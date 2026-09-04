@@ -8,9 +8,17 @@
 一种可从 DSH 消息编辑器使用，并由可点击控件表示的可复用消息意图。
 _避免使用_：Quick Button（快捷按钮）、快捷按钮（仅在指代视觉控件时除外）
 
+**Quick Action Layout（快捷动作布局）**：
+用户选择快捷动作在常驻消息编辑器附近如何呈现的全局偏好；可采用上方动作带、下方操作栏或单入口面板。
+_避免使用_：按钮位置、临时视图
+
 **Preset Quick Action（预置快捷动作）**：
 归作者所有并随插件分发的 Quick Action（快捷动作）。
 _避免使用_：Default Button（默认按钮）、Built-in Button（内置按钮）
+
+**Preset Catalog（预置目录）**：
+由软件包内置定义与 Host 配置附加项组成、由 Host 权威提供的不可变预置快捷动作集合。
+_避免使用_：用户预置存储、可编辑默认值
 
 **Custom Quick Action（自定义快捷动作）**：
 归用户所有、从头创建或从 Preset Quick Action（预置快捷动作）克隆而来的 Quick Action（快捷动作）。

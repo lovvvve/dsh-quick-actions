@@ -1,0 +1,9 @@
+# 实现管理、动作面板与发送确认
+
+Type: task
+Mode: AFK
+Blocked by: 14
+
+## Question（问题）
+
+实现集中式管理面板、B/C 共用的可搜索动作面板、自定义动作新建/编辑表单，以及发送确认面板。落实预置排序/隐藏/克隆、自定义 CRUD/启停、布局选择、1–4 emoji、验证限制、确认时重验、设置写入失败和 revision 冲突恢复。使用 DSH UI primitives、主题 token、CSS module 与中英文 `locale`，保证键盘操作、焦点恢复、文本或 `aria-label` 无障碍名称、宽窄布局和局部错误隔离；成功操作不得产生多余 toast。

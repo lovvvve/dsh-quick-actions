@@ -30,12 +30,11 @@ Label: `wayfinder:map`
 - [选择所需的 DSH 消息编辑器核心扩展](./issues/09-choose-required-dsh-composer-core-extensions.md) — 新增最小公共 `inputActions.insertText` 接口，同时将首版放置范围限定为常驻消息编辑器，并为旧 DSH 版本安全禁用插入动作。
 - [确定运行时与失败语义](./issues/06-decide-runtime-and-failure-semantics.md) — 插入动作保留编辑上下文；发送动作只处理未占用草稿并按会话单飞，所有确认、失败、断线和会话切换均采用无内容丢失的保守行为。
 - [选择快捷动作的放置方式和管理流程](./issues/04-choose-placement-and-management-flow.md) — 默认使用与输入框等宽的上方单行动作带，并提供下方操作栏和单入口面板作为全局持久化选项，三者共享管理与确认面板。
+- [选择插件架构与软件包契约](./issues/07-select-plugin-architecture-and-package-contract.md) — 采用双面功能包加安装 bundle、Host Settings 与只读目录 Remote、共享领域深模块、局部会话执行，以及仓库自有的可测试 Client 构建适配器。
 
 ## Not yet specified（尚未明确）
 
-- 具体的实施切片和源文件边界；只有在选定受支持的 DSH 扩展点和架构后，才能明确这些内容。
-- 自动化测试的确切拆分方式、测试夹具以及浏览器手动验证流程；这些内容将在运行时行为和架构确定后转为正式票据。
-- 打包、安装、升级和最终用户文档任务；这些内容将在软件包契约确定后转为正式票据。
+<!-- 当前没有仍处于迷雾中的范围；实施、验证、打包和文档均已毕业为正式票据。 -->
 
 ## Out of scope（范围外）
 
