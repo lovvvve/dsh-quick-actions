@@ -16,6 +16,18 @@ _避免使用_：Default Button（默认按钮）、Built-in Button（内置按�
 归用户所有、从头创建或从 Preset Quick Action（预置快捷动作）克隆而来的 Quick Action（快捷动作）。
 _避免使用_：Override（覆盖项）、Edited Preset（已编辑的预置项）
 
+**Preset Action ID（预置动作 ID）**：
+由作者分配给预置快捷动作、且不随标签或文本变化的稳定身份。
+_避免使用_：标签派生 ID、位置 ID
+
+**Custom Action ID（自定义动作 ID）**：
+在创建自定义快捷动作时分配、并在其整个生命周期内保持不变的用户动作身份。
+_避免使用_：标签派生 ID、数组索引 ID
+
+**Clone Provenance（克隆来源）**：
+记录自定义快捷动作最初由哪个预置快捷动作克隆而来的说明性关联；它不表示持续同步或共享所有权。
+_避免使用_：继承关系、实时分叉
+
 **Insert Action（插入动作）**：
 其文本会成为当前草稿的一部分而不提交草稿的 Quick Action（快捷动作）。
 _避免使用_：Append Button（追加按钮）、Fill Button（填充按钮）
