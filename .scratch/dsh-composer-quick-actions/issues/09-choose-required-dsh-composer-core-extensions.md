@@ -2,7 +2,6 @@
 
 Type: grilling
 Mode: HITL
-Status: claimed
 Blocked by: 02
 
 ## Question（问题）
