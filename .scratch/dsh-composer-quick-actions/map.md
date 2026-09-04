@@ -22,6 +22,8 @@ Implement, verify, and document a persistent installable DSH plugin that exposes
 <!-- Closed-ticket index only. Each decision lives in its ticket. -->
 
 - [Establish a Versioned Workspace for Research](./issues/01-establish-versioned-research-workspace.md) — A committed local `main` baseline now supports isolated research branches; no remote is required.
+- [Identify Supported DSH Composer Extension Seams](./issues/02-identify-composer-extension-seams.md) — Persistent Client Slots and official submission are supported, while selection insertion and universal composer placement require a product/core boundary decision.
+- [Identify Durable Configuration and Preset Seams](./issues/03-identify-durable-configuration-seams.md) — Host Settings should own user actions and preset deltas; immutable presets stay package-owned, with backward-readable schema rewrites covering the current migration gap.
 
 ## Not yet specified
 
