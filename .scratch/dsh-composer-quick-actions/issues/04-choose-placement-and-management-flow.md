@@ -1,9 +1,9 @@
-# Choose Quick Action Placement and Management Flow
+# 选择快捷动作的放置方式和管理流程
 
 Type: prototype
 Mode: HITL
 Blocked by: 02, 05, 06
 
-## Question
+## Question（问题）
 
-Which concrete interaction best exposes Quick Actions above or below the composer while supporting discovery, ordering, overflow, preset hiding and cloning, custom-action editing, and optional send confirmation on both wide and narrow layouts? Produce a cheap visual prototype constrained by the supported DSH Slot topology, compare the viable directions with the human, and select one interaction contract.
+哪种具体交互方式最适合在消息编辑器上方或下方提供快捷动作，同时支持可发现性、排序、溢出处理、隐藏和克隆预置快捷动作、编辑自定义快捷动作，并在宽、窄两种布局下支持可选的发送确认？请制作一个受支持的 DSH Slot 拓扑约束的低成本视觉原型，与用户共同比较可行方案，并选定一种交互契约。

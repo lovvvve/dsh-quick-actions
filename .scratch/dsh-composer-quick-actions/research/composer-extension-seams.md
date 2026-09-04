@@ -1,51 +1,51 @@
-# Identify Supported DSH Composer Extension Seams
+# 识别 DSH Composer（编辑器）受支持的扩展点
 
-## Scope and source basis
+## 范围与来源依据
 
-This report answers the question against the live Cordis Inspect Providers and the packaged DSH implementation checkout:
+本报告基于实时 Cordis Inspect Provider 和打包随附的 DSH 实现检出目录回答该问题：
 
 `/Users/lovvvve/Library/Application Support/io.github.hairyf.deepseek-harness-desktop/dependencies/dsh/`
 
-The checkout contains the deployed JavaScript artifacts, package manifests, bundle patches, and first-party package references for DSH `0.1.2-rc.1` (`package.json:14-16`; `node_modules/@deepseek-ai/dsh/package.json:1-4`). No web or secondary source was used.
+该检出目录包含 DSH `0.1.2-rc.1` 的已部署 JavaScript 产物、包清单、bundle 补丁和第一方包参考资料（`package.json:14-16`；`node_modules/@deepseek-ai/dsh/package.json:1-4`）。未使用 Web 或二手来源。
 
-Live Inspect discovery (`cordis_inspect_list`) confirmed the Client `Slots`, `Service`, `Event`, and `Builtin` providers and their exact query methods. The delegated session's follow-up Client query was cancelled by the runtime, so it did not provide a complete live catalog. A successful parent-session `Slots.listSubTree` query independently verified that `conversation.input.dock` is currently available as a `list`/`session` Slot with `replaceRisk: "none"`, required unique `id`, optional `order`/`label`, owner `InputZone { session, input }`, and standard `useInput`/`inputActions` props; the same live compact tree verified `conversation.composer.dock` as an available `list`/`session` Slot declared by `conversation.composer.bar`, with `replaceRisk: "none"`, required unique `id`, optional `order`/`label`, current `stats` occupant, and standard `useInput`/`inputActions`/`useSession`/`sessionId` props. The remaining exact contracts are cross-checked against the generated Inspect catalogs embedded in the shipped Client runner. That catalog says it is generated from the same AST walk as the Cordis documentation and freshness-gated so those representations cannot diverge (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1100-1111`).
+实时 Inspect 发现（`cordis_inspect_list`）确认了客户端（Client）的 `Slots`、`Service`、`Event` 和 `Builtin` Provider 及其确切查询方法。委派会话后续的 Client 查询被运行时取消，因此未能提供完整的实时目录。父会话中一次成功的 `Slots.listSubTree` 查询独立验证了：`conversation.input.dock` 当前可用，是一个 `list`/`session` Slot，具有 `replaceRisk: "none"`、必需且唯一的 `id`、可选的 `order`/`label`、拥有者 `InputZone { session, input }`，以及标准 `useInput`/`inputActions` props；同一份实时精简树还验证了 `conversation.composer.dock` 是一个可用的 `list`/`session` Slot，由 `conversation.composer.bar` 声明，具有 `replaceRisk: "none"`、必需且唯一的 `id`、可选的 `order`/`label`、当前占用项 `stats`，以及标准 `useInput`/`inputActions`/`useSession`/`sessionId` props。其余确切契约均与随附 Client runner 中嵌入的生成式 Inspect 目录进行了交叉核对。该目录说明，它由与 Cordis 文档相同的 AST 遍历生成，并通过新鲜度门禁确保这些表示不可能发生分歧（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1100-1111`）。
 
-Terminology in this report:
+本报告使用以下术语：
 
-- **Supported public seam**: documented package/profile, Slot, Service, Event, or Cordis lifecycle contract intended for other packages.
-- **Internal implementation detail**: reachable or observable in the current build, but package-private, absent from the public catalog, or explicitly described as internal.
-- **Missing capability**: no supported seam in this checkout satisfies the requirement.
+- **支持的公开扩展点**：供其他包使用的、已有文档说明的 package/profile、Slot、Service、Event 或 Cordis 生命周期契约。
+- **内部实现细节**：在当前构建中可以触达或观察，但属于包私有、未出现在公开目录中，或被明确描述为内部内容。
+- **缺失能力**：此检出版本中没有任何受支持的扩展点能够满足该要求。
 
-## Bottom line
+## 核心结论
 
-| Requirement | Finding |
+| 要求 | 结论 |
 |---|---|
-| Persist across DSH restarts/page refreshes | **Supported.** Install a Loader-backed **profile bundle** into the `web` profile. Its patch inserts an ordinary row for a built `dsh.client` package. This is separate from process-local dynamic Cordis Packages. |
-| Add controls above the normal resident composer | **Supported:** `conversation.input.dock` (`list`, `session`). |
-| Add controls below the normal active composer card | **Supported:** `conversation.composer.dock` (`list`, `session`). |
-| Add compact controls inside the tool row | **Supported alternatives:** `conversation.input.left` and `conversation.input.right`. |
-| Automatically clean up registrations/listeners | **Supported:** register through `ctx.slots.inject(...)`, `ctx.slots.register(...)`, `ctx.on(...)`, and `ctx.effect(...)`; all are fiber-owned. |
-| Read/update the current draft | **Partly supported:** Slot components receive `useInput` and stable `inputActions`; `inputActions.setDraft(text)` replaces the **whole** draft and moves the caret to the end. |
-| Insert static text at the current selection | **Missing as a public seam.** The implementation has a package-private `paste(text)` and span-based `slash/input-insert-text` path, but neither is exposed in `InputActions` or the public Client Event catalog. `InputState` omits selection. |
-| Submit the current draft through the composer path | **Supported:** call the Slot prop `inputActions.submit()`. The shipped primary send button calls that same function. It enters the input machine, command adjudication, optimistic commit, and default `sendSession` sink. |
-| Appear around literally every composer, including no-session and takeover composers | **Missing as one universal additive Slot.** The two docks belong to the resident fallback composer. A chain takeover hides that fallback; the below-card dock is also absent in hero mode, and both session-scoped docks are absent with no Session. |
+| 跨 DSH 重启/页面刷新持久存在 | **受支持。** 将一个由 Loader 支持的 **profile bundle** 安装到 `web` profile 中。它的补丁会为已构建的 `dsh.client` 包插入一个普通行。这与仅在进程内存在的动态 Cordis Package 不同。 |
+| 在常规常驻 Composer 上方添加控件 | **受支持：** `conversation.input.dock`（`list`、`session`）。 |
+| 在常规活动 Composer 卡片下方添加控件 | **受支持：** `conversation.composer.dock`（`list`、`session`）。 |
+| 在工具行内添加紧凑控件 | **受支持的替代方案：** `conversation.input.left` 和 `conversation.input.right`。 |
+| 自动清理注册项/监听器 | **受支持：** 通过 `ctx.slots.inject(...)`、`ctx.slots.register(...)`、`ctx.on(...)` 和 `ctx.effect(...)` 注册；它们都归 fiber 所有。 |
+| 读取/更新当前草稿 | **部分受支持：** Slot 组件会收到 `useInput` 和稳定的 `inputActions`；`inputActions.setDraft(text)` 会替换**整个**草稿，并将光标移至末尾。 |
+| 在当前选区插入静态文本 | **作为公开扩展点时缺失。** 实现中存在包私有的 `paste(text)` 和基于 span 的 `slash/input-insert-text` 路径，但二者都没有通过 `InputActions` 或公开 Client Event 目录暴露。`InputState` 不包含选区。 |
+| 通过 Composer 路径提交当前草稿 | **受支持：** 调用 Slot prop `inputActions.submit()`。随附的主发送按钮调用的就是同一个函数。它会进入输入状态机、命令裁决、乐观提交和默认 `sendSession` sink。 |
+| 出现在字面意义上的每一个 Composer 周围，包括无 session 和 takeover Composer | **缺失一个通用的可叠加 Slot。** 两个 dock 都属于常驻 fallback Composer。chain takeover 会隐藏该 fallback；下方卡片 dock 在 hero 模式中也不存在，而且没有 Session 时，这两个 session 作用域的 dock 都不存在。 |
 
-The practical conclusion is therefore: a persistent quick-actions package can safely render buttons above or below every **normal, session-backed resident composer** and can submit the current draft officially, but it cannot officially splice text at the live selection, and it cannot guarantee visibility around replacement/takeover composers without a new upstream seam.
+因此，实际结论是：持久化 quick-actions 包可以安全地在每个**常规、由 session 支持的常驻 Composer**上方或下方渲染按钮，也可以正式提交当前草稿；但它无法通过官方方式在实时选区插入文本，也无法在没有新增上游扩展点的情况下，保证自身出现在 replacement/takeover Composer 周围。
 
 ---
 
-## 1. Supported persistent package mechanism
+## 1. 受支持的持久化包机制
 
-### 1.1 The persistent unit is a web-profile bundle, not a dynamic Cordis Package
+### 1.1 持久化单元是 web-profile bundle，而不是动态 Cordis Package
 
-The supported launcher describes profiles as ordered stacks of bundle patch layers. A profile directory contains:
+受支持的 launcher 将 profile 描述为由 bundle 补丁层组成的有序栈。一个 profile 目录包含：
 
-- `package.json` with `dsh.profile.bundles` and `patchReload`, and
-- `cordis.patch.yml` as the user's later patch layer.
+- 带有 `dsh.profile.bundles` 和 `patchReload` 的 `package.json`；以及
+- 作为用户较后补丁层的 `cordis.patch.yml`。
 
-Bundle patches apply in bundle order, followed by profile and home patches and then `--patch` overlays (`node_modules/@deepseek-ai/dsh/README.md:33-47`; executable composition order in `node_modules/@deepseek-ai/dsh/lib/profile-boot-BTzzdrGY.js:166-210`).
+Bundle 补丁按 bundle 顺序应用，随后应用 profile 和 home 补丁，最后应用 `--patch` overlay（`node_modules/@deepseek-ai/dsh/README.md:33-47`；可执行的组合顺序见 `node_modules/@deepseek-ai/dsh/lib/profile-boot-BTzzdrGY.js:166-210`）。
 
-The exact bundle manifest declaration is:
+确切的 bundle 清单声明如下：
 
 ```json
 {
@@ -57,9 +57,9 @@ The exact bundle manifest declaration is:
 }
 ```
 
-`loadProfile()` reads precisely `package.json.dsh.bundle.patch`, fails if it is absent, joins it to the package directory, and parses that patch (`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:834-879`). The package-level contract is also stated verbatim in the profile module documentation (`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:286-309`). Shipped bundles use exactly this field, for example `@deepseek-ai/dsh-web-app` (`node_modules/@deepseek-ai/dsh-web-app/package.json:25-40`) and `@deepseek-ai/dsh-base` (`node_modules/@deepseek-ai/dsh-base/package.json:21-35`).
+`loadProfile()` 会精确读取 `package.json.dsh.bundle.patch`；若该字段不存在则失败；随后将其与包目录拼接，并解析该补丁（`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:834-879`）。profile 模块文档也逐字陈述了这一包级契约（`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:286-309`）。随附 bundle 使用的正是这个字段，例如 `@deepseek-ai/dsh-web-app`（`node_modules/@deepseek-ai/dsh-web-app/package.json:25-40`）和 `@deepseek-ai/dsh-base`（`node_modules/@deepseek-ai/dsh-base/package.json:21-35`）。
 
-A bundle patch is a top-level list. The ordinary way to add the browser package's Loader row is an insert such as:
+Bundle 补丁是一个顶层列表。添加浏览器包 Loader 行的常规方式是使用如下 insert：
 
 ```yaml
 - insert:
@@ -67,19 +67,19 @@ A bundle patch is a top-level list. The ordinary way to add the browser package'
       name: '@scope/dsh-composer-quick-actions-client'
 ```
 
-This follows the shipped web bundle's browser roster, which is one `insert` containing ordinary `{ id, name, ... }` rows (`node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml:39-43,151-175,207-214`). Loader entry options are publicly documented as `id`, `name`, `config`, `group`, `disabled`, and `inject` (`node_modules/@deepseek-ai/cordis-plugin-loader/README.md:25-35`).
+这遵循了随附 web bundle 的浏览器名册结构，即一个包含普通 `{ id, name, ... }` 行的 `insert`（`node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml:39-43,151-175,207-214`）。Loader 条目选项的公开文档列出了 `id`、`name`、`config`、`group`、`disabled` 和 `inject`（`node_modules/@deepseek-ai/cordis-plugin-loader/README.md:25-35`）。
 
-`dsh plugin --profile web add <package>` is the supported installation path. It forwards to pnpm in the profile directory and then appends installed dependencies that declare `dsh.bundle` to `dsh.profile.bundles`; bundle-less dependencies remain plain dependencies and are not activated as layers (`node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js:7-16,20-33,35-77,96-127`). Therefore:
+`dsh plugin --profile web add <package>` 是受支持的安装路径。它会在 profile 目录中转交给 pnpm，然后把已安装依赖中声明了 `dsh.bundle` 的依赖追加到 `dsh.profile.bundles`；不含 bundle 的依赖仍只是普通依赖，不会作为层被激活（`node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js:7-16,20-33,35-77,96-127`）。因此：
 
-- a **client-only** package installed as a dependency is not enough to persistently mount it;
-- either a bundle package must insert that client row, or the user's persistent profile patch must insert it manually;
-- the canonical installable package mechanism is the bundle declaration above.
+- 仅安装一个**纯客户端**包作为依赖，并不足以持久挂载它；
+- 要么由一个 bundle 包插入该 Client 行，要么由用户的持久化 profile 补丁手动插入；
+- 规范的可安装包机制就是上面的 bundle 声明。
 
-The web profile is a host-plane composition. The shipped patch explicitly calls its `dsh.client` rows “the browser roster” (`node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml:39-42,151-156`) and separately moves only the agent/tool plane behind per-session presets (`same file:308-313,433-439`). The Client module scanner listens to the host Loader's `internal/plugin` events and scans `ctx.loader.entries()` (`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:434-479`). Thus an agent preset is not the correct home for a global browser-composer extension.
+web profile 是一个 Host 平面组合。随附补丁明确将其 `dsh.client` 行称为“浏览器名册”（`node_modules/@deepseek-ai/dsh-web-app/cordis.patch.yml:39-42,151-156`），并单独将只有 agent/tool 平面移到各 session 的 preset 后面（`same file:308-313,433-439`）。Client 模块扫描器监听 Host Loader 的 `internal/plugin` 事件，并扫描 `ctx.loader.entries()`（`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:434-479`）。因此，agent preset 并不是全局浏览器 Composer 扩展的正确归属位置。
 
-### 1.2 Exact persistent Client package declaration
+### 1.2 持久化 Client 包的确切声明
 
-A browser package declares `dsh.client`, exports `./client`, and ships the already-built browser artifact. The package reference states this as the authoring contract (`node_modules/@deepseek-ai/dsh-client-modules/README.md:25-44`). The executable parser accepts this exact shape:
+浏览器包需要声明 `dsh.client`、导出 `./client`，并随包提供已经构建好的浏览器产物。包参考资料将其陈述为编写契约（`node_modules/@deepseek-ai/dsh-client-modules/README.md:25-44`）。可执行解析器接受以下确切结构：
 
 ```ts
 interface DshClientDeclaration {
@@ -90,21 +90,21 @@ interface DshClientDeclaration {
 }
 ```
 
-The parser rejects a non-object declaration, a missing/non-string `platform`, non-string arrays, or a non-boolean `immediately` (`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:139-154`). It accepts `exports["./client"]` either as a string or as an object with a string `default` (`same file:155-165`). During scan, only `platform === "web"` survives; absence of `./client` is a hard error, and the resolved artifact path and manifest fields become the boot graph row (`same file:618-647`).
+解析器会拒绝非对象声明、缺失或并非字符串的 `platform`、非字符串数组，或非布尔值的 `immediately`（`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:139-154`）。它接受字符串形式的 `exports["./client"]`，也接受带有字符串 `default` 的对象形式（`same file:155-165`）。扫描期间，只有 `platform === "web"` 会保留下来；缺少 `./client` 属于硬错误，而解析后的产物路径和清单字段会成为 boot graph 行（`same file:618-647`）。
 
-A representative shipped UI package has:
+一个有代表性的随附 UI 包包含：
 
-- root/default export for its Loader row;
-- `./client` export pointing at `lib/client.js`;
-- `dsh.client.inject` containing package names that must precede it;
-- `platform: "web"`;
-- built `lib/index.js` and `lib/client.js` files.
+- 面向其 Loader 行的 root/default export；
+- 指向 `lib/client.js` 的 `./client` export；
+- 包含必须先于它加载之包名的 `dsh.client.inject`；
+- `platform: "web"`；
+- 已构建的 `lib/index.js` 和 `lib/client.js` 文件。
 
-See `node_modules/@deepseek-ai/dsh-client-ui-plan/package.json:13-37,57-65`. Its Node/root half is intentionally an empty `apply()` solely so the package can exist as a host Loader row while its browser behavior comes from `exports["./client"]` (`node_modules/@deepseek-ai/dsh-client-ui-plan/lib/index.js:1-12`). This is the exact precedent for a pure browser feature.
+参见 `node_modules/@deepseek-ai/dsh-client-ui-plan/package.json:13-37,57-65`。它的 Node/root 部分有意只提供空的 `apply()`，目的仅在于让该包能够作为 Host Loader 行存在，而其浏览器行为则来自 `exports["./client"]`（`node_modules/@deepseek-ai/dsh-client-ui-plan/lib/index.js:1-12`）。这正是纯浏览器功能的先例。
 
-Important distinction: manifest-level `dsh.client.inject` contains **package names used by the browser boot graph**. Runtime Cordis injection is the Client module's exported `inject` array of **Service keys**. For example, `ui-plan` has package prerequisites in its manifest (`package.json:28-36`) but exports runtime Service keys `slots`, `remote`, `remote.commands`, and `locale` (`lib/client.js:103-135`). A composer quick-actions Client package would at minimum order itself after `@deepseek-ai/dsh-client-ui-conversation` at the manifest level and inject `slots` at runtime.
+重要区别：清单级 `dsh.client.inject` 包含浏览器 boot graph 使用的**包名**。运行时 Cordis injection 则是 Client 模块所导出的 **Service key** 数组。例如，`ui-plan` 在其清单中包含包前置依赖（`package.json:28-36`），但导出的运行时 Service key 是 `slots`、`remote`、`remote.commands` 和 `locale`（`lib/client.js:103-135`）。Composer quick-actions Client 包至少应在清单层面将自己排在 `@deepseek-ai/dsh-client-ui-conversation` 之后，并在运行时注入 `slots`。
 
-Built Client artifacts use DSH's lazy-CJS registration wrapper:
+已构建的 Client 产物使用 DSH 的 lazy-CJS 注册 wrapper：
 
 ```js
 window.__ModuleLoader__.load({
@@ -113,34 +113,34 @@ window.__ModuleLoader__.load({
 })
 ```
 
-A shipped artifact begins with exactly that form (`node_modules/@deepseek-ai/dsh-client-ui-plan/lib/client.js:1-4`) and exports `apply`/`inject` at its tail (`same file:103-136`). The Client module system explains that executing the bundle registers a lazy factory and first materialization runs its body (`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:7-37`).
+一个随附产物的开头正是这种形式（`node_modules/@deepseek-ai/dsh-client-ui-plan/lib/client.js:1-4`），并在结尾导出 `apply`/`inject`（`same file:103-136`）。Client 模块系统说明，执行 bundle 会注册一个惰性 factory，而第一次具体化会运行其函数体（`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:7-37`）。
 
-This is persistent across normal page loads because every enabled Loader row declaring `dsh.client` is scanned into `window.__DSH_BOOT__` and served under `/plugins` (`node_modules/@deepseek-ai/dsh-client-modules/README.md:10-12,28-44`). This contrasts with dynamic Client Packages, for which “nothing is restored after a refresh” (`node_modules/@deepseek-ai/dsh-cordis-client-runner/README.md:10-12,38-40`).
+它能够跨常规页面加载持久存在，因为每一个已启用且声明 `dsh.client` 的 Loader 行都会被扫描进 `window.__DSH_BOOT__`，并通过 `/plugins` 提供（`node_modules/@deepseek-ai/dsh-client-modules/README.md:10-12,28-44`）。动态 Client Package 则与此不同，对后者而言，“刷新后不会恢复任何内容”（`node_modules/@deepseek-ai/dsh-cordis-client-runner/README.md:10-12,38-40`）。
 
-Loading-time boundary: the profile manifest and bundle list are composed during process boot. In `patchReload: "live"` mode, the running launcher watches only the profile and home `cordis.patch.yml` files (`node_modules/@deepseek-ai/dsh/lib/profile-boot-BTzzdrGY.js:233-261,271-288`), not `package.json.dsh.profile.bundles`. Installing a new bundle therefore persists it for the next DSH boot; it is not evidence that the already-running process mounted it. During development, Client HMR also needs an external build watcher to rewrite `lib/client.js` before the existing page can swap it (`node_modules/@deepseek-ai/dsh-client-hmr/README.md:24-36`).
+加载时边界：profile 清单和 bundle 列表在进程启动期间完成组合。在 `patchReload: "live"` 模式下，运行中的 launcher 只监视 profile 和 home 的 `cordis.patch.yml` 文件（`node_modules/@deepseek-ai/dsh/lib/profile-boot-BTzzdrGY.js:233-261,271-288`），而不会监视 `package.json.dsh.profile.bundles`。因此，安装新 bundle 会使其在下一次 DSH 启动时保持存在；这并不能证明当前已经运行的进程已挂载它。开发期间，Client HMR 还需要一个外部构建 watcher 来重写 `lib/client.js`，之后现有页面才能替换该模块（`node_modules/@deepseek-ai/dsh-client-hmr/README.md:24-36`）。
 
-### 1.3 Packaging limitation that must not be hidden
+### 1.3 不得隐瞒的打包限制
 
-The mechanism is supported, but the checkout documents a tooling gap for out-of-tree browser plugins: the `clientBundle` tsdown preset that emits the required lazy-CJS artifact lives inside the DSH monorepo and is **not published**, so an external plugin must reproduce that build (`node_modules/@deepseek-ai/dsh-client-ui-settings-plugins/README.md:88-97`). The module system also fails activation loudly when `lib/client.js` is missing (`node_modules/@deepseek-ai/dsh-client-modules/README.md:42-44`; implementation diagnostics at `lib/index.js:90-119`).
+该机制本身受支持，但检出目录记录了树外浏览器插件的一个工具缺口：能够产出所需 lazy-CJS 产物的 `clientBundle` tsdown preset 位于 DSH monorepo 内，且**没有发布**，因此外部插件必须复现该构建流程（`node_modules/@deepseek-ai/dsh-client-ui-settings-plugins/README.md:88-97`）。当 `lib/client.js` 缺失时，模块系统也会明确地让激活失败（`node_modules/@deepseek-ai/dsh-client-modules/README.md:42-44`；实现诊断见 `lib/index.js:90-119`）。
 
-The source independently parses `dsh.bundle` and `dsh.client`, so it does not reject a manifest containing both. However, the shipped examples establish a clearer two-role pattern: a bundle carries the patch, and an inserted UI package carries the Client row. No source in this checkout explicitly promises a one-package self-inserting layout, so it should not be presented as the canonical contract without a test.
+源码会独立解析 `dsh.bundle` 和 `dsh.client`，因此不会拒绝同时包含二者的清单。不过，随附示例建立了一种更清晰的双角色模式：bundle 携带补丁，被插入的 UI 包携带 Client 行。此检出版本中没有源码明确承诺单包自插入布局，因此在未经测试的情况下，不应将它描述为规范契约。
 
 ---
 
-## 2. Exact supported composer Slots
+## 2. 受支持的 Composer Slot 确切情况
 
-The shipped Client runner embeds the generated Slot contract ledger. It includes kind, scope, owner props, standard props, registration options, declaring owner, current occupants, replacement risk, and original source location (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2133-2145`).
+随附 Client runner 嵌入了生成的 Slot 契约账本。它包含种类、作用域、拥有者 props、标准 props、注册选项、声明方拥有者、当前占用项、替换风险和原始源码位置（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2133-2145`）。
 
-### 2.1 Above: `conversation.input.dock`
+### 2.1 上方：`conversation.input.dock`
 
-Exact contract:
+确切契约：
 
-- key: `conversation.input.dock`
-- kind: `list`
-- scope: `session`
-- purpose: “Full-width entries above the composer card.”
-- registration: required unique `id`; optional ascending `order` (default `0`) and optional `label`
-- owner props:
+- 键：`conversation.input.dock`
+- 种类：`list`
+- 作用域：`session`
+- 用途：“Composer 卡片上方的全宽条目。”
+- 注册：必需且唯一的 `id`；可选的升序 `order`（默认值为 `0`），以及可选的 `label`
+- 拥有者 props：
 
 ```ts
 interface InputZone {
@@ -149,36 +149,36 @@ interface InputZone {
 }
 ```
 
-- standard props include `useInput: SnapshotSelectorHook<InputState>`, `inputActions: InputActions`, `useSession`, `sessionId`, `useProjection`, and the other standard Session/Workspace hooks.
+- 标准 props 包括 `useInput: SnapshotSelectorHook<InputState>`、`inputActions: InputActions`、`useSession`、`sessionId`、`useProjection`，以及其他标准 Session/Workspace hook。
 
-All of that is recorded at `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2672-2724` (the catalog records original source `packages/client/ui-conversation/src/client/contract/slots.ts:127`). It is additive (`replaceRisk: "none"`); shipped occupants include Queue, Todo, and Goal docks (`same range:2716-2723`).
+这些内容全部记录在 `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2672-2724`（目录记录的原始来源为 `packages/client/ui-conversation/src/client/contract/slots.ts:127`）。它是可叠加的（`replaceRisk: "none"`）；随附占用项包括 Queue、Todo 和 Goal dock（`same range:2716-2723`）。
 
-The owner actually renders this Slot immediately before the resident composer bar:
+拥有者确实会在常驻 Composer bar 之前紧邻渲染该 Slot：
 
 ```tsx
 zone !== undefined && renderSlot("conversation.input.dock", zone)
 inputBar
 ```
 
-See `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14401-14404,14437-14461`. This is the best supported seat for a full-width quick-action row **above** the normal session-backed composer.
+参见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14401-14404,14437-14461`。对于常规、由 session 支持的 Composer，这是在其**上方**放置全宽 quick-action 行的最佳受支持位置。
 
-Boundary: `zone` exists only when both a Session snapshot and Input state exist. Consequently this Slot does not render in the no-Session inert state (`same file:14401-14404,14436-14460`).
+边界：只有 Session snapshot 和 Input state 同时存在时，`zone` 才存在。因此，该 Slot 不会在无 Session 的惰性状态下渲染（`same file:14401-14404,14436-14460`）。
 
-### 2.2 Below: `conversation.composer.dock`
+### 2.2 下方：`conversation.composer.dock`
 
-Exact contract:
+确切契约：
 
-- key: `conversation.composer.dock`
-- kind: `list`
-- scope: `session`
-- purpose: “Ambient entries below the composer card.”
-- registration: required unique `id`; optional `order` and `label`
-- no owner-specific props
-- standard props include `useInput`, `inputActions`, `useSession`, `sessionId`, `useProjection`, and the standard Session/Workspace hooks.
+- 键：`conversation.composer.dock`
+- 种类：`list`
+- 作用域：`session`
+- 用途：“Composer 卡片下方的环境条目。”
+- 注册：必需且唯一的 `id`；可选的 `order` 和 `label`
+- 没有拥有者专用 props
+- 标准 props 包括 `useInput`、`inputActions`、`useSession`、`sessionId`、`useProjection`，以及标准 Session/Workspace hook。
 
-See `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2463-2511` (catalog source `packages/client/ui-conversation/src/client/contract/slots.ts:131`). `ui-chat` provides a concrete supported precedent by registering its `stats` row through `ctx.slots.inject(... register(...))` (`node_modules/@deepseek-ai/dsh-client-ui-chat/lib/client.js:8147-8152`).
+参见 `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2463-2511`（目录来源为 `packages/client/ui-conversation/src/client/contract/slots.ts:131`）。`ui-chat` 提供了一个具体且受支持的先例：通过 `ctx.slots.inject(... register(...))` 注册其 `stats` 行（`node_modules/@deepseek-ai/dsh-client-ui-chat/lib/client.js:8147-8152`）。
 
-The InputBar renders this Slot after the composer card, but only for the active `composer` variant with Session and Input present:
+InputBar 会在 Composer 卡片之后渲染该 Slot，但仅限于 Session 和 Input 均存在的活动 `composer` variant：
 
 ```tsx
 variant === "composer" && input !== undefined && sessionId !== undefined
@@ -186,46 +186,46 @@ variant === "composer" && input !== undefined && sessionId !== undefined
   : null
 ```
 
-See `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15713-15718`. It therefore does **not** render below the centered hero variant.
+参见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15713-15718`。因此，它**不会**渲染在居中的 hero variant 下方。
 
-### 2.3 In-row alternatives
+### 2.3 行内替代方案
 
-If “above/below” is not essential and the controls should sit inside the composer toolbar:
+如果并不要求必须位于“上方/下方”，并且控件应放在 Composer 工具栏内部：
 
-- `conversation.input.left`: `list`, `session`, “Compact controls at the left of the composer tool row”; required `id`, optional `order`/`label` (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2727-2775`).
-- `conversation.input.right`: `list`, `session`, “Compact controls before the composer submit action”; same list options (`same file:2893-2941`).
+- `conversation.input.left`：`list`、`session`，“Composer 工具行左侧的紧凑控件”；必需的 `id`，可选的 `order`/`label`（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2727-2775`）。
+- `conversation.input.right`：`list`、`session`，“Composer 提交操作之前的紧凑控件”；列表选项相同（`same file:2893-2941`）。
 
-The InputBar places those Slots exactly in those positions (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15612-15643`).
+InputBar 会把这些 Slot 准确放置在上述位置（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15612-15643`）。
 
-### 2.4 Slots that look relevant but are not additive quick-action seams
+### 2.4 看似相关、但不是可叠加 quick-action 扩展点的 Slot
 
 #### `conversation.composer.bar`
 
-This is `single`, `session-maybe`, and already occupied by the shipped `InputBar`. Registering another entry shadows the shipped composer (`replaceRisk: "shadows-shipped-ui"`) (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2433-2460`). Its owner prop includes `accessory?: ReactNode`, documented as content above the surface (`same file:2439`), but that is an input **to the sole bar occupant**, not an additive accessory Slot. A third-party registrant cannot set `accessory` on the existing InputBar; it would have to replace the whole bar and reimplement the composer. That is not a supported quick-actions approach.
+它是 `single`、`session-maybe`，且已由随附的 `InputBar` 占用。注册另一个条目会遮蔽随附 Composer（`replaceRisk: "shadows-shipped-ui"`）（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2433-2460`）。其拥有者 prop 包含 `accessory?: ReactNode`，文档将其描述为 surface 上方的内容（`same file:2439`），但它是提供给唯一 bar 占用项的输入，**并非**一个可叠加的 accessory Slot。第三方注册方无法在现有 InputBar 上设置 `accessory`；它必须替换整个 bar 并重新实现 Composer。这不是一种受支持的 quick-actions 方案。
 
 #### `conversation.composer`
 
-This is a `chain` of selector-routed **replacements** for temporary Session interactions, not an additive region (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2388-2430`; public usage constraints in `node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:51-97`). The shell invokes it with `overlay: true` and the resident bar as fallback (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14463-14472`). When a chain entry wins, the renderer keeps the fallback mounted but sets its wrapper to `display: none` (`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:871-878`). Thus both resident docks are visually hidden during approval/question/subagent takeover composers.
+这是 selector 路由的临时 Session 交互**替代项**所组成的 `chain`，而不是可叠加区域（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2388-2430`；公开使用限制见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:51-97`）。shell 使用 `overlay: true` 调用它，并以常驻 bar 作为 fallback（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14463-14472`）。当一个 chain 条目胜出时，renderer 会保持 fallback 已挂载，但将其 wrapper 设置为 `display: none`（`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:871-878`）。因此，在 approval/question/subagent takeover Composer 期间，两个常驻 dock 在视觉上都会被隐藏。
 
-### 2.5 “Every composer” is not fully supported
+### 2.5 并未完全支持“每一个 Composer”
 
-There is no additive Slot outside the `conversation.composer` chain that wraps both its fallback and elected replacements. Therefore:
+`conversation.composer` chain 外部没有一个可叠加 Slot 能够同时包裹其 fallback 和当选 replacement。因此：
 
-- above normal session-backed resident composer: yes (`conversation.input.dock`);
-- below active normal resident composer: yes (`conversation.composer.dock`);
-- no-Session inert composer: neither session-scoped dock;
-- centered hero: above dock can render when a Session/Input exists, below dock does not;
-- elected takeover composer: resident fallback and its docks are hidden.
+- 常规、由 session 支持的常驻 Composer 上方：可以（`conversation.input.dock`）；
+- 活动的常规常驻 Composer 下方：可以（`conversation.composer.dock`）；
+- 无 Session 的惰性 Composer：两个 session 作用域的 dock 都不存在；
+- 居中的 hero：存在 Session/Input 时，上方 dock 可以渲染；下方 dock 不会渲染；
+- 当选的 takeover Composer：常驻 fallback 及其 dock 都会被隐藏。
 
-A literal “above/below every composer implementation” requirement needs a new outer Slot around the chain/seat. That capability is absent in this version.
+如果要求在字面意义上的“每一种 Composer 实现上方/下方”显示，就需要在 chain/seat 外围新增一个 Slot。此版本缺少该能力。
 
 ---
 
-## 3. Lifecycle-safe registration and cleanup
+## 3. 生命周期安全的注册与清理
 
-### 3.1 Slot lifecycle
+### 3.1 Slot 生命周期
 
-The supported registration pattern is:
+受支持的注册模式是：
 
 ```ts
 ctx.slots.inject("conversation.input.dock", () =>
@@ -236,7 +236,7 @@ ctx.slots.inject("conversation.input.dock", () =>
 )
 ```
 
-`SlotsService.inject` has the exact public signature:
+`SlotsService.inject` 的确切公开签名是：
 
 ```ts
 inject(
@@ -245,9 +245,9 @@ inject(
 ): () => void
 ```
 
-Its contract says the callback runs for each declaration lifetime; declaration collapse disposes it; re-declaration runs it again; iterable effects install transactionally and dispose in reverse order; and the controller belongs to the caller's fiber, so unload cancels a pending wait and removes an active contribution (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1317-1336`). The implementation does exactly that with nested `ctx.effect` calls and idempotent stop/reconcile logic (`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1000-1074`).
+其契约说明：callback 会在每段声明生命周期内运行；声明折叠会 dispose 它；重新声明会使其再次运行；可迭代 effect 以事务方式安装并按逆序 dispose；controller 归调用方 fiber 所有，因此卸载会取消尚在等待的过程并移除活动贡献（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1317-1336`）。实现通过嵌套 `ctx.effect` 调用以及幂等 stop/reconcile 逻辑，确实完成了这些行为（`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1000-1074`）。
 
-`slots.register` itself is routed through the **caller** context and implemented as:
+`slots.register` 本身会通过**调用方** context 路由，并实现为：
 
 ```js
 return this.ctx.effect(
@@ -256,27 +256,27 @@ return this.ctx.effect(
 )
 ```
 
-See `node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1250-1271,1388-1391`. Therefore both the wait and registration are fiber-owned; explicit global DOM mounting is unnecessary and would weaken cleanup.
+参见 `node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1250-1271,1388-1391`。因此，等待过程和注册项都归 fiber 所有；没有必要显式执行全局 DOM 挂载，而且这样做反而会削弱清理保障。
 
-### 3.2 General Cordis lifecycle
+### 3.2 通用 Cordis 生命周期
 
-Cordis documents that effects, event listeners, and services are removed with their owning fiber (`node_modules/@deepseek-ai/cordis/README.md:61-67`). More precisely:
+Cordis 文档说明，effect、事件监听器和 service 会随其所属 fiber 一起移除（`node_modules/@deepseek-ai/cordis/README.md:61-67`）。更准确地说：
 
-- `ctx.on(name, listener, options?)` registers the listener as a fiber effect and removes it automatically on unload (`node_modules/@deepseek-ai/cordis/lib/index.js:327-379`).
-- `ctx.effect(execute, label?)` collects callback/iterable/async effect disposers and executes collected cleanup in reverse order (`same file:1124-1168,1168-1184`).
-- `ctx.provide(name, value, check?)` is also a fiber effect; disposal unregisters the service and refreshes dependents (`same file:789-823`).
+- `ctx.on(name, listener, options?)` 将监听器注册为 fiber effect，并在卸载时自动移除（`node_modules/@deepseek-ai/cordis/lib/index.js:327-379`）。
+- `ctx.effect(execute, label?)` 收集 callback/iterable/async effect disposer，并按逆序执行已收集的清理操作（`same file:1124-1168,1168-1184`）。
+- `ctx.provide(name, value, check?)` 也是 fiber effect；dispose 会注销 service 并刷新依赖方（`same file:789-823`）。
 
-Component-local browser listeners/timers should likewise be installed in `React.useEffect` with a cleanup return, or be wrapped in `ctx.effect`. Direct mutations of the composer DOM are not lifecycle or API safe.
+组件本地的浏览器监听器/定时器也应安装在 `React.useEffect` 中并返回清理函数，或包装在 `ctx.effect` 中。直接修改 Composer DOM 既不符合生命周期安全，也不符合 API 安全要求。
 
 ---
 
-## 4. Draft and selection: supported surface versus internal implementation
+## 4. 草稿与选区：受支持接口与内部实现的对比
 
-### 4.1 `inputActions` is a standard Slot prop, not a Cordis Service
+### 4.1 `inputActions` 是标准 Slot prop，而不是 Cordis Service
 
-`ui-conversation` contributes `input` as a hook source and `inputActions` as a stable plain prop via `ctx.uiSession.provide()` (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:16039-16056`). The renderer materializes those provided sources into standard component props and selector hooks (`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:537-573,588-626`). This is why the two dock Slot contracts include `useInput` and `inputActions`.
+`ui-conversation` 通过 `ctx.uiSession.provide()` 提供 `input` 作为 hook source，并提供 `inputActions` 作为稳定的普通 prop（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:16039-16056`）。renderer 会将这些已提供的 source 具体化为标准组件 prop 和 selector hook（`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:537-573,588-626`）。这就是两个 dock Slot 契约都包含 `useInput` 和 `inputActions` 的原因。
 
-The generated Slot ledger names the compile-time type `InputActions` (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2490-2502,2699-2711`). The exact erased runtime face in this packaged checkout is:
+生成的 Slot 账本将编译时类型命名为 `InputActions`（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2490-2502,2699-2711`）。在此打包检出版本中，其被擦除后的确切运行时接口形态为：
 
 ```js
 actions = {
@@ -288,9 +288,9 @@ actions = {
 }
 ```
 
-See `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11483-11510`. The executable code and its callers establish `text` as the draft string and `id`/`ids` as draft-attachment identities; this deployed package does not physically include the advertised declaration file, so this report does not invent erased readonly modifiers.
+参见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11483-11510`。可执行代码及其调用方证明，`text` 是草稿字符串，`id`/`ids` 是草稿附件标识；这个已部署包并未实际包含所宣传的声明文件，因此本报告不会凭空添加已被擦除的 readonly 修饰符。
 
-The public Input snapshot is composed as:
+公开的 Input snapshot 由以下内容组成：
 
 ```ts
 {
@@ -304,17 +304,17 @@ The public Input snapshot is composed as:
 }
 ```
 
-and contains **no selection or caret** (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:12235-12245`).
+其中**没有选区或光标位置**（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:12235-12245`）。
 
-### 4.2 What `setDraft` actually does
+### 4.2 `setDraft` 的实际行为
 
-`setDraft(text)` is a whole-document replacement. It strips reserved reference placeholders, clears the Lexical root, creates paragraphs from newline-separated text, and calls `root.selectEnd()` (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11621-11643`). It is useful for restoring or replacing a draft, but it does not preserve or target the current selection.
+`setDraft(text)` 会替换整个文档。它会移除保留的引用占位符、清空 Lexical root、根据以换行符分隔的文本创建段落，并调用 `root.selectEnd()`（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11621-11643`）。它适合恢复或替换草稿，但不会保留或针对当前选区。
 
-Therefore computing a new string from `useInput(s => s.draft)` and calling `setDraft(newString)` is not selection-aware. It also destroys rich reference-chip identity represented in the editor but flattened in the clipboard projection.
+因此，通过 `useInput(s => s.draft)` 计算新字符串再调用 `setDraft(newString)` 并不感知选区。它还会破坏编辑器中存在、但在剪贴板投影中已被扁平化的富引用 chip 标识。
 
-### 4.3 The selection-aware implementation exists, but is private
+### 4.3 感知选区的实现确实存在，但属于私有内容
 
-The internal shell has precisely the behavior the requested feature wants:
+内部 shell 恰好拥有所请求功能需要的行为：
 
 ```js
 paste(text) {
@@ -325,13 +325,13 @@ paste(text) {
 }
 ```
 
-See `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11686-11705`. It also computes the live selection as an ordered detect-coordinate span with `caretSpan()` (`same file:11785-11798`). But neither method appears in the public `actions` object (`same file:11495-11510`). The implementation explicitly calls the broader keyboard face “package-internal” and says it is handed to the composer-bar entry, “never across a plugin boundary” (`same file:12342-12350`).
+参见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11686-11705`。它还会通过 `caretSpan()` 将实时选区计算为有序的 detect-coordinate span（`same file:11785-11798`）。但是，这两个方法都没有出现在公开的 `actions` 对象中（`same file:11495-11510`）。实现明确将更宽泛的 keyboard 接口称为“包内部”接口，并说明它会交给 Composer-bar 条目，“绝不会跨越插件边界”（`same file:12342-12350`）。
 
-The contenteditable itself is also private assembly: `ComposerContentEditable` binds a shell-owned Lexical editor to a resident `div[data-composer-input]` (`same file:14646-14681`), and `InputBar` receives that editor only through its private `keyboard` injection (`same file:15305-15331,16193-16213`). DOM selection, `data-composer-input`, and Lexical internals are therefore implementation details, not an extension contract.
+contenteditable 本身也是私有装配的一部分：`ComposerContentEditable` 将 shell 所有的 Lexical editor 绑定到常驻 `div[data-composer-input]`（`same file:14646-14681`），而 `InputBar` 只通过其私有 `keyboard` injection 接收该 editor（`same file:15305-15331,16193-16213`）。因此，DOM selection、`data-composer-input` 和 Lexical 内部机制都是实现细节，而不是扩展契约。
 
-### 4.4 The scoped `slash/input-insert-text` event is internal, not a public workaround
+### 4.4 有作用域的 `slash/input-insert-text` 事件属于内部内容，并非公开的变通方案
 
-The input-trigger package dispatches a bail event:
+input-trigger 包会派发一个 bail event：
 
 ```js
 actx.bail(actx, "slash/input-insert-text", {
@@ -341,19 +341,19 @@ actx.bail(actx, "slash/input-insert-text", {
 })
 ```
 
-(`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js:603-619`). `ui-conversation` installs the scoped listener inside the Session shell effect (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:12311-12326`). Its receiver accepts text only when `span.draftRev` still equals the editor revision, then maps and replaces that exact span (`same file:11875-11895`).
+（`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js:603-619`）。`ui-conversation` 在 Session shell effect 内安装有作用域的 listener（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:12311-12326`）。只有当 `span.draftRev` 仍等于 editor revision 时，其 receiver 才接受文本，然后映射并替换该确切 span（`same file:11875-11895`）。
 
-This is not a supported general button API for three independent reasons:
+基于三个相互独立的原因，这不是受支持的通用按钮 API：
 
-1. It is absent from the generated Inspect-visible Client Event catalog. That catalog contains only `connection/reset`, `locale/change`, `slots/changed`, and `theme/change` (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1551-1594`).
-2. A dock component receives `draftRev` but not the live selection span (`InputState` shape at `ui-conversation/lib/client.js:12235-12245`).
-3. The event is part of the private choreography between `ui-input-trigger` and `ui-conversation`; the input-trigger package's own reference says it emits no public Cordis events (`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:80-90`).
+1. 它没有出现在 Inspect 可见的生成式 Client Event 目录中。该目录只包含 `connection/reset`、`locale/change`、`slots/changed` 和 `theme/change`（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1551-1594`）。
+2. dock 组件会收到 `draftRev`，但不会收到实时选区 span（`InputState` 结构见 `ui-conversation/lib/client.js:12235-12245`）。
+3. 该事件属于 `ui-input-trigger` 与 `ui-conversation` 之间的私有协作流程；input-trigger 包自身的参考资料说明，它不会发出公开 Cordis event（`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:80-90`）。
 
-`ctx.inputTriggers.registerSource(src)` *is* a supported feature-specific seam for a business package that wants to join the `/` or `@` candidate pipeline: the package reference explicitly says “any business package” may register a source and that a picked text outcome is applied by the consuming input package (`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:10-12,25-32`). The exact registration method returns a disposer (`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js:753-796`). That does not solve an arbitrary quick-action button, because only the input pipeline owns the fresh selection/span passed to the text outcome.
+`ctx.inputTriggers.registerSource(src)` *确实是*一个受支持的特定功能扩展点，供希望加入 `/` 或 `@` 候选项 pipeline 的业务包使用：包参考资料明确说明“任何业务包”都可以注册 source，且被选中的文本 outcome 会由消费方 input 包应用（`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:10-12,25-32`）。确切的注册方法会返回 disposer（`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/lib/client.js:753-796`）。这并不能解决任意 quick-action 按钮的问题，因为只有 input pipeline 拥有传递给文本 outcome 的新鲜选区/span。
 
-### 4.5 Missing API
+### 4.5 缺失的 API
 
-There is no supported equivalent of any of the following on `InputActions` or a public Client Service/Event:
+`InputActions` 或公开 Client Service/Event 上不存在与以下任一操作等价的受支持接口：
 
 ```ts
 insertTextAtSelection(text: string): void
@@ -361,51 +361,51 @@ replaceSelection(text: string): void
 getSelection(): ComposerSelection
 ```
 
-The safest upstream addition would be an action (for example `inputActions.insertText(text)`) that delegates to the existing shell `paste(text)` implementation. An action is preferable to exposing raw span state because the existing span path uses a revision CAS specifically to avoid stale edits. This is a proposed seam, not one present in the examined checkout.
+最安全的上游新增项应该是一个 action（例如 `inputActions.insertText(text)`），将操作委托给现有 shell 的 `paste(text)` 实现。与暴露原始 span 状态相比，action 更为可取，因为现有 span 路径专门使用 revision CAS 来避免陈旧编辑。这是一个提议的扩展点，并不存在于所检查的检出版本中。
 
 ---
 
-## 5. Official submit path
+## 5. 官方提交路径
 
-### 5.1 Supported call
+### 5.1 受支持的调用
 
-A dock/toolbar Slot component should call its standard prop:
+dock/toolbar Slot 组件应调用其标准 prop：
 
 ```ts
 inputActions.submit()
 ```
 
-This is not merely similar to the composer button: the shipped primary button calls that exact function after its UI guards (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15510-15521`). The action delegates to `SessionInputShell.submit("queue")` (`same file:11495-11510`).
+这不只是与 Composer 按钮相似：随附的主按钮会在完成其 UI guard 后调用这个确切函数（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15510-15521`）。该 action 会委托给 `SessionInputShell.submit("queue")`（`same file:11495-11510`）。
 
-The shell then:
+随后，shell 会：
 
-1. handles image-only input;
-2. validates claimed commands and image support;
-3. dispatches the input state machine's `enter` event with the current projected draft;
-4. runs trigger/command adjudication when applicable;
-5. commits successful/default sends and invokes the default sink.
+1. 处理只有图片的输入；
+2. 验证已认领的命令和图片支持情况；
+3. 使用当前投影后的草稿派发输入状态机的 `enter` 事件；
+4. 在适用时运行 trigger/command 裁决；
+5. 提交成功/默认发送，并调用默认 sink。
 
-See `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11707-11753,12170-12229`. The default sink is explicitly “optimistic clear + prompt” and delegates to `conversation.sendSession(...)` (`same file:12362-12371`). `sendSession` creates the local submission echo, yields a paint, serializes content, and calls the Session Controller's `session.prompt(...)` (`same file:1933-1974`). The package reference summarizes the same official flow and its queue/steer placement and failure restoration (`node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:45-49`).
+参见 `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11707-11753,12170-12229`。默认 sink 被明确描述为“乐观清空 + prompt”，并委托给 `conversation.sendSession(...)`（`same file:12362-12371`）。`sendSession` 会创建本地 submission echo、让出一次 paint、序列化内容，并调用 Session Controller 的 `session.prompt(...)`（`same file:1933-1974`）。包参考资料概述了同一个官方流程，以及它的 queue/steer 放置方式和失败恢复行为（`node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:45-49`）。
 
-A custom control should apply the same visible guards as the primary button (non-empty draft/attachments, not disabled/blocked/removed, and not `adjudicating`/`submitting`) using `useInput`/`useSession`, rather than assuming `submit()` reports a result; `submit()` returns `void`.
+自定义控件应使用 `useInput`/`useSession` 应用与主按钮相同的可见 guard（草稿/附件非空、未 disabled/blocked/removed，且不处于 `adjudicating`/`submitting`），而不应假设 `submit()` 会报告结果；`submit()` 返回 `void`。
 
-### 5.2 Exact limitation of the public submit action
+### 5.2 公开提交 action 的确切限制
 
-`inputActions.submit()` is the primary **pointer-send** path and always requests delivery mode `"queue"`. The keyboard path instead calls the private `keyboard.submit(resolveSubmitMode(...))`, allowing the configured busy-Enter Queue/Steer policy (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15467-15495`). Thus `inputActions.submit()` is official and identical to clicking Send, but it is not a public parameterized “submit using the current keyboard gesture policy” API.
+`inputActions.submit()` 是主要的**指针发送**路径，并且始终请求交付模式 `"queue"`。keyboard 路径则调用私有的 `keyboard.submit(resolveSubmitMode(...))`，从而支持配置的 busy-Enter Queue/Steer 策略（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:15467-15495`）。因此，`inputActions.submit()` 是官方路径，与点击“发送”完全相同，但它不是一种公开且参数化的“使用当前键盘手势策略提交”API。
 
-### 5.3 What not to call
+### 5.3 不应调用的内容
 
-`ConversationController.send(text)` exists in the implementation and calls the scoped Session's `prompt(..., "queue")` directly (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:1883-1918`). Calling it would bypass draft mutation, command adjudication, optimistic draft commit/restoration, current attachments, and the public Slot action face. It is not the requested “same path as the composer.” Likewise, calling a Host Remote directly would bypass the Client input machine.
+`ConversationController.send(text)` 存在于实现中，并直接调用有作用域 Session 的 `prompt(..., "queue")`（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:1883-1918`）。调用它会绕过草稿变更、命令裁决、乐观草稿提交/恢复、当前附件以及公开 Slot action 接口。它不是所要求的“与 Composer 相同的路径”。同样，直接调用 Host Remote 也会绕过 Client 输入状态机。
 
-Combining `inputActions.setDraft(staticText)` and `inputActions.submit()` uses the official submit path but first replaces the entire user draft and puts the caret at the end. It does not meet “insert at current selection.” There is no public atomic “insert then submit” operation.
+组合调用 `inputActions.setDraft(staticText)` 和 `inputActions.submit()` 虽然会使用官方提交路径，但会先替换用户的整个草稿，并把光标移到末尾。它不满足“在当前选区插入”的要求。不存在公开且原子的“插入后提交”操作。
 
 ---
 
-## 6. Client Services, Events, and Builtins relevant to this feature
+## 6. 与此功能相关的 Client Service、Event 和 Builtin
 
-### 6.1 Inspect-visible and feature-specific Client Services
+### 6.1 Inspect 可见及特定功能的 Client Service
 
-The generated **Inspect-visible** Client Service catalog in this checkout contains these Service keys and no composer-editing Service:
+此检出版本中生成的、**Inspect 可见**的 Client Service 目录包含以下 Service key，且不包含 Composer 编辑 Service：
 
 - `layout`
 - `locale`
@@ -416,26 +416,26 @@ The generated **Inspect-visible** Client Service catalog in this checkout contai
 - `uiWorkspace`
 - `workspaces`
 
-The literal catalog begins at `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1113`; the keys occur at `1116`, `1138`, `1234`, `1317`, `1339`, `1389`, `1426`, and `1488`, and the catalog ends at `1550`.
+字面目录始于 `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1113`；这些 key 分别出现在 `1116`、`1138`、`1234`、`1317`、`1339`、`1389`、`1426` 和 `1488`，目录结束于 `1550`。
 
-Relevant exact contracts are:
+相关的确切契约是：
 
-- `slots.register`: the SlotCore registration overloads, wrapped as a caller-fiber effect (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1317-1324`; implementation `node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1388-1391`).
-- `slots.inject(key, callback): () => void` with declaration-lifetime and unload cleanup (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1325-1336`).
-- `sessions.scope(id: SessionId): AgentContext | undefined` and `sessions.binding(id: SessionId): SessionBinding | undefined` (`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1297-1313`) when a feature-specific scoped Service genuinely requires them.
+- `slots.register`：SlotCore 注册 overload，由调用方 fiber effect 包装（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1317-1324`；实现见 `node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1388-1391`）。
+- `slots.inject(key, callback): () => void`：具有声明生命周期和卸载清理行为（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1325-1336`）。
+- 当一个特定功能且有作用域的 Service 确实需要它们时，可使用 `sessions.scope(id: SessionId): AgentContext | undefined` 和 `sessions.binding(id: SessionId): SessionBinding | undefined`（`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1297-1313`）。
 
-For a compiled persistent package, that dynamic/Inspect catalog is not the whole published package surface. Two feature-specific Services are explicitly offered to other packages, but neither fills the missing button-insertion seam:
+对于已编译的持久化包，这个 dynamic/Inspect 目录并不代表全部已发布包接口。另有两个特定功能 Service 明确提供给其他包使用，但都无法填补按钮插入能力的缺失扩展点：
 
-- `ctx.uiConversation` owns event/view registries and `binding(bindingOrSessionId)` for Conversation target packages (`node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:25-34`; implementation methods at `lib/client.js:1629-1746`). It does not expose composer draft mutation.
-- `ctx.inputTriggers.registerSource(src): () => void` admits a business-owned `/` or `@` source (`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:10-12`; implementation `lib/client.js:753-796`). Its controller applies text only after its own trigger/menu flow has captured a fresh span.
+- `ctx.uiConversation` 为 Conversation target 包管理 event/view registry 和 `binding(bindingOrSessionId)`（`node_modules/@deepseek-ai/dsh-client-ui-conversation/README.md:25-34`；实现方法见 `lib/client.js:1629-1746`）。它不暴露 Composer 草稿变更。
+- `ctx.inputTriggers.registerSource(src): () => void` 接纳由业务方拥有的 `/` 或 `@` source（`node_modules/@deepseek-ai/dsh-client-ui-input-trigger/README.md:10-12`；实现见 `lib/client.js:753-796`）。它的 controller 只有在自身 trigger/menu 流程捕获到新鲜 span 后才会应用文本。
 
-The implementation also provides scoped `ctx.conversation`, including direct `send(text)`, queue, and cancel operations (`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:1883-2101`), but that is not the standard composer action face and direct `send(text)` bypasses the input-machine behavior required here. `inputActions` is intentionally delivered as a Slot standard prop, not looked up from `ctx`.
+实现还提供有作用域的 `ctx.conversation`，其中包括直接 `send(text)`、queue 和 cancel 操作（`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:1883-2101`），但这不是标准 Composer action 接口，而且直接 `send(text)` 会绕过这里所需的输入状态机行为。`inputActions` 被有意作为 Slot 标准 prop 传递，而不是从 `ctx` 查找。
 
-No documented Service in the examined source exposes current-selection insertion.
+所检查源码中没有任何已有文档说明的 Service 暴露当前选区插入能力。
 
-### 6.2 Inspect-visible Client Events
+### 6.2 Inspect 可见的 Client Event
 
-Exact Inspect-visible Client Event catalog:
+Inspect 可见的确切 Client Event 目录：
 
 ```ts
 "connection/reset"(): void
@@ -444,28 +444,28 @@ Exact Inspect-visible Client Event catalog:
 "theme/change"(snapshot: ThemeSnapshot): void
 ```
 
-See `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1551-1594`. None carries draft text, selection, an insertion command, or a submit request. `slots/changed` is observational; `ctx.slots.inject` already provides the declaration-lifetime behavior this package needs. No first-party package reference examined documents a separate public composer-mutation Event; the only text-insertion dispatch found is the private `slash/input-insert-text` choreography described above.
+参见 `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1551-1594`。其中没有任何 Event 携带草稿文本、选区、插入命令或提交请求。`slots/changed` 仅用于观察；`ctx.slots.inject` 已经提供该包所需的声明生命周期行为。所检查的第一方包参考资料均未记录单独的公开 Composer 变更 Event；唯一找到的文本插入派发是上文所述的私有 `slash/input-insert-text` 协作流程。
 
-At the Cordis level, `ctx.on(...)` is supported and automatically fiber-cleaned (`node_modules/@deepseek-ai/cordis/lib/index.js:360-379`), but inventing or dispatching an uncatalogued composer event is not a supported DSH seam.
+在 Cordis 层面，`ctx.on(...)` 受支持且会随 fiber 自动清理（`node_modules/@deepseek-ai/cordis/lib/index.js:360-379`），但自行虚构或派发目录中没有的 Composer event 并不是受支持的 DSH 扩展点。
 
-### 6.3 “Builtins” must be split into three different concepts
+### 6.3 必须将“Builtin”拆分为三个不同概念
 
-#### A. Ordinary Cordis lifecycle/context API — supported for persistent plugins
+#### A. 普通 Cordis 生命周期/context API——受持久化插件支持
 
-A persistent Client package is an ordinary compiled Cordis plugin. It exports `apply` and optionally `inject`, imports its build-time dependencies, and uses normal Cordis APIs such as `ctx.get`, `ctx.on`, `ctx.effect`, `ctx.provide`, and `ctx.plugin`. Cordis itself defines the plugin/fiber lifecycle and automatic cleanup (`node_modules/@deepseek-ai/cordis/README.md:18-67`; effect implementation `node_modules/@deepseek-ai/cordis/lib/index.js:1124-1278`).
+持久化 Client 包是一个普通的已编译 Cordis plugin。它导出 `apply` 和可选的 `inject`，导入其构建时依赖，并使用普通 Cordis API，例如 `ctx.get`、`ctx.on`、`ctx.effect`、`ctx.provide` 和 `ctx.plugin`。Cordis 自身定义 plugin/fiber 生命周期和自动清理行为（`node_modules/@deepseek-ai/cordis/README.md:18-67`；effect 实现见 `node_modules/@deepseek-ai/cordis/lib/index.js:1124-1278`）。
 
-#### B. Loader builtins — supported composition machinery, not composer APIs
+#### B. Loader builtin——受支持的组合机制，而不是 Composer API
 
-DSH boot registers exactly two Loader builtins:
+DSH boot 只注册两个 Loader builtin：
 
 - `cordis:include`
 - `cordis:group`
 
-`mountRootInclude` installs them and mounts the root `cordis:include` with the profile config path and patches (`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:1277-1315`). The first-party boot reference calls these the “Two Loader builtins” and explains that group creates a shared isolate realm (`node_modules/@deepseek-ai/dsh-app-boot/README.md:81-86`). A simple quick-actions bundle needs only an ordinary inserted row, not either builtin.
+`mountRootInclude` 会安装它们，并使用 profile config 路径和补丁挂载 root `cordis:include`（`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:1277-1315`）。第一方 boot 参考资料将其称为“两个 Loader builtin”，并说明 group 会创建一个共享 isolate realm（`node_modules/@deepseek-ai/dsh-app-boot/README.md:81-86`）。简单的 quick-actions bundle 只需要一个普通的插入行，不需要这两个 builtin 中的任何一个。
 
-#### C. Dynamic Client Builtin catalog — **not** the persistent-package contract
+#### C. 动态 Client Builtin 目录——**并非**持久化包契约
 
-The embedded Inspect provider exposes these closure symbols to **dynamic** Client halves only:
+嵌入式 Inspect Provider 只向**动态** Client half 暴露以下闭包符号：
 
 ```ts
 ctx.get / ctx.on / ctx.provide / ctx.effect
@@ -475,44 +475,44 @@ styles.insert(css)
 console.log / console.error
 ```
 
-See `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:4077-4112`. The owning README explicitly scopes those symbols to plain-JavaScript dynamic packages with no imports (`node_modules/@deepseek-ai/dsh-cordis-client-runner/README.md:25-32`). Therefore `host.call` and `styles.insert` must **not** be advertised as builtins of a persistent package.
+参见 `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:4077-4112`。其所属 README 明确将这些符号限定为不使用 import 的纯 JavaScript 动态包（`node_modules/@deepseek-ai/dsh-cordis-client-runner/README.md:25-32`）。因此，绝不能将 `host.call` 和 `styles.insert` 宣传为持久化包的 builtin。
 
-Persistent browser packages instead use the built Client module graph. The public module-system contract says the shell seeds a frozen baseline of React, Cordis, and static UI libraries; non-baseline runtime imports must be named in `dsh.client.external` (`node_modules/@deepseek-ai/dsh-client-modules/README.md:38-44`). Normal browser globals may exist in that compiled runtime, as the shipped implementation itself uses `document`, `window`, and `localStorage`, but DOM access to `div[data-composer-input]`, synthetic paste, or Lexical internals is not a supported composer extension seam and would be brittle across builds.
+持久化浏览器包使用的是已构建的 Client module graph。公开模块系统契约说明，shell 会植入由 React、Cordis 和静态 UI 库组成的冻结 baseline；非 baseline 运行时 import 必须列在 `dsh.client.external` 中（`node_modules/@deepseek-ai/dsh-client-modules/README.md:38-44`）。普通浏览器全局对象可能存在于该编译运行时中，因为随附实现本身会使用 `document`、`window` 和 `localStorage`；但通过 DOM 访问 `div[data-composer-input]`、合成 paste 或触达 Lexical 内部机制，都不是受支持的 Composer 扩展点，并且很容易随构建变化而失效。
 
 ---
 
-## 7. Recommended supported scope for a quick-actions package
+## 7. quick-actions 包的建议受支持范围
 
-Without upstream changes, a persistent package can safely do the following:
+在不修改上游的情况下，持久化包可以安全地执行以下操作：
 
-1. Ship/install a web-profile bundle whose patch inserts a built `dsh.client` row.
-2. Export a no-op Host/root `apply()` if it has no Host behavior.
-3. In the Client `apply(ctx)`, inject `slots` and register a unique list-cell id through `ctx.slots.inject(...)` in either:
-   - `conversation.input.dock` for a full-width row above the normal composer, or
-   - `conversation.composer.dock` for a row below the active normal composer.
-4. Render controls as a normal React Slot component.
-5. Read current state with `useInput`/`useSession`.
-6. Submit the current draft with `inputActions.submit()`.
-7. Put every non-React side effect under `ctx.effect`/`ctx.on`; let Slot registration and React unmount clean up the rest.
+1. 提供/安装一个 web-profile bundle，其补丁会插入已构建的 `dsh.client` 行。
+2. 如果没有 Host 行为，则导出无操作的 Host/root `apply()`。
+3. 在 Client `apply(ctx)` 中注入 `slots`，并通过 `ctx.slots.inject(...)` 在以下任一位置注册唯一的 list-cell id：
+   - `conversation.input.dock`，用于常规 Composer 上方的全宽行；或
+   - `conversation.composer.dock`，用于活动的常规 Composer 下方的一行。
+4. 将控件渲染为普通 React Slot 组件。
+5. 使用 `useInput`/`useSession` 读取当前状态。
+6. 使用 `inputActions.submit()` 提交当前草稿。
+7. 将每一个非 React side effect 放在 `ctx.effect`/`ctx.on` 之下；其余清理由 Slot 注册机制和 React unmount 完成。
 
-It cannot, through a supported seam in this checkout:
+通过此检出版本中受支持的扩展点，它无法：
 
-- splice static text at the current selection;
-- preserve rich editor/chip identity while reconstructing text itself;
-- request the private Queue/Steer keyboard submit policy with a public mode argument;
-- render one additive row around no-session, hero, resident, and every elected takeover composer.
+- 在当前选区拼接静态文本；
+- 自行重建文本时保留富编辑器/chip 标识；
+- 使用公开 mode 参数请求私有 Queue/Steer keyboard 提交策略；
+- 在无 session、hero、resident 以及每一个当选 takeover Composer 周围渲染同一个可叠加行。
 
-Those are genuine API gaps, not reasons to reach into `[data-composer-input]`, dispatch synthetic browser events, call `conversation.input.for(...)`, or emit `slash/input-insert-text` with fabricated coordinates.
+这些是真实的 API 缺口，不能据此就触达 `[data-composer-input]`、派发合成浏览器事件、调用 `conversation.input.for(...)`，或使用伪造坐标发出 `slash/input-insert-text`。
 
-## Source index (highest-value ranges)
+## 来源索引（价值最高的范围）
 
-- Persistent profiles/bundles: `node_modules/@deepseek-ai/dsh/README.md:33-47`; `node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:286-309,834-894`; `node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js:7-77,96-127`.
-- Client package discovery: `node_modules/@deepseek-ai/dsh-client-modules/README.md:25-44`; `node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:139-165,434-479,618-647`.
-- Representative pure Client package: `node_modules/@deepseek-ai/dsh-client-ui-plan/package.json:13-37,57-65`; `lib/index.js:1-12`; `lib/client.js:1-4,103-136`.
-- Above/below Slot contracts: `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2463-2511,2672-2724`.
-- Actual Slot placement: `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14401-14472,15713-15718`.
-- Slot cleanup: `node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1000-1074,1250-1271,1388-1391`.
-- Input public actions/state: `node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11483-11510,11621-11643,12235-12245,16039-16056`.
-- Private selection paths: `same file:11686-11705,11785-11798,11875-11895,12311-12350,14646-14681`.
-- Submit path: `same file:11707-11753,12170-12229,12362-12371,15510-15521,1933-1974`.
-- Public Client Services/Events/Builtins catalog: `node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1113-1594,4077-4112`.
+- 持久化 profile/bundle：`node_modules/@deepseek-ai/dsh/README.md:33-47`；`node_modules/@deepseek-ai/dsh-app-boot/lib/index.js:286-309,834-894`；`node_modules/@deepseek-ai/dsh/lib/plugin-F7ZVfRyo.js:7-77,96-127`。
+- Client 包发现：`node_modules/@deepseek-ai/dsh-client-modules/README.md:25-44`；`node_modules/@deepseek-ai/dsh-client-modules/lib/index.js:139-165,434-479,618-647`。
+- 有代表性的纯 Client 包：`node_modules/@deepseek-ai/dsh-client-ui-plan/package.json:13-37,57-65`；`lib/index.js:1-12`；`lib/client.js:1-4,103-136`。
+- 上方/下方 Slot 契约：`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:2463-2511,2672-2724`。
+- Slot 实际位置：`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:14401-14472,15713-15718`。
+- Slot 清理：`node_modules/@deepseek-ai/dsh-client-ui-renderer/lib/client.js:1000-1074,1250-1271,1388-1391`。
+- Input 公开 action/state：`node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js:11483-11510,11621-11643,12235-12245,16039-16056`。
+- 私有选区路径：`same file:11686-11705,11785-11798,11875-11895,12311-12350,14646-14681`。
+- 提交路径：`same file:11707-11753,12170-12229,12362-12371,15510-15521,1933-1974`。
+- 公开 Client Service/Event/Builtin 目录：`node_modules/@deepseek-ai/dsh-cordis-client-runner/lib/client.js:1113-1594,4077-4112`。

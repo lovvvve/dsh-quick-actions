@@ -1,19 +1,19 @@
-# Domain Docs
+# 领域文档
 
-This repository uses a single domain context.
+本仓库使用单一领域上下文。
 
-## Before exploring, read these
+## 开始探索前，请阅读以下内容
 
-- `CONTEXT.md` at the repository root
-- Relevant ADRs under `docs/adr/`
+- 仓库根目录下的 `CONTEXT.md`
+- `docs/adr/` 下的相关 ADR（架构决策记录）
 
-If they do not exist, proceed silently. The domain-modeling skill creates them lazily when vocabulary or durable decisions emerge.
+如果它们不存在，请直接继续，无需提示。domain-modeling 技能会在形成术语或长期有效的决策时按需创建它们。
 
-## Layout
+## 布局
 
 /
 ├── CONTEXT.md
 ├── docs/adr/
 └── src/
 
-Use vocabulary defined in `CONTEXT.md`. If work contradicts an existing ADR, surface the conflict explicitly rather than silently overriding it.
+请使用 `CONTEXT.md` 中定义的词汇。如果工作与现有 ADR（架构决策记录）矛盾，请明确指出冲突，而不是在不作说明的情况下将其覆盖。

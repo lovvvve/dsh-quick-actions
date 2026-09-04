@@ -1,9 +1,9 @@
-# Decide Runtime and Failure Semantics
+# 确定运行时与失败语义
 
 Type: grilling
 Mode: HITL
 Blocked by: 02, 05, 09
 
-## Question
+## Question（问题）
 
-What observable behavior must Insert and Send Actions have in every composer state? Settle selection replacement and cursor placement, whitespace handling, interaction with an existing draft, confirmation cancellation, rapid repeat clicks, disabled or streaming composers, send failures, persistence failures, user feedback, and whether failed direct sends restore any draft state.
+在消息编辑器的每种状态下，插入动作和发送动作必须呈现哪些可观察行为？请确定选区替换和光标位置、空白字符处理、与现有草稿的交互、取消发送确认时的处理、快速重复点击时的处理、消息编辑器处于禁用或流式输出状态时的处理、发送失败、持久化失败、用户反馈，以及直接发送失败后是否恢复任何草稿状态。

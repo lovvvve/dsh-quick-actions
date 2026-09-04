@@ -1,9 +1,9 @@
-# Define Verification and Release Acceptance
+# 定义验证与发布验收标准
 
 Type: grilling
 Mode: HITL
 Blocked by: 07
 
-## Question
+## Question（问题）
 
-What evidence will prove the persistent Quick Actions plugin is complete and safe to release? Define unit and integration contracts, restart-persistence coverage, preset-upgrade scenarios, composer interaction and accessibility checks, narrow-layout checks, lifecycle stop/update cleanup, failure-path tests, build/package verification, installation documentation, and the exact manual acceptance walkthrough in the existing DSH Web GUI.
+哪些证据能够证明持久化快捷动作插件已经完整实现并可安全发布？请定义单元测试和集成测试契约、跨重启的持久化覆盖范围、预置升级场景、消息编辑器交互与无障碍检查、窄布局检查、停止或更新时的生命周期清理、失败路径测试、构建和软件包验证、安装文档，以及在现有 DSH Web GUI 中执行的确切手动验收流程。

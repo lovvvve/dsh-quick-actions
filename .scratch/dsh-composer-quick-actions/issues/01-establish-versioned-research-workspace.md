@@ -1,16 +1,16 @@
-# Establish a Versioned Workspace for Research
+# 建立用于研究的版本化工作区
 
 Type: task
 Mode: AFK
 Status: resolved
 Blocked by: none
 
-## Question
+## Question（问题）
 
-Establish the minimum versioned workspace required to capture evidence-backed research on throwaway branches: initialize a local Git repository, commit the approved agent configuration, domain glossary, and Wayfinder artifacts as a baseline, and record the default branch. Do not scaffold plugin implementation or choose a package architecture in this task.
+建立一个最小的版本化工作区，用于在一次性分支上记录有证据支持的研究：初始化本地 Git 仓库，将已批准的 Agent 配置、领域词汇表和 Wayfinder 产物作为基线提交，并记录默认分支。本任务中不要搭建插件实现的脚手架，也不要选择软件包架构。
 
-## Answer
+## Answer（答案）
 
-The workspace is now a local Git repository whose default branch is `main`. The approved agent configuration is captured by commit `c91a69d`, and the domain glossary plus complete initial Wayfinder map are captured by commit `5569962`. Together those commits provide the clean baseline required for evidence-backed research branches.
+工作区现在是一个默认分支为 `main` 的本地 Git 仓库。提交 `c91a69d` 记录了已批准的 Agent 配置，提交 `5569962` 则记录了领域词汇表和完整的初始 Wayfinder 地图。这两个提交共同提供了创建有证据支持的研究分支所需的干净基线。
 
-No remote is configured; that does not block local `research/<topic>` branches. Future research work should branch from the updated `main` tip and keep each ticket's evidence isolated until its resolution is recorded.
+当前未配置远程仓库；这不会阻碍本地 `research/<topic>` 分支。后续研究工作应从更新后的 `main` 分支顶端创建分支，并将每张票据的证据保持隔离，直至记录其解决结论。

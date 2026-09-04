@@ -1,25 +1,25 @@
-# Composer Quick Actions
+# Composer Quick Actions（消息编辑器快捷动作）
 
-This context defines reusable message actions exposed near the DSH composer and the ownership language used to distinguish plugin-provided actions from user-owned actions.
+此上下文定义了在 DSH 消息编辑器附近提供的可复用消息动作，以及用于区分插件提供动作与用户自有动作的归属术语。
 
-## Language
+## 术语
 
-**Quick Action（快捷动作）**:
-A reusable message intent available from the DSH composer and represented by a clickable control.
-_Avoid_: Quick Button, 快捷按钮（仅用于指代视觉控件时除外）
+**Quick Action（快捷动作）**：
+一种可从 DSH 消息编辑器使用，并由可点击控件表示的可复用消息意图。
+_避免使用_：Quick Button（快捷按钮）、快捷按钮（仅在指代视觉控件时除外）
 
-**Preset Quick Action（预置快捷动作）**:
-An author-owned Quick Action distributed by the plugin.
-_Avoid_: Default Button, Built-in Button
+**Preset Quick Action（预置快捷动作）**：
+归作者所有并随插件分发的 Quick Action（快捷动作）。
+_避免使用_：Default Button（默认按钮）、Built-in Button（内置按钮）
 
-**Custom Quick Action（自定义快捷动作）**:
-A user-owned Quick Action created from scratch or cloned from a Preset Quick Action.
-_Avoid_: Override, Edited Preset
+**Custom Quick Action（自定义快捷动作）**：
+归用户所有、从头创建或从 Preset Quick Action（预置快捷动作）克隆而来的 Quick Action（快捷动作）。
+_避免使用_：Override（覆盖项）、Edited Preset（已编辑的预置项）
 
-**Insert Action（插入动作）**:
-A Quick Action whose text becomes part of the current draft without submitting it.
-_Avoid_: Append Button, Fill Button
+**Insert Action（插入动作）**：
+其文本会成为当前草稿的一部分而不提交草稿的 Quick Action（快捷动作）。
+_避免使用_：Append Button（追加按钮）、Fill Button（填充按钮）
 
-**Send Action（发送动作）**:
-A Quick Action whose text is submitted as a message.
-_Avoid_: Reply Button, Submit Button
+**Send Action（发送动作）**：
+其文本会作为消息提交的 Quick Action（快捷动作）。
+_避免使用_：Reply Button（回复按钮）、Submit Button（提交按钮）

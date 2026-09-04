@@ -1,18 +1,18 @@
-# Identify Durable Configuration and Preset Seams
+# 识别持久化配置和预置扩展点
 
 Type: research
 Mode: AFK
 Status: resolved
 Blocked by: 01
 
-## Question
+## Question（问题）
 
-Which exact DSH/Cordis Host and Client facilities can persist user-owned Quick Actions across local DSH restarts and accept author-owned Preset Quick Actions from an installable package? Determine the supported configuration or storage APIs, Client-to-Host boundary, lifecycle constraints, stable identity expectations, and schema-migration facilities, with exact contracts and source references.
+哪些确切的 DSH/Cordis Host 和 Client 能力可以跨本地 DSH 重启持久保存用户拥有的快捷动作，并从可安装软件包接收作者拥有的预置快捷动作？请确定受支持的配置或存储 API、Client 到 Host 的边界、生命周期约束、稳定身份要求和数据模式迁移能力，并提供确切契约和源码引用。
 
-## Answer
+## Answer（答案）
 
-The cited research asset is [Durable Configuration and Preset Seams for Quick Actions](../research/durable-configuration-seams.md), captured on branch `research/durable-configuration-seams` at commit `07e0b85`.
+引用的研究材料是[快捷动作的持久化配置和预置扩展点](../research/durable-configuration-seams.md)，记录于分支 `research/durable-configuration-seams` 的提交 `07e0b85`。
 
-Use the Host `settings` service backed by `@deepseek-ai/dsh-settings-file`. Keep author-owned Preset Quick Actions immutable in package code or Host composition config, and persist only ID-keyed user actions, explicit user ordering, and per-preset deltas in one stable lowercase-hyphen namespace. The Client edits the Host-authoritative namespace through `settingsScope` and generated `remote.settings` calls with revision fencing; browser-local persistence is not a supported authority.
+使用以 `@deepseek-ai/dsh-settings-file` 为后端的 Host `settings` 服务。将作者拥有的预置快捷动作作为不可变内容保留在软件包代码或 Host composition 配置中，并且只在一个稳定的、以小写字母和连字符命名的命名空间内持久保存按 ID 索引的用户自有快捷动作、用户明确指定的顺序以及各预置的差异。Client 通过 `settingsScope` 和生成的 `remote.settings` 调用，在修订版本栅栏保护下编辑由 Host 持有权威状态的命名空间；浏览器本地持久化不能作为受支持的权威数据源。
 
-`storageDomain` is a supported but heavier Host-only alternative requiring a configured backend, explicit `Domain.close()` lifecycle ownership, and a custom Client controller. It adds record-scale point writes but still has no data migration. Settings likewise has no pre-validation schema migration hook, so the first release should use a backward-readable versioned schema followed by an idempotent revision-fenced canonical rewrite; a strict future migration facility would require a DSH core extension.
+`storageDomain` 是一种受支持但更重量级的纯 Host 替代方案；它要求配置好后端、明确负责 `Domain.close()` 的生命周期管理，并提供自定义 Client 控制器。它提供记录级单点写入能力，但依然不提供数据迁移。Settings 同样没有验证前的数据模式迁移钩子，因此首个版本应采用可向后读取的版本化数据模式，随后执行具备幂等性且受修订版本栅栏保护的规范重写；未来若需要严格的迁移能力，则必须扩展 DSH 核心。

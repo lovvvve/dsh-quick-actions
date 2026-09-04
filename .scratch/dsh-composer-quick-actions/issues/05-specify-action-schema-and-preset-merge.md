@@ -1,9 +1,9 @@
-# Specify the Quick Action Schema and Preset Merge Rules
+# 制定快捷动作的数据结构与预置合并规则
 
 Type: grilling
 Mode: HITL
 Blocked by: 03
 
-## Question
+## Question（问题）
 
-What is the exact Quick Action domain schema and ownership/merge contract? Settle stable identity, labels, static text, Insert versus Send behavior, confirmation policy, ordering, enabled/hidden state, preset read-only semantics, clone provenance, validation limits, duplicate handling, and what happens when plugin upgrades add, remove, or change Preset Quick Actions.
+快捷动作的确切领域数据模式及所有权/合并契约是什么？请确定稳定身份、标签、静态文本、插入动作与发送动作的行为、确认策略、顺序、启用/隐藏状态、预置快捷动作的只读语义、克隆来源、验证限制、重复项处理方式，以及插件升级新增、移除或更改预置快捷动作时的处理方式。

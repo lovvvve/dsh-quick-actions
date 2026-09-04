@@ -1,9 +1,9 @@
-# Choose the Required DSH Composer Core Extensions
+# 选择所需的 DSH 消息编辑器核心扩展
 
 Type: grilling
 Mode: HITL
 Blocked by: 02
 
-## Question
+## Question（问题）
 
-The supported composer surface cannot insert text at the current selection and does not expose one additive Slot around no-session, hero, resident, and takeover composers. Which boundary should the first release choose: add narrowly-scoped DSH core contracts, or narrow the destination to the supported resident-composer behavior? If core work remains in scope, settle the exact `inputActions.insertText(text)` semantics, whether an outer all-composer Slot is truly required, ownership and compatibility of those contracts, and the fallback for older DSH versions.
+受支持的消息编辑器界面无法在当前选区插入文本，也没有提供一个覆盖 no-session、hero、resident 和 takeover 消息编辑器的增量 Slot。首个版本应选择哪种边界：添加范围严格受限的 DSH 核心契约，还是将目标收窄为受支持的 resident 消息编辑器行为？如果核心工作仍在范围内，请确定 `inputActions.insertText(text)` 的确切语义、是否确实需要一个覆盖所有消息编辑器的外层 Slot、这些契约的所有权和兼容性，以及针对较旧 DSH 版本的回退方案。
