@@ -2,6 +2,7 @@
 
 Type: prototype
 Mode: HITL
+Status: claimed
 Blocked by: 02, 05, 06
 
 ## Question（问题）
