@@ -25,16 +25,19 @@ type CustomQuickActionValue =
   | { kind: 'send'; label: string; text: string; icon?: string; confirm: boolean; enabled: boolean; clonedFromPresetId?: PresetActionId }
 ```
 
-用户层只持久化以下结构，不复制不可变预置，也不保存时间戳、颜色、分组或快捷键：
+用户层只持久化以下动作与布局状态，不复制不可变预置，也不保存时间戳、颜色、分组或快捷键：
 
 ```ts
 interface QuickActionSettingsV1 {
   schemaVersion: 1
+  layout: 'ribbon' | 'bar' | 'launcher'
   userActionsById: Record<CustomActionId, CustomQuickActionValue>
   actionOrder: Array<{ source: 'preset' | 'custom'; id: string }>
   presetStateById: Record<PresetActionId, { hidden?: boolean }>
 }
 ```
+
+全局 `layout` 的默认值为 `ribbon`，其三个值及交互含义由[选择快捷动作的放置方式和管理流程](./04-choose-placement-and-management-flow.md)确定，并随同一 Settings 命名空间跨重启保存。
 
 预置只允许用户隐藏、排序或克隆；自定义动作允许创建、编辑、启停、排序和删除。克隆会复制当时的内容并生成新的自定义动作，只以可选 `clonedFromPresetId` 保留说明性来源，之后不再同步。自定义动作 `enabled` 默认 `true`，预置 `hidden` 默认 `false`，发送动作 `confirm` 默认 `true`。
 

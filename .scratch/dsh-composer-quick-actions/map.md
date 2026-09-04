@@ -12,6 +12,7 @@ Label: `wayfinder:map`
 - 本项工作明确涵盖执行、测试、打包和使用文档，并将其推进至全部完成；不会止步于可供实施的规格说明。
 - 预置快捷动作为只读，但用户可以将其隐藏，或克隆为可编辑的自定义快捷动作。
 - 首个版本中的所有快捷动作均为全局生效。
+- 布局也是全局持久化设置：默认 `ribbon`（A，上方动作带），并可选择 `bar`（B，下方操作栏）或 `launcher`（C，单入口面板）。
 - 完整插入功能依赖 DSH 核心公共 `inputActions.insertText(text)`；旧版本保留发送与配置能力，但禁用插入动作，且不得使用私有接口回退。
 - 在依赖 Cordis 的 Services、Events、Builtins、Slots 或 token 之前，请查阅 `cordis-plugin-development`；Inspect 结果是运行时契约的事实来源。
 - Client `cordis_inspect_query` 调用只能由拥有活动 GUI 页面的前台父会话运行，然后再将结果传给研究代理。如果没有页面响应该子 Agent，后台子代理的查询可能会无限期保持等待；Host Inspect 和已打包源码的读取可在子代理中安全进行。
@@ -28,6 +29,7 @@ Label: `wayfinder:map`
 - [制定快捷动作的数据结构与预置合并规则](./issues/05-specify-action-schema-and-preset-merge.md) — 采用稳定双来源身份、插入/发送判别联合、不可变预置与用户增量、统一引用顺序，以及带确定性修复的版本化存储。
 - [选择所需的 DSH 消息编辑器核心扩展](./issues/09-choose-required-dsh-composer-core-extensions.md) — 新增最小公共 `inputActions.insertText` 接口，同时将首版放置范围限定为常驻消息编辑器，并为旧 DSH 版本安全禁用插入动作。
 - [确定运行时与失败语义](./issues/06-decide-runtime-and-failure-semantics.md) — 插入动作保留编辑上下文；发送动作只处理未占用草稿并按会话单飞，所有确认、失败、断线和会话切换均采用无内容丢失的保守行为。
+- [选择快捷动作的放置方式和管理流程](./issues/04-choose-placement-and-management-flow.md) — 默认使用与输入框等宽的上方单行动作带，并提供下方操作栏和单入口面板作为全局持久化选项，三者共享管理与确认面板。
 
 ## Not yet specified（尚未明确）
 
