@@ -14,11 +14,13 @@ Implement, verify, and document a persistent installable DSH plugin that exposes
 - All Quick Actions are global in the first release.
 - Consult `cordis-plugin-development` before relying on Cordis Services, Events, Builtins, Slots, or tokens; Inspect results are the source of truth for runtime contracts.
 - Consult `prototype` and `frontend-design` for visual interaction work, `domain-modeling` when vocabulary changes, `test-driven-development` during implementation, and `verification-before-completion` before declaring delivery complete.
-- The workspace began empty and currently has no Git repository or remote. Local Markdown under this directory is the issue tracker.
+- The workspace is a local Git repository on `main` with no remote. Local Markdown under this directory is the issue tracker, and research evidence is isolated on `research/<topic>` branches.
 
 ## Decisions so far
 
 <!-- Closed-ticket index only. Each decision lives in its ticket. -->
+
+- [Establish a Versioned Workspace for Research](./issues/01-establish-versioned-research-workspace.md) — A committed local `main` baseline now supports isolated research branches; no remote is required.
 
 ## Not yet specified
 
