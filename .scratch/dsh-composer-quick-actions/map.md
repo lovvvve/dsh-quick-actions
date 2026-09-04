@@ -13,6 +13,7 @@ Implement, verify, and document a persistent installable DSH plugin that exposes
 - Preset Quick Actions are read-only, but users may hide them or clone them into editable Custom Quick Actions.
 - All Quick Actions are global in the first release.
 - Consult `cordis-plugin-development` before relying on Cordis Services, Events, Builtins, Slots, or tokens; Inspect results are the source of truth for runtime contracts.
+- Run Client `cordis_inspect_query` calls only from the foreground parent session with the active GUI page, then pass the result to research agents. A background child query can remain pending indefinitely when no page answers for that child Agent; Host Inspect and packaged-source reads are safe in children.
 - Consult `prototype` and `frontend-design` for visual interaction work, `domain-modeling` when vocabulary changes, `test-driven-development` during implementation, and `verification-before-completion` before declaring delivery complete.
 - The workspace is a local Git repository on `main` with no remote. Local Markdown under this directory is the issue tracker, and research evidence is isolated on `research/<topic>` branches.
 
