@@ -27,6 +27,7 @@ Label: `wayfinder:map`
 - [识别持久化配置和预置扩展点](./issues/03-identify-durable-configuration-seams.md) — Host Settings 应持有用户自有快捷动作和预置差异；不可变的预置快捷动作仍归软件包所有，并通过可向后读取的数据模式重写来弥补当前的迁移能力缺口。
 - [制定快捷动作的数据结构与预置合并规则](./issues/05-specify-action-schema-and-preset-merge.md) — 采用稳定双来源身份、插入/发送判别联合、不可变预置与用户增量、统一引用顺序，以及带确定性修复的版本化存储。
 - [选择所需的 DSH 消息编辑器核心扩展](./issues/09-choose-required-dsh-composer-core-extensions.md) — 新增最小公共 `inputActions.insertText` 接口，同时将首版放置范围限定为常驻消息编辑器，并为旧 DSH 版本安全禁用插入动作。
+- [确定运行时与失败语义](./issues/06-decide-runtime-and-failure-semantics.md) — 插入动作保留编辑上下文；发送动作只处理未占用草稿并按会话单飞，所有确认、失败、断线和会话切换均采用无内容丢失的保守行为。
 
 ## Not yet specified（尚未明确）
 
