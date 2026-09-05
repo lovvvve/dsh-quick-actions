@@ -23,11 +23,18 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
     dts: false,
     sourcemap: true,
     clean: false,
+    failOnWarn: true,
     deps: {
       neverBundle: specifier => external.has(specifier),
       alwaysBundle: specifier => !external.has(specifier),
     },
+    inputOptions: {
+      resolve: {
+        conditionNames: ['browser', 'import', 'module', 'default'],
+      },
+    },
     outputOptions: {
+      codeSplitting: false,
       entryFileNames: 'client.js',
       sourcemapExcludeSources: false,
       banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(options.id)}, factory: (require) => {`,

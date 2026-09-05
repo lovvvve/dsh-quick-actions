@@ -1,10 +1,11 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
+import { SourceMapConsumer, type RawSourceMap } from 'source-map-js'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const roots: string[] = []
@@ -78,6 +79,27 @@ async function waitUntil(check: () => Promise<boolean>, timeoutMs = 10_000): Pro
   throw new Error('timed out waiting for client bundle output')
 }
 
+async function waitForApply(
+  child: ChildProcess,
+  output: string,
+  expected: unknown,
+  diagnostics: () => string,
+): Promise<void> {
+  try {
+    await waitUntil(async () => {
+      if (child.exitCode !== null) throw new Error(`watch exited early:\n${diagnostics()}`)
+      try {
+        const executed = executeBundle(await readFile(output, 'utf8'))
+        return (executed.exports.apply as () => unknown)() === expected
+      } catch {
+        return false
+      }
+    })
+  } catch (error) {
+    throw new Error(`watch did not rebuild:\n${diagnostics()}`, { cause: error })
+  }
+}
+
 afterEach(async () => {
   for (const child of children.splice(0)) {
     if (child.exitCode !== null || child.signalCode !== null) continue
@@ -89,6 +111,62 @@ afterEach(async () => {
 })
 
 describe('dshClientBundle', () => {
+  it('resolves conditional exports through the browser branch', async () => {
+    const built = await fixture([
+      `import { target } from 'conditional-dependency'`,
+      `export const inject = []`,
+      `export function apply() { return target }`,
+      '',
+    ].join('\n'))
+    const dependency = join(built.root, 'node_modules', 'conditional-dependency')
+    await mkdir(dependency, { recursive: true })
+    await writeFile(join(dependency, 'package.json'), JSON.stringify({
+      name: 'conditional-dependency',
+      type: 'module',
+      exports: {
+        '.': {
+          browser: './browser.js',
+          node: './node.js',
+          default: './default.js',
+        },
+      },
+    }))
+    await writeFile(join(dependency, 'browser.js'), `export const target = 'browser'\n`)
+    await writeFile(join(dependency, 'node.js'), `export const target = 'node'\n`)
+    await writeFile(join(dependency, 'default.js'), `export const target = 'default'\n`)
+
+    await runTsdown(built.config)
+
+    const executed = executeBundle(await readFile(built.output, 'utf8'))
+    expect((executed.exports.apply as () => unknown)()).toBe('browser')
+  })
+
+  it('fails the build when a non-external import cannot be resolved', async () => {
+    const built = await fixture([
+      `import { missing } from 'missing-dependency'`,
+      `export const inject = []`,
+      `export function apply() { return missing }`,
+      '',
+    ].join('\n'))
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/UNRESOLVED_IMPORT|missing-dependency/)
+  })
+
+  it('inlines dynamic imports into the single loadable client artifact', async () => {
+    const built = await fixture([
+      `export const inject = []`,
+      `export async function apply() { return (await import('./lazy.ts')).value }`,
+      '',
+    ].join('\n'))
+    await writeFile(join(dirname(built.entry), 'lazy.ts'), `export const value = 'lazy-value'\n`)
+
+    await runTsdown(built.config)
+
+    expect((await readdir(join(built.root, 'lib'))).sort()).toEqual(['client.js', 'client.js.map'])
+    const executed = executeBundle(await readFile(built.output, 'utf8'))
+    await expect((executed.exports.apply as () => Promise<unknown>)()).resolves.toBe('lazy-value')
+  })
+
   it('emits an executable DSH ModuleLoader factory with externals and a source map', async () => {
     const built = await fixture([
       `import { marker } from 'fixture-external'`,
@@ -104,12 +182,19 @@ describe('dshClientBundle', () => {
     expect(executed.requests).toEqual(['fixture-external'])
     expect(executed.exports.inject).toEqual(['slots'])
     expect((executed.exports.apply as () => unknown)()).toBe('external-value')
-    const map = JSON.parse(await readFile(`${built.output}.map`, 'utf8')) as {
-      sources: string[]
-      sourcesContent: Array<string | null>
-    }
+    const map = JSON.parse(await readFile(`${built.output}.map`, 'utf8')) as RawSourceMap
     expect(map.sources.some(item => item.endsWith('/src/client.ts'))).toBe(true)
-    expect(map.sourcesContent.some(item => item?.includes(`export function apply()`))).toBe(true)
+    expect(map.sourcesContent?.some(item => item.includes(`export function apply()`))).toBe(true)
+    const generatedLines = source.split('\n')
+    const generatedIndex = generatedLines.findIndex(line => line.includes('function apply()'))
+    expect(generatedIndex).toBeGreaterThanOrEqual(0)
+    const generatedColumn = generatedLines[generatedIndex]!.indexOf('function apply()')
+    const original = new SourceMapConsumer(map).originalPositionFor({
+      line: generatedIndex + 1,
+      column: generatedColumn,
+    })
+    expect(original.source.endsWith('/src/client.ts')).toBe(true)
+    expect(original.line).toBe(3)
   })
 
   it('rebuilds the same client artifact when the watched entry changes', async () => {
@@ -123,30 +208,10 @@ describe('dshClientBundle', () => {
     child.stdout?.on('data', chunk => { diagnostics += String(chunk) })
     child.stderr?.on('data', chunk => { diagnostics += String(chunk) })
 
-    await waitUntil(async () => {
-      if (child.exitCode !== null) throw new Error(`watch exited early:\n${diagnostics}`)
-      try {
-        const executed = executeBundle(await readFile(built.output, 'utf8'))
-        return (executed.exports.apply as () => unknown)() === 'one'
-      } catch {
-        return false
-      }
-    })
+    await waitForApply(child, built.output, 'one', () => diagnostics)
 
     await writeFile(built.entry, `export const inject = []; export function apply() { return 'two' }\n`)
 
-    try {
-      await waitUntil(async () => {
-        if (child.exitCode !== null) throw new Error(`watch exited early:\n${diagnostics}`)
-        try {
-          const executed = executeBundle(await readFile(built.output, 'utf8'))
-          return (executed.exports.apply as () => unknown)() === 'two'
-        } catch {
-          return false
-        }
-      })
-    } catch (error) {
-      throw new Error(`watch did not rebuild:\n${diagnostics}`, { cause: error })
-    }
+    await waitForApply(child, built.output, 'two', () => diagnostics)
   }, 20_000)
 })
