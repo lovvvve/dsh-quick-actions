@@ -141,6 +141,41 @@ describe('dshClientBundle', () => {
     expect((executed.exports.apply as () => unknown)()).toBe('browser')
   })
 
+  it('resolves legacy package browser fields instead of Node main entries', async () => {
+    const built = await fixture([
+      `import { target } from 'legacy-conditional-dependency'`,
+      `export const inject = []`,
+      `export function apply() { return target }`,
+      '',
+    ].join('\n'))
+    const dependency = join(built.root, 'node_modules', 'legacy-conditional-dependency')
+    await mkdir(dependency, { recursive: true })
+    await writeFile(join(dependency, 'package.json'), JSON.stringify({
+      name: 'legacy-conditional-dependency',
+      type: 'module',
+      main: './node.js',
+      browser: './browser.js',
+    }))
+    await writeFile(join(dependency, 'browser.js'), `export const target = 'browser'\n`)
+    await writeFile(join(dependency, 'node.js'), `export const target = 'node'\n`)
+
+    await runTsdown(built.config)
+
+    const executed = executeBundle(await readFile(built.output, 'utf8'))
+    expect((executed.exports.apply as () => unknown)()).toBe('browser')
+  })
+
+  it('rejects undeclared Node builtins from browser bundles', async () => {
+    const built = await fixture([
+      `import { basename } from 'node:path'`,
+      `export const inject = []`,
+      `export function apply() { return basename('/tmp/example') }`,
+      '',
+    ].join('\n'))
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/UNRESOLVED_IMPORT|node:path/)
+  })
+
   it('fails the build when a non-external import cannot be resolved', async () => {
     const built = await fixture([
       `import { missing } from 'missing-dependency'`,

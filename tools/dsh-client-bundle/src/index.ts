@@ -29,6 +29,7 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
       alwaysBundle: specifier => !external.has(specifier),
     },
     inputOptions: {
+      platform: 'browser',
       resolve: {
         conditionNames: ['browser', 'import', 'module', 'default'],
       },
