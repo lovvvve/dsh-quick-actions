@@ -2,7 +2,7 @@
 
 Type: task
 Mode: AFK
-Blocked by: 08, 10, 13, 14, 15, 16, 17
+Blocked by: 08, 10, 13, 14, 15, 16, 17, 19
 
 ## Question（问题）
 

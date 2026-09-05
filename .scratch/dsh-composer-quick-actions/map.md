@@ -14,7 +14,7 @@ Label: `wayfinder:map`
 - 首个版本中的所有快捷动作均为全局生效。
 - 布局也是全局持久化设置：默认 `ribbon`（A，上方动作带），并可选择 `bar`（B，下方操作栏）或 `launcher`（C，单入口面板）。
 - 正常状态下预置与自定义动作合计最多 50 个；升级导致既有状态被动超限时保留全部数据，但禁止新增和克隆，直到恢复到上限以内。
-- 完整插入功能依赖 DSH 核心公共 `inputActions.insertText(text)`；旧版本保留发送与配置能力，但禁用插入动作，且不得使用私有接口回退。
+- 完整插入功能依赖 DSH 核心公共 `inputActions.insertText(text)`；已测试补丁基于 `dsh-v0.1.2-rc.1`，正式首发版本仍需上游集成后记录。旧版本保留发送与配置能力，但禁用插入动作，且不得使用私有接口回退。
 - 在依赖 Cordis 的 Services、Events、Builtins、Slots 或 token 之前，请查阅 `cordis-plugin-development`；Inspect 结果是运行时契约的事实来源。
 - Client `cordis_inspect_query` 调用只能由拥有活动 GUI 页面的前台父会话运行，然后再将结果传给研究代理。如果没有页面响应该子 Agent，后台子代理的查询可能会无限期保持等待；Host Inspect 和已打包源码的读取可在子代理中安全进行。
 - 视觉交互工作请查阅 `prototype` 和 `frontend-design`，词汇发生变化时请查阅 `domain-modeling`，实施期间请查阅 `test-driven-development`，宣布交付完成之前请查阅 `verification-before-completion`。
@@ -33,6 +33,7 @@ Label: `wayfinder:map`
 - [选择快捷动作的放置方式和管理流程](./issues/04-choose-placement-and-management-flow.md) — 默认使用与输入框等宽的上方单行动作带，并提供下方操作栏和单入口面板作为全局持久化选项，三者共享管理与确认面板。
 - [选择插件架构与软件包契约](./issues/07-select-plugin-architecture-and-package-contract.md) — 采用双面功能包加安装 bundle、Host Settings 与只读目录 Remote、共享领域深模块、局部会话执行，以及仓库自有的可测试 Client 构建适配器。
 - [定义验证与发布验收标准](./issues/08-define-verification-and-release-acceptance.md) — 发布要求全部新鲜自动化、安装与人工验收通过，并保存可复核证据；动作上限为 50，升级被动超限必须无损降级。
+- [公开 DSH 消息编辑器 insertText 接口](./issues/10-publish-dsh-composer-insert-text-api.md) — 基于当前 DSH 标签完成了经 TDD、构建、GUI 测试和独立审查的上游补丁；正式发布版本由后续集成票据记录。
 
 ## Not yet specified（尚未明确）
 
