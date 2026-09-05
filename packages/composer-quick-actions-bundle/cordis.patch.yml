@@ -1,0 +1,3 @@
+- insert:
+    - id: composer-quick-actions
+      name: dsh-composer-quick-actions

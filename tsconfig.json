@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "tools/dsh-client-bundle" },
+    { "path": "packages/composer-quick-actions" }
+  ]
+}

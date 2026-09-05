@@ -1,0 +1,7 @@
+node_modules/
+.pnpm-store/
+coverage/
+**/lib/
+*.tgz
+*.tsbuildinfo
+.DS_Store

@@ -1,0 +1,25 @@
+{
+  "name": "dsh-plugins",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r --if-present run build",
+    "test": "vitest run",
+    "typecheck": "tsc -b && tsc -p tsconfig.test.json",
+    "lint": "oxlint . --deny-warnings",
+    "watch:client": "pnpm --filter dsh-composer-quick-actions run watch:client"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0",
+    "oxlint": "^1.76.0",
+    "tsdown": "^0.22.2",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

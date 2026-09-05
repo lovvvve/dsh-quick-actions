@@ -1,0 +1,12 @@
+{
+  "name": "@dsh-plugins/dsh-client-bundle",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "tsdown": "^0.22.2"
+  }
+}

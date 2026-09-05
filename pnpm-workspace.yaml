@@ -1,0 +1,7 @@
+packages:
+  - packages/*
+  - tools/*
+
+# tsdown/vitest require esbuild's reviewed native binary install step.
+allowBuilds:
+  esbuild: true
