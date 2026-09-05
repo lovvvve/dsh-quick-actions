@@ -34,6 +34,7 @@ Label: `wayfinder:map`
 - [选择插件架构与软件包契约](./issues/07-select-plugin-architecture-and-package-contract.md) — 采用双面功能包加安装 bundle、Host Settings 与只读目录 Remote、共享领域深模块、局部会话执行，以及仓库自有的可测试 Client 构建适配器。
 - [定义验证与发布验收标准](./issues/08-define-verification-and-release-acceptance.md) — 发布要求全部新鲜自动化、安装与人工验收通过，并保存可复核证据；动作上限为 50，升级被动超限必须无损降级。
 - [公开 DSH 消息编辑器 insertText 接口](./issues/10-publish-dsh-composer-insert-text-api.md) — 基于当前 DSH 标签完成了经 TDD、构建、GUI 测试和独立审查的上游补丁；正式发布版本由后续集成票据记录。
+- [搭建可发布工作区与 Client 构建适配器](./issues/11-scaffold-workspace-and-client-build-adapter.md) — 已建立双面功能包、安装 bundle 与经真实 tsdown/ModuleLoader/watch 测试的 browser-only 单文件 Client 构建链路，业务逻辑仍留给后续任务。
 
 ## Not yet specified（尚未明确）
 
