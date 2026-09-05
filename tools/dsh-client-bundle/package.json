@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "tsdown": "^0.22.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.0"
   }
 }

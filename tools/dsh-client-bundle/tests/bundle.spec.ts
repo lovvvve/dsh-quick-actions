@@ -39,6 +39,19 @@ async function fixture(source: string): Promise<{
   return { root, entry, output, config }
 }
 
+async function targetDependency(
+  root: string,
+  name: string,
+  fields: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  const dependency = join(root, 'node_modules', name)
+  await mkdir(dependency, { recursive: true })
+  await writeFile(join(dependency, 'package.json'), JSON.stringify({ name, type: 'module', ...fields }))
+  await writeFile(join(dependency, 'browser.js'), `export const target = 'browser'\n`)
+  await writeFile(join(dependency, 'node.js'), `export const target = 'node'\n`)
+  await writeFile(join(dependency, 'default.js'), `export const target = 'default'\n`)
+}
+
 function runTsdown(config: string): Promise<void> {
   return new Promise((resolveRun, reject) => {
     execFile(process.execPath, [tsdownCli, '--config', config], { cwd: repositoryRoot }, (error, _stdout, stderr) => {
@@ -118,11 +131,7 @@ describe('dshClientBundle', () => {
       `export function apply() { return target }`,
       '',
     ].join('\n'))
-    const dependency = join(built.root, 'node_modules', 'conditional-dependency')
-    await mkdir(dependency, { recursive: true })
-    await writeFile(join(dependency, 'package.json'), JSON.stringify({
-      name: 'conditional-dependency',
-      type: 'module',
+    await targetDependency(built.root, 'conditional-dependency', {
       exports: {
         '.': {
           browser: './browser.js',
@@ -130,10 +139,7 @@ describe('dshClientBundle', () => {
           default: './default.js',
         },
       },
-    }))
-    await writeFile(join(dependency, 'browser.js'), `export const target = 'browser'\n`)
-    await writeFile(join(dependency, 'node.js'), `export const target = 'node'\n`)
-    await writeFile(join(dependency, 'default.js'), `export const target = 'default'\n`)
+    })
 
     await runTsdown(built.config)
 
@@ -148,16 +154,10 @@ describe('dshClientBundle', () => {
       `export function apply() { return target }`,
       '',
     ].join('\n'))
-    const dependency = join(built.root, 'node_modules', 'legacy-conditional-dependency')
-    await mkdir(dependency, { recursive: true })
-    await writeFile(join(dependency, 'package.json'), JSON.stringify({
-      name: 'legacy-conditional-dependency',
-      type: 'module',
+    await targetDependency(built.root, 'legacy-conditional-dependency', {
       main: './node.js',
       browser: './browser.js',
-    }))
-    await writeFile(join(dependency, 'browser.js'), `export const target = 'browser'\n`)
-    await writeFile(join(dependency, 'node.js'), `export const target = 'node'\n`)
+    })
 
     await runTsdown(built.config)
 
@@ -174,6 +174,26 @@ describe('dshClientBundle', () => {
     ].join('\n'))
 
     await expect(runTsdown(built.config)).rejects.toThrow(/UNRESOLVED_IMPORT|node:path/)
+  })
+
+  it('rejects dynamic imports of module-table externals', async () => {
+    const built = await fixture([
+      `export const inject = []`,
+      `export async function apply() { return (await import('fixture-external')).marker }`,
+      '',
+    ].join('\n'))
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/dynamic import.*fixture-external/i)
+  })
+
+  it('rejects computed require calls that bypass the external list', async () => {
+    const built = await fixture([
+      `export const inject = []`,
+      `export function apply(id: string) { return require(id) }`,
+      '',
+    ].join('\n'))
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/computed require/i)
   })
 
   it('fails the build when a non-external import cannot be resolved', async () => {
@@ -244,6 +264,12 @@ describe('dshClientBundle', () => {
     child.stderr?.on('data', chunk => { diagnostics += String(chunk) })
 
     await waitForApply(child, built.output, 'one', () => diagnostics)
+    const lastGood = await readFile(built.output, 'utf8')
+    const diagnosticsStart = diagnostics.length
+
+    await writeFile(built.entry, `export const inject = []; export function apply() { return eval("'broken'") }\n`)
+    await waitUntil(async () => /eval/i.test(diagnostics.slice(diagnosticsStart)))
+    expect(await readFile(built.output, 'utf8')).toBe(lastGood)
 
     await writeFile(built.entry, `export const inject = []; export function apply() { return 'two' }\n`)
 

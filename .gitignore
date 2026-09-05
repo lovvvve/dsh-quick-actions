@@ -2,6 +2,7 @@ node_modules/
 .pnpm-store/
 coverage/
 **/lib/
+**/lib.dsh-client-stage/
 *.tgz
 *.tsbuildinfo
 .DS_Store
