@@ -1,5 +1,5 @@
 import { copyFile, mkdir, rename, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import type { UserConfig } from 'tsdown'
 
 export interface DshClientBundleOptions {
@@ -18,12 +18,16 @@ function syntaxNode(value: unknown): value is SyntaxNode {
   return typeof value === 'object' && value !== null && typeof (value as { type?: unknown }).type === 'string'
 }
 
-function visitSyntax(node: SyntaxNode, visit: (node: SyntaxNode) => void): void {
-  visit(node)
+function visitSyntax(
+  node: SyntaxNode,
+  visit: (node: SyntaxNode, parent: SyntaxNode | undefined) => void,
+  parent?: SyntaxNode,
+): void {
+  visit(node, parent)
   for (const value of Object.values(node)) {
-    if (syntaxNode(value)) visitSyntax(value, visit)
+    if (syntaxNode(value)) visitSyntax(value, visit, node)
     else if (Array.isArray(value)) {
-      for (const child of value) if (syntaxNode(child)) visitSyntax(child, visit)
+      for (const child of value) if (syntaxNode(child)) visitSyntax(child, visit, node)
     }
   }
 }
@@ -66,7 +70,8 @@ async function publishClientBundle(staging: string, destination: string): Promis
  */
 export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
   const external = new Set(options.external ?? [])
-  const staging = `${options.outDir}.dsh-client-stage`
+  const destination = resolve(options.outDir)
+  const staging = `${destination}.dsh-client-stage`
   return {
     name: `${options.id}/client`,
     entry: { client: options.entry },
@@ -78,7 +83,7 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
     sourcemap: true,
     clean: false,
     failOnWarn: true,
-    onSuccess: async () => { await publishClientBundle(staging, options.outDir) },
+    onSuccess: async () => { await publishClientBundle(staging, destination) },
     deps: {
       neverBundle: specifier => external.has(specifier),
       alwaysBundle: specifier => !external.has(specifier),
@@ -92,7 +97,25 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
     plugins: [{
       name: 'dsh-client-module-table-boundary',
       renderChunk(code) {
-        visitSyntax(this.parse(code) as unknown as SyntaxNode, (node) => {
+        visitSyntax(this.parse(code) as unknown as SyntaxNode, (node, parent) => {
+          if (node.type === 'Identifier' && node.name === 'require') {
+            const directCall = parent?.type === 'CallExpression' && parent.callee === node
+            const parameterDeclaration = parent?.type === 'ArrowFunctionExpression'
+              && Array.isArray(parent.params)
+              && parent.params.includes(node)
+            const memberName = parent?.type === 'MemberExpression'
+              && parent.property === node
+              && parent.computed !== true
+            const propertyName = (parent?.type === 'Property'
+              || parent?.type === 'MethodDefinition'
+              || parent?.type === 'PropertyDefinition')
+              && parent.key === node
+              && parent.computed !== true
+              && parent.shorthand !== true
+            if (!directCall && !parameterDeclaration && !memberName && !propertyName) {
+              throw new Error(`dshClientBundle: indirect require reference under ${parent?.type ?? 'root'} cannot use the DSH module table`)
+            }
+          }
           if (node.type === 'ImportExpression') {
             const specifier = literalString(node.source) ?? '<computed>'
             throw new Error(`dshClientBundle: dynamic import of ${specifier} cannot use the DSH module table`)

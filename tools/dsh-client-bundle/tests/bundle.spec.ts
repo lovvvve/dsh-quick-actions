@@ -1,6 +1,6 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { once } from 'node:events'
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -13,7 +13,7 @@ const children: ChildProcess[] = []
 const repositoryRoot = resolve(import.meta.dirname, '../../..')
 const tsdownCli = fileURLToPath(import.meta.resolve('tsdown/run'))
 
-async function fixture(source: string): Promise<{
+async function fixture(source: string, trailingOutDir = false): Promise<{
   root: string
   entry: string
   output: string
@@ -22,7 +22,9 @@ async function fixture(source: string): Promise<{
   const root = await mkdtemp(join(tmpdir(), 'dsh-client-bundle-'))
   roots.push(root)
   const entry = join(root, 'src', 'client.ts')
-  const output = join(root, 'lib', 'client.js')
+  const finalOutDir = join(root, 'lib')
+  const configuredOutDir = trailingOutDir ? `${finalOutDir}/` : finalOutDir
+  const output = join(finalOutDir, 'client.js')
   const config = join(root, 'tsdown.config.ts')
   await mkdir(dirname(entry), { recursive: true })
   await writeFile(entry, source)
@@ -31,7 +33,7 @@ async function fixture(source: string): Promise<{
     `export default dshClientBundle({`,
     `  id: 'dsh-client-fixture',`,
     `  entry: ${JSON.stringify(entry)},`,
-    `  outDir: ${JSON.stringify(join(root, 'lib'))},`,
+    `  outDir: ${JSON.stringify(configuredOutDir)},`,
     `  external: ['fixture-external'],`,
     `})`,
     '',
@@ -196,6 +198,17 @@ describe('dshClientBundle', () => {
     await expect(runTsdown(built.config)).rejects.toThrow(/computed require/i)
   })
 
+  it('rejects indirect references to the ModuleLoader require parameter', async () => {
+    const built = await fixture([
+      `const load = require`,
+      `export const inject = []`,
+      `export function apply() { return load('undeclared-runtime') }`,
+      '',
+    ].join('\n'))
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/indirect require/i)
+  })
+
   it('fails the build when a non-external import cannot be resolved', async () => {
     const built = await fixture([
       `import { missing } from 'missing-dependency'`,
@@ -252,6 +265,34 @@ describe('dshClientBundle', () => {
     expect(original.line).toBe(3)
   })
 
+  it('keeps failed staging outside a trailing-separator final outDir', async () => {
+    const built = await fixture([
+      `export const inject = []`,
+      `export function apply() { return eval("'broken'") }`,
+      '',
+    ].join('\n'), true)
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/eval/i)
+
+    const finalEntries = await readdir(dirname(built.output)).catch((error: unknown) => {
+      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') return []
+      throw error
+    })
+    expect(finalEntries).toEqual([])
+  })
+
+  it('keeps sourcemap paths valid when outDir has a trailing separator', async () => {
+    const built = await fixture(`export const inject = []; export function apply() { return 'value' }\n`, true)
+
+    await runTsdown(built.config)
+
+    const mapPath = `${built.output}.map`
+    const map = JSON.parse(await readFile(mapPath, 'utf8')) as RawSourceMap
+    const source = map.sources.find(item => item.endsWith('/src/client.ts'))
+    expect(source).toBeDefined()
+    expect(await realpath(resolve(dirname(mapPath), map.sourceRoot ?? '', source!))).toBe(await realpath(built.entry))
+  })
+
   it('rebuilds the same client artifact when the watched entry changes', async () => {
     const built = await fixture(`export const inject = []; export function apply() { return 'one' }\n`)
     const child = spawn(process.execPath, [tsdownCli, '--config', built.config, '--watch'], {
@@ -268,11 +309,14 @@ describe('dshClientBundle', () => {
     const diagnosticsStart = diagnostics.length
 
     await writeFile(built.entry, `export const inject = []; export function apply() { return eval("'broken'") }\n`)
-    await waitUntil(async () => /eval/i.test(diagnostics.slice(diagnosticsStart)))
+    await waitUntil(async () => {
+      const failedBuild = diagnostics.slice(diagnosticsStart)
+      return /eval/i.test(failedBuild) && /build failed|error/i.test(failedBuild)
+    })
     expect(await readFile(built.output, 'utf8')).toBe(lastGood)
 
     await writeFile(built.entry, `export const inject = []; export function apply() { return 'two' }\n`)
 
     await waitForApply(child, built.output, 'two', () => diagnostics)
-  }, 20_000)
+  }, 35_000)
 })
