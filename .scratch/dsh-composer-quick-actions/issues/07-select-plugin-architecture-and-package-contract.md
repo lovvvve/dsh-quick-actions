@@ -82,3 +82,10 @@ Host 用向后兼容 schema 注册所有已发布旧状态，随后执行幂等�
 ### 2026-09-05 — 包兼容契约改为能力自适应
 
 [将 insertText 补丁集成到 DSH 官方发布](./19-upstream-insert-text-and-record-release.md)替代“旧版仅禁用插入动作并等待正式最低版本”的呈现与发布前提。较宽 peer range 和运行时能力检测不变；缺少公共插入能力时，Client 从 Composer 投影省略兼容性抑制插入动作，在管理界面保留其配置与计数，并继续提供发送动作。发送动作在最终空草稿重验后，能力存在时使用公共 `insertText` 装载文本，缺失时仅为发送使用公共 `setDraft`，两者随后都调用公共 `submit`；插入动作绝不使用 `setDraft` 回退。README 按能力矩阵描述这两条路径，在正式版本未知时不声明最低版本。
+
+---
+
+**已被 spec 第 16 节部分取代（首版范围收缩）。**
+
+- 「运行时检测 `inputActions.insertText`」「旧版仅禁用插入动作」「README 按能力矩阵描述两条路径」「核心接口发布后记录完整功能最低 DSH 版本」：**首版不再适用**。首版不提供插入动作、不做任何能力检测，peer range 只覆盖公开 `setDraft` 与 `submit`，README 不再出现能力矩阵。
+- 双面功能包 + 安装 bundle 的架构、Host Settings 与只读目录 Remote、共享领域深模块、局部会话执行、仓库自有可测试 Client 构建适配器：**全部仍然有效**，本次收缩不改变架构结论。

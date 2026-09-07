@@ -24,3 +24,9 @@ Blocked by: 10
 发布验收采用双通道：现有官方 DSH GUI 证明兼容性抑制、集中兼容提示、管理、持久化和发送路径；[当前主线补丁](../core/0001-expose-public-text-insertion-dsh-v0.1.3-alpha.1.patch)应用到隔离源码检出后，由受管后台任务在明确的独立 URL 提供真实 GUI，以证明插件的选区插入、焦点和撤销等完整能力路径。补丁的重放与验证证据见[上游集成状态](../core/upstream-integration-status.md)，但本地提交与 `dsh-v0.1.3-alpha.1` 均不得冒充首个正式包含该接口的版本。
 
 没有创建上游 PR、运行上游 CI、取得维护者审查、合并或记录正式首发版本。待官方开放外部贡献入口或维护者确认内部接手后，这些工作应建立新的独立 Wayfinder effort，而不是重新打开本地图。
+
+---
+
+**已被 spec 第 16 节取代（首版范围收缩）。**
+
+本票据的能力自适应描述（`insertText` 存在时启用插入、缺失时降级为兼容性抑制插入动作）与双通道验收要求，**均已不是首版目标**：首版整体不提供插入动作，GUI 验收收敛为现有官方 DSH GUI 单通道。这些描述连同[补丁](../core/0001-expose-public-text-insertion-dsh-v0.1.3-alpha.1.patch)与[上游集成状态](../core/upstream-integration-status.md)一并保留为未来插入动作 effort 的输入。本票据仍为首版范围外，本次收缩不改变该结论。
