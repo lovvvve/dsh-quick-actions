@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 目前只有空 `apply` 和占位入口——它是经过验证的构建骨架，不是已实现的领域模型 / Settings / Remote / 控制器 / 界面。
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12），但 Host `apply`、Client `apply` 仍是空骨架——尚未实现 Settings / Remote / 控制器 / 界面。
 
-真正完成的只有两件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**），以及 workspace + Client 构建适配器。
+真正完成的有三件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器，以及共享领域模型（纯 JSON，`src/model/`，未被任何一侧装配）。
 
 ## 命令
 
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，**第 16 节记录首版范围收缩且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [12 实现共享领域模型](.scratch/dsh-composer-quick-actions/issues/12-implement-shared-quick-action-model.md)（12–18、20 均未认领）。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [13 实现 Host Settings 与 Catalog Remote](.scratch/dsh-composer-quick-actions/issues/13-implement-host-settings-and-catalog-remote.md)（13–18、20 均未认领）。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。

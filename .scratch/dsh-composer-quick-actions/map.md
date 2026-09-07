@@ -41,6 +41,7 @@ Label: `wayfinder:map`
 - [搭建可发布工作区与 Client 构建适配器](./issues/11-scaffold-workspace-and-client-build-adapter.md) — 已建立双面功能包、安装 bundle 与经真实 tsdown/ModuleLoader/watch 测试的 browser-only 单文件 Client 构建链路，业务逻辑仍留给后续任务。
 - [汇总统一规格](./spec.md)（spec 第 15 节，无票据） — 各项存留边界收敛为 baseline 并落入实施票据。
 - [首版范围收缩与斜杠命令处置](./spec.md)（spec 第 16 节，无票据） — 移除插入动作、取消全部核心接口新增、`/` 开头文本改为合法的命令发送动作；该节优先级高于正文与第 15 节。
+- [实现快捷动作共享领域模型](./issues/12-implement-shared-quick-action-model.md) — 已交付纯 JSON 领域深模块：校验、预置目录合并与确定性 revision、Settings V1 解码与幂等规范化、`kind: 'send'` 恒写与非 `'send'` 数据的无损墓碑保留、`confirm` 透传、命令发送动作判定、投影与 50 项上限/被动超限、revision-fenced mutation 计划。Host/Client 装配仍属票据 13/14。
 
 ## Not yet specified（尚未明确）
 
