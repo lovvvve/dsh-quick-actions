@@ -8,6 +8,7 @@
     "vitest.config.ts",
     "tools/**/*.spec.ts",
     "packages/**/*.spec.ts",
+    "packages/**/tests/**/*.ts",
     "packages/**/tsdown.config.ts"
   ]
 }
