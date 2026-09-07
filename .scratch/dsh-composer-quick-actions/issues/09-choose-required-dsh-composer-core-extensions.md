@@ -24,3 +24,9 @@ insertText(text: string): void
 核心接口由 DSH 独立实现、测试和发布，并作为本地图内先行但可与插件其他工作并行的实施前置，具体工作记录在[公开 DSH 消息编辑器 insertText 接口](./10-publish-dsh-composer-insert-text-api.md)。首次包含该接口的 DSH 版本确定后，插件文档应记录完整插入功能所需的最低版本。
 
 插件必须在运行时检测 `inputActions.insertText`。旧 DSH 版本中，发送动作和配置管理继续可用；插入动作显示为禁用并明确提示升级 DSH。禁止静默回退到 `setDraft`、DOM 操作或其他私有机制。
+
+## Comments（评论）
+
+### 2026-09-05 — 首版兼容边界已按运行时能力重划
+
+[将 insertText 补丁集成到 DSH 官方发布](./19-upstream-insert-text-and-record-release.md)保留本答案选择的最小公共接口、常驻消息编辑器范围与禁止私有回退原则，但替代答案后两段中“核心接口须先由 DSH 正式发布并作为本地图实施前置”、“记录完整功能最低正式版本”及“旧版插入动作显示禁用”的前提。[公开 DSH 消息编辑器 insertText 接口](./10-publish-dsh-composer-insert-text-api.md)在本地图中只提供经验证、可重放的能力测试基线，官方发布不再是首版前置：能力缺失时插入动作作为兼容性抑制插入动作从 Composer 列表省略，在管理界面保留并可配置；禁止 `setDraft` 回退仍严格适用于插入动作。发送动作在最终确认草稿未占用后可仅为发送使用公共 `setDraft(text)`，再调用公共 `submit()`，因此不依赖新增接口。首版不等待或虚构正式最低 DSH 版本，正式上游集成改由未来独立 effort 跟踪。

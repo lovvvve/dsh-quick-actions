@@ -76,3 +76,9 @@ Host 构建输出标准 ESM。由于 DSH 的 `clientBundle` preset 未发布，�
 ### Settings 迁移
 
 Host 用向后兼容 schema 注册所有已发布旧状态，随后执行幂等、带 namespace revision fence 的规范重写。Client 只解码已确认状态。若未来旧数据已无法通过当前注册 schema 读取，则需要单独推进 DSH 验证前迁移钩子；首版不通过原始文件或 storage backend 绕过 Settings。
+
+## Comments（评论）
+
+### 2026-09-05 — 包兼容契约改为能力自适应
+
+[将 insertText 补丁集成到 DSH 官方发布](./19-upstream-insert-text-and-record-release.md)替代“旧版仅禁用插入动作并等待正式最低版本”的呈现与发布前提。较宽 peer range 和运行时能力检测不变；缺少公共插入能力时，Client 从 Composer 投影省略兼容性抑制插入动作，在管理界面保留其配置与计数，并继续提供发送动作。发送动作在最终空草稿重验后，能力存在时使用公共 `insertText` 装载文本，缺失时仅为发送使用公共 `setDraft`，两者随后都调用公共 `submit`；插入动作绝不使用 `setDraft` 回退。README 按能力矩阵描述这两条路径，在正式版本未知时不声明最低版本。

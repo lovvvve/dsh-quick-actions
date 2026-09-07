@@ -1,0 +1,515 @@
+From 2efa35fa782c536eb7385bb2ec69e79b02d29b51 Mon Sep 17 00:00:00 2001
+From: yulong <yulong@jet-bay.com>
+Date: Sat, 5 Sep 2026 10:43:15 +0800
+Subject: [PATCH] feat(ui-conversation): expose public text insertion
+
+---
+ ...5-public-composer-text-insertion.i18n.yaml |   6 +
+ ...26-09-05-public-composer-text-insertion.md |  30 +++++
+ ...09-05-public-composer-text-insertion.zh.md |  30 +++++
+ docs/subsystems/conversation.i18n.yaml        |   4 +-
+ docs/subsystems/conversation.md               |   4 +
+ docs/subsystems/conversation.zh.md            |   4 +
+ .../tests/message-image.client.spec.tsx       |   1 +
+ .../ui-chat/tests/chat-view.client.spec.tsx   |   1 +
+ .../tests/gate-branch-tails.client.spec.tsx   |   2 +
+ .../client/ui-conversation/README.i18n.yaml   |   4 +-
+ packages/client/ui-conversation/README.md     |   2 +-
+ packages/client/ui-conversation/README.zh.md  |   2 +-
+ .../src/client/contract/input.ts              |   6 +
+ .../src/client/input/facade.ts                |   1 +
+ .../tests/input-actions.client.spec.ts        | 107 ++++++++++++++++++
+ .../ui-tool/tests/diff-card.client.spec.tsx   |   1 +
+ .../ui-tool/tests/read-card.client.spec.tsx   |   1 +
+ .../ui-tool/tests/search-card.client.spec.tsx |   1 +
+ .../tests/terminal-card.client.spec.tsx       |   4 +-
+ .../ui-tool/tests/web-card.client.spec.tsx    |   1 +
+ .../ui-trajectory/tests/views.client.spec.tsx |   2 +
+ .../tests/plan-review-panel.client.spec.tsx   |   1 +
+ .../user-questions-composer.client.spec.tsx   |   1 +
+ .../tests/workflow-run.client.spec.tsx        |   1 +
+ 24 files changed, 209 insertions(+), 8 deletions(-)
+ create mode 100644 .agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.i18n.yaml
+ create mode 100644 .agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.md
+ create mode 100644 .agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.zh.md
+ create mode 100644 packages/client/ui-conversation/tests/input-actions.client.spec.ts
+
+diff --git a/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.i18n.yaml b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.i18n.yaml
+new file mode 100644
+index 0000000000..d674d90aa5
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.i18n.yaml
+@@ -0,0 +1,6 @@
++# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
++# side as of the last confirmed-consistent state. Both languages carry equal authority;
++# after editing either side, bring the other along and re-record with:
++#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.md
++2026-09-05-public-composer-text-insertion.md: 5997701ebe7dcd2115d194f3dcea3499ca9fb467
++2026-09-05-public-composer-text-insertion.zh.md: ef0ecb78eef593933436560c8c5c90d52172458c
+diff --git a/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.md b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.md
+new file mode 100644
+index 0000000000..5997701ebe
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.md
+@@ -0,0 +1,30 @@
++# Agent Note: Public selection-aware composer text insertion
++
++Status: implemented
++
++English | [中文](2026-09-05-public-composer-text-insertion.zh.md)
++
++## Problem
++
++Session-scoped Slot components receive the stable `InputActions` face, but that face could only replace the whole draft or submit it. A feature that needed to insert plain text at the current selection therefore had to destroy the draft through `setDraft`, reach into the private `ComposerKeyboard.paste` face, or manipulate Lexical/DOM state outside the owning package.
++
++## Decision
++
++`InputActions` exposes one additional synchronous operation, `insertText(text: string): void`. `SessionInputShell.actions` delegates it to the shell's existing paste implementation, so public insertion strips forged reference placeholders, replaces the current range selection, falls back to the document end without a selection, preserves untouched rich nodes, and carries `PASTE_TAG` as one undo boundary.
++
++The new action exposes no editor, selection object, Lexical node, or span coordinate; `ComposerKeyboard` remains private to [`ui-conversation`](../../../../packages/client/ui-conversation/README.md). The public operation accepts plain text only and adds no options, return status, selection handle, or submit behavior.
++
++## Alternatives considered
++
++**Expose `ComposerKeyboard.paste`.** That face also carries editor identity, keyboard arbitration, trigger completion, and explicit submit modes. Publishing it would couple feature plugins to InputBar event-handler behavior instead of exposing the one supported edit.
++
++**Compose `useInput().draft` with `setDraft`.** Rebuilding the projected string loses the current selection and can flatten reference-chip identity, so it cannot satisfy selection-aware insertion.
++
++**Add options or return a success flag.** The current consumer requires exactly the established paste behavior, and valid insertion has no asynchronous admission result. Additional modes would create a second editing policy without a consumer.
++
++## Consequences
++
++- Session-scoped Slot features can insert safe plain text without receiving editor internals.
++- Clipboard paste and programmatic insertion share sanitization, selection fallback, rich-node preservation, and undo behavior, so fixes remain local to one implementation.
++- The operation does not submit, insert rich nodes, expose selection coordinates, or report whether placeholder-only input became a no-op.
++- `packages/client/ui-conversation/tests/input-actions.client.spec.ts` exercises the public face over range selection, absent selection, placeholder sanitization, no-op publication, undo, and preserved reference chips.
+diff --git a/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.zh.md b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.zh.md
+new file mode 100644
+index 0000000000..ef0ecb78ee
+--- /dev/null
++++ b/.agents/notes/implemented/feature/2026-09-05-public-composer-text-insertion.zh.md
+@@ -0,0 +1,30 @@
++# Agent Note: Public selection-aware composer text insertion
++
++Status: implemented
++
++[English](2026-09-05-public-composer-text-insertion.md) | 中文
++
++## Problem
++
++Session-scoped Slot 组件会收到稳定的 `InputActions` 接口，但该接口原本只能替换整个草稿或提交草稿。需要在当前选区插入纯文本的功能只能通过 `setDraft` 破坏性地重建草稿、触达私有 `ComposerKeyboard.paste` 接口，或在所属包之外操作 Lexical/DOM 状态。
++
++## Decision
++
++`InputActions` 新增一个同步操作 `insertText(text: string): void`。`SessionInputShell.actions` 将它委托给 shell 现有的 paste 实现，因此公共插入会移除伪造的引用占位符、替换当前范围选区；没有选区时回退到文档末尾；保留未触及的富节点，并携带 `PASTE_TAG` 形成一个独立撤销边界。
++
++新操作不公开编辑器、选区对象、Lexical 节点或 span 坐标；`ComposerKeyboard` 仍由 [`ui-conversation`](../../../../packages/client/ui-conversation/README.zh.md) 私有持有。公共操作只接受纯文本，不增加 options、返回状态、选区 handle 或提交行为。
++
++## Alternatives considered
++
++**公开 `ComposerKeyboard.paste`。** 该接口还携带编辑器身份、键盘裁决、trigger completion 和显式提交模式。公开它会让功能插件耦合到 InputBar 事件处理行为，而不是只暴露一项受支持的编辑操作。
++
++**组合 `useInput().draft` 与 `setDraft`。** 重建投影字符串会丢失当前选区，并可能扁平化引用 chip 身份，因此无法满足选区感知插入。
++
++**增加 options 或成功状态。** 当前消费者只需要既有 paste 行为，而且有效插入没有异步 admission 结果。附加模式会在没有消费者的情况下产生第二套编辑策略。
++
++## Consequences
++
++- Session-scoped Slot 功能无需获得编辑器内部对象即可插入安全纯文本。
++- 剪贴板粘贴与程序化插入共享清理、选区回退、富节点保留和撤销行为，因此修复仍集中在同一个实现中。
++- 该操作不提交、不插入富节点、不公开选区坐标，也不报告仅含占位符的输入是否成为无操作。
++- `packages/client/ui-conversation/tests/input-actions.client.spec.ts` 通过公共接口覆盖范围选区、无选区、占位符清理、无操作发布、撤销和引用 chip 保留。
+diff --git a/docs/subsystems/conversation.i18n.yaml b/docs/subsystems/conversation.i18n.yaml
+index e226ceae53..c7491a14b9 100644
+--- a/docs/subsystems/conversation.i18n.yaml
++++ b/docs/subsystems/conversation.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write docs/subsystems/conversation.md
+-conversation.md: 61e76e1b057be7b47150bd623b3e04400b50e394
+-conversation.zh.md: 5b54625fcfe9ac451e79a42c387a5cf0836ee39a
++conversation.md: 8169e210a7f0c9f5e0fd46c40c265fe5ed99b819
++conversation.zh.md: 27981693ce8b0413b134c558a1c6f4c1369ab425
+diff --git a/docs/subsystems/conversation.md b/docs/subsystems/conversation.md
+index 61e76e1b05..8169e210a7 100644
+--- a/docs/subsystems/conversation.md
++++ b/docs/subsystems/conversation.md
+@@ -6,6 +6,10 @@ Conversation is the target-neutral assembly layer between a Client `SessionEvent
+ 
+ This page defines the data model and the extension path for a business-owned Conversation node. The [Web Client architecture](web-client.md) places the subsystem between Client models and Slots; the [Conversation Node assembly decision](../../.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.md) owns its rationale.
+ 
++## Composer input actions
++
++The shell publishes one stable `inputActions` face to Session-scoped Slots. `insertText(text)` is the plugin-facing plain-text splice: it strips forged reference placeholders, replaces the current range selection, falls back to the document end when no selection exists, preserves untouched rich nodes, and creates one paste-tagged undo boundary. Editor identity, Lexical nodes, and selection objects remain private to `ui-conversation`.
++
+ ## Data model and ownership
+ 
+ The Session Controller owns the contiguous loaded logical-event window. Each `SessionEventLikeEntry` is either `{ type: 'event', event: SessionEvent }` for one durable event or `{ type: 'transient', event: AssistantLiveChunkEvent }` for one Client-only `assistant/live-chunk` presentation. Both inner events expose `type`, `seq`, `time`, and `data`. `ui-conversation` passes these entries to the assembler without opening a second history stream. One `ConversationNodeAssembler` per Session applies every registered Definition and publishes an independent source for each registered view target.
+diff --git a/docs/subsystems/conversation.zh.md b/docs/subsystems/conversation.zh.md
+index 5b54625fcf..27981693ce 100644
+--- a/docs/subsystems/conversation.zh.md
++++ b/docs/subsystems/conversation.zh.md
+@@ -6,6 +6,10 @@ Conversation 是 Client `SessionEventLikeEntry` window 与浏览器 view 之间
+ 
+ 本文定义数据模型与业务自有 Conversation node 的扩展路径。[Web Client 架构](web-client.zh.md)说明该子系统在 Client model 与 Slots 之间的位置；[Conversation Node 组装决策](../../.agents/notes/implemented/architecture/2026-08-09-client-conversation-node-assembly.zh.md)记录其设计理由。
+ 
++## Composer 输入操作
++
++Shell 向 Session-scoped Slot 发布一个稳定的 `inputActions` 接口。`insertText(text)` 是供插件使用的纯文本拼接操作：它会移除伪造的引用占位符、替换当前范围选区；没有选区时回退到文档末尾；保留未触及的富节点，并创建一个带 paste tag 的独立撤销边界。编辑器身份、Lexical 节点和选区对象仍由 `ui-conversation` 私有持有。
++
+ ## 数据模型与所有权
+ 
+ Session Controller 拥有连续的已加载逻辑 event window。每个 `SessionEventLikeEntry` 要么是表示一个持久事件的 `{ type: 'event', event: SessionEvent }`，要么是表示一个 Client-only `assistant/live-chunk` 呈现的 `{ type: 'transient', event: AssistantLiveChunkEvent }`；两种内部 event 都公开 `type`、`seq`、`time` 与 `data`。`ui-conversation` 把这些 entry 直接交给 assembler，不另开 history stream。每个 Session 对应一个 `ConversationNodeAssembler`，它应用所有已注册 Definition，并为每个已注册 view target 发布独立 source。
+diff --git a/packages/client/ui-attachment/tests/message-image.client.spec.tsx b/packages/client/ui-attachment/tests/message-image.client.spec.tsx
+index 595f20cb1c..1d19fe898f 100644
+--- a/packages/client/ui-attachment/tests/message-image.client.spec.tsx
++++ b/packages/client/ui-attachment/tests/message-image.client.spec.tsx
+@@ -277,6 +277,7 @@ describe('ImageGallery', () => {
+       useInput,
+       inputActions: {
+         setDraft: vi.fn(),
++        insertText: vi.fn(),
+         addAttachments: vi.fn(() => true),
+         removeAttachment: vi.fn(),
+         pruneAttachments: vi.fn(),
+diff --git a/packages/client/ui-chat/tests/chat-view.client.spec.tsx b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
+index 2c8fe220ea..ac4d2f070e 100644
+--- a/packages/client/ui-chat/tests/chat-view.client.spec.tsx
++++ b/packages/client/ui-chat/tests/chat-view.client.spec.tsx
+@@ -379,6 +379,7 @@ function makeHarness(
+     useInput: (() => { throw new Error('unused') }),
+     inputActions: {
+       setDraft: () => {},
++      insertText: () => {},
+       addAttachments: () => true,
+       removeAttachment: () => {},
+       pruneAttachments: () => {},
+diff --git a/packages/client/ui-chat/tests/gate-branch-tails.client.spec.tsx b/packages/client/ui-chat/tests/gate-branch-tails.client.spec.tsx
+index 9f7d3dd062..52f0dcafb9 100644
+--- a/packages/client/ui-chat/tests/gate-branch-tails.client.spec.tsx
++++ b/packages/client/ui-chat/tests/gate-branch-tails.client.spec.tsx
+@@ -153,6 +153,7 @@ describe('render branch tails', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+@@ -215,6 +216,7 @@ describe('render branch tails', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+diff --git a/packages/client/ui-conversation/README.i18n.yaml b/packages/client/ui-conversation/README.i18n.yaml
+index 16c22d55b6..3569521912 100644
+--- a/packages/client/ui-conversation/README.i18n.yaml
++++ b/packages/client/ui-conversation/README.i18n.yaml
+@@ -2,5 +2,5 @@
+ # side as of the last confirmed-consistent state. Both languages carry equal authority;
+ # after editing either side, bring the other along and re-record with:
+ #   pnpm run verify-translation-pairing --write packages/client/ui-conversation/README.md
+-README.md: 9b81858adee21d3b8d8a158fe5ffa239b6d4ffe3
+-README.zh.md: 40c02c469032e98191cbaa2a0203cc1f5a5a889e
++README.md: 6f77844498bcc94e69e0e65d82aa9bb4b00fbc00
++README.zh.md: f5202f82512ed60d28c0310375a4073c2a82a6fe
+diff --git a/packages/client/ui-conversation/README.md b/packages/client/ui-conversation/README.md
+index 9b81858ade..6f77844498 100644
+--- a/packages/client/ui-conversation/README.md
++++ b/packages/client/ui-conversation/README.md
+@@ -36,7 +36,7 @@ Target packages declaration-merge their snapshot and Location data maps, then re
+ <a id="shell-and-standard-props"></a>
+ ## Shell and standard props
+ 
+-The package registers the optional-Session `conversation` shell, strict Session header/body entries, View list, composer chain and bar, input regions, Hero regions, queue dock, draft persistence, and phase calculation. `ctx.uiSession.provide()` materializes the Conversation and input sources from the same Session binding and supplies `inputActions` as a stable standard prop.
++The package registers the optional-Session `conversation` shell, strict Session header/body entries, View list, composer chain and bar, input regions, Hero regions, queue dock, draft persistence, and phase calculation. `ctx.uiSession.provide()` materializes the Conversation and input sources from the same Session binding and supplies `inputActions` as a stable standard prop. Its `insertText(text)` operation inserts placeholder-sanitized plain text over the current selection, falls back to the document end without a selection, and keeps the insertion as one undo boundary.
+ 
+ View selection is deterministic: a registered persisted selection wins, otherwise registered `chat` wins, otherwise no View renders. It never chooses the first registered View. Shell phase combines Session lifecycle with the active-target set; no target-specific snapshot is read by the shell.
+ 
+diff --git a/packages/client/ui-conversation/README.zh.md b/packages/client/ui-conversation/README.zh.md
+index 40c02c4690..f5202f8251 100644
+--- a/packages/client/ui-conversation/README.zh.md
++++ b/packages/client/ui-conversation/README.zh.md
+@@ -36,7 +36,7 @@ target package 通过 declaration merge 扩展 snapshot 与 Location data map，
+ <a id="shell-and-standard-props"></a>
+ ## Shell 与标准 props
+ 
+-本包注册 optional-Session `conversation` shell、strict Session header/body、View list、composer chain 与 bar、输入区域、Hero 区域、queue dock、草稿持久化和 phase 计算。`ctx.uiSession.provide()` 从同一个 Session binding 物化 Conversation 与 input source，并将 `inputActions` 作为稳定标准 prop 提供。
++本包注册 optional-Session `conversation` shell、strict Session header/body、View list、composer chain 与 bar、输入区域、Hero 区域、queue dock、草稿持久化和 phase 计算。`ctx.uiSession.provide()` 从同一个 Session binding 物化 Conversation 与 input source，并将 `inputActions` 作为稳定标准 prop 提供。其 `insertText(text)` 操作会在当前选区插入已清理引用占位符的纯文本；没有选区时回退到文档末尾，并将本次插入保留为一个独立撤销边界。
+ 
+ View 选择规则固定：有效且已注册的持久化选择优先，其次是已注册的 `chat`，否则不渲染 View；绝不选择第一个已注册 View。Shell phase 只组合 Session lifecycle 与 active-target set，不读取任何 target-specific snapshot。
+ 
+diff --git a/packages/client/ui-conversation/src/client/contract/input.ts b/packages/client/ui-conversation/src/client/contract/input.ts
+index 9d65d84f1f..ab05dcf078 100644
+--- a/packages/client/ui-conversation/src/client/contract/input.ts
++++ b/packages/client/ui-conversation/src/client/contract/input.ts
+@@ -229,6 +229,12 @@ export interface SessionInputResolver {
+ export interface InputActions {
+   /** Replace the whole draft (persisted-draft seed and programmatic writes). */
+   setDraft(text: string): void
++  /**
++   * Insert placeholder-sanitized plain text over the current editor selection.
++   * An absent selection inserts at the document end; the edit owns one undo boundary.
++   * @param text - plain text to insert.
++   */
++  insertText(text: string): void
+   /** Append ordered browser-owned attachment ids; busy admission phases refuse. */
+   addAttachments(ids: readonly DraftAttachmentId[]): boolean
+   /** Remove one browser-owned attachment id; busy admission phases refuse. */
+diff --git a/packages/client/ui-conversation/src/client/input/facade.ts b/packages/client/ui-conversation/src/client/input/facade.ts
+index 1cacd83812..3c77100292 100644
+--- a/packages/client/ui-conversation/src/client/input/facade.ts
++++ b/packages/client/ui-conversation/src/client/input/facade.ts
+@@ -135,6 +135,7 @@ export class SessionInputShell implements SessionInput {
+   /** The public provide-channel action face (one stable identity per session). */
+   readonly actions: InputActions = {
+     setDraft: (text) => { this.setDraft(text) },
++    insertText: (text) => { this.paste(text) },
+     addAttachments: ids => this.addAttachments(ids),
+     removeAttachment: (id) => { this.removeAttachment(id) },
+     pruneAttachments: (ids) => { this.pruneAttachments(ids) },
+diff --git a/packages/client/ui-conversation/tests/input-actions.client.spec.ts b/packages/client/ui-conversation/tests/input-actions.client.spec.ts
+new file mode 100644
+index 0000000000..7597a4656d
+--- /dev/null
++++ b/packages/client/ui-conversation/tests/input-actions.client.spec.ts
+@@ -0,0 +1,107 @@
++import { afterEach, describe, expect, it, vi } from 'vitest'
++import type { Context } from '@deepseek-ai/cordis'
++import { $getRoot, $isTextNode, $setSelection, UNDO_COMMAND } from 'lexical'
++import { SessionInputShell } from '../src/client/input/facade.ts'
++
++const shells: SessionInputShell[] = []
++
++function createShell(): SessionInputShell {
++  const shell = new SessionInputShell({
++    actx: {} as Context,
++    defaultSink: vi.fn(),
++    commandAttachments: {
++      serialize: () => Promise.resolve([]),
++      release: () => {},
++      unsupportedNotice: token => `${token.trim()} attachments-unsupported`,
++    },
++  })
++  shells.push(shell)
++  return shell
++}
++
++function selectText(shell: SessionInputShell, start: number, end: number): void {
++  shell.editor.update(() => {
++    const text = $getRoot().getAllTextNodes()[0]
++    if (!$isTextNode(text)) throw new Error('expected one text node')
++    text.select(start, end)
++  }, { discrete: true })
++}
++
++afterEach(() => {
++  for (const shell of shells.splice(0)) shell.dispose()
++})
++
++describe('public input actions', () => {
++  it('replaces the current editor selection', () => {
++    const shell = createShell()
++    shell.setDraft('alpha beta')
++    selectText(shell, 6, 10)
++
++    shell.actions.insertText('replacement')
++
++    expect(shell.snapshot.draft).toBe('alpha replacement')
++  })
++
++  it('inserts at the document end when no editor selection exists', () => {
++    const shell = createShell()
++    shell.setDraft('alpha')
++    shell.editor.update(() => { $setSelection(null) }, { discrete: true })
++
++    shell.actions.insertText(' beta')
++
++    expect(shell.snapshot.draft).toBe('alpha beta')
++  })
++
++  it('strips forged reference placeholders from inserted text', () => {
++    const shell = createShell()
++
++    shell.actions.insertText('\uE100visible\uFFFC')
++
++    expect(shell.snapshot.draft).toBe('visible')
++  })
++
++  it('publishes no edit when inserted text contains only reference placeholders', () => {
++    const shell = createShell()
++    const before = shell.state.getSnapshot()
++
++    shell.actions.insertText('\uFFFC')
++
++    expect(shell.state.getSnapshot()).toBe(before)
++  })
++
++  it('keeps one public insertion as its own undo boundary', () => {
++    const shell = createShell()
++    shell.setDraft('alpha')
++    shell.actions.insertText(' beta')
++
++    shell.editor.dispatchCommand(UNDO_COMMAND, undefined)
++    shell.editor.update(() => {}, { discrete: true })
++
++    expect(shell.snapshot.draft).toBe('alpha')
++  })
++
++  it('preserves an existing reference chip outside the insertion', () => {
++    const shell = createShell()
++    const mention = '@[Research](dsh-session:InNvdXJjZSI)'
++    shell.setDraft('@res')
++    expect(shell.insertReference({
++      source: 'reference',
++      ref: mention,
++      label: 'Research',
++      clipboardText: mention,
++    }, {
++      start: 0,
++      end: 4,
++      draftRev: shell.snapshot.draftRev,
++    })).toBe(true)
++
++    shell.actions.insertText('tail')
++
++    expect(shell.snapshot.draft).toBe(`${mention} tail`)
++    expect(shell.snapshot.occurrences).toMatchObject([{
++      source: 'reference',
++      ref: mention,
++      label: 'Research',
++    }])
++  })
++})
+diff --git a/packages/client/ui-tool/tests/diff-card.client.spec.tsx b/packages/client/ui-tool/tests/diff-card.client.spec.tsx
+index be039beb46..d9814a5a41 100644
+--- a/packages/client/ui-tool/tests/diff-card.client.spec.tsx
++++ b/packages/client/ui-tool/tests/diff-card.client.spec.tsx
+@@ -391,6 +391,7 @@ describe('DetailsPanel diff Output section', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+diff --git a/packages/client/ui-tool/tests/read-card.client.spec.tsx b/packages/client/ui-tool/tests/read-card.client.spec.tsx
+index 5f172891c0..274f016760 100644
+--- a/packages/client/ui-tool/tests/read-card.client.spec.tsx
++++ b/packages/client/ui-tool/tests/read-card.client.spec.tsx
+@@ -312,6 +312,7 @@ describe('DetailsPanel Output section (read)', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+diff --git a/packages/client/ui-tool/tests/search-card.client.spec.tsx b/packages/client/ui-tool/tests/search-card.client.spec.tsx
+index 963bf18e49..71e091dc65 100644
+--- a/packages/client/ui-tool/tests/search-card.client.spec.tsx
++++ b/packages/client/ui-tool/tests/search-card.client.spec.tsx
+@@ -396,6 +396,7 @@ describe('DetailsPanel Output section (search)', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+diff --git a/packages/client/ui-tool/tests/terminal-card.client.spec.tsx b/packages/client/ui-tool/tests/terminal-card.client.spec.tsx
+index 03ec730732..c85980243f 100644
+--- a/packages/client/ui-tool/tests/terminal-card.client.spec.tsx
++++ b/packages/client/ui-tool/tests/terminal-card.client.spec.tsx
+@@ -526,7 +526,7 @@ describe('DetailsPanel Output section', () => {
+         useTrajectory={useEmptyTrajectory}
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+-          setDraft: () => {}, addAttachments: () => true, removeAttachment: () => {},
++          setDraft: () => {}, insertText: () => {}, addAttachments: () => true, removeAttachment: () => {},
+           pruneAttachments: () => {}, submit: () => {},
+         }}
+         useProjection={(() => undefined)}
+@@ -717,7 +717,7 @@ describe('DetailsPanel Output section', () => {
+         useTrajectory={useEmptyTrajectory}
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+-          setDraft: () => {}, addAttachments: () => true, removeAttachment: () => {},
++          setDraft: () => {}, insertText: () => {}, addAttachments: () => true, removeAttachment: () => {},
+           pruneAttachments: () => {}, submit: () => {},
+         }}
+         useProjection={(() => undefined)}
+diff --git a/packages/client/ui-tool/tests/web-card.client.spec.tsx b/packages/client/ui-tool/tests/web-card.client.spec.tsx
+index 473ac1c7a4..4b70d419c4 100644
+--- a/packages/client/ui-tool/tests/web-card.client.spec.tsx
++++ b/packages/client/ui-tool/tests/web-card.client.spec.tsx
+@@ -243,6 +243,7 @@ describe('DetailsPanel web Output section', () => {
+         useInput={(() => { throw new Error('unused') })}
+         inputActions={{
+           setDraft: () => {},
++          insertText: () => {},
+           addAttachments: () => true,
+           removeAttachment: () => {},
+           pruneAttachments: () => {},
+diff --git a/packages/client/ui-trajectory/tests/views.client.spec.tsx b/packages/client/ui-trajectory/tests/views.client.spec.tsx
+index e8288cb0fa..af229b146c 100644
+--- a/packages/client/ui-trajectory/tests/views.client.spec.tsx
++++ b/packages/client/ui-trajectory/tests/views.client.spec.tsx
+@@ -210,6 +210,7 @@ function standaloneProps(
+   })
+   const inputActions: InputActions = {
+     setDraft: () => {},
++    insertText: () => {},
+     addAttachments: () => false,
+     removeAttachment: () => {},
+     pruneAttachments: () => {},
+@@ -332,6 +333,7 @@ function mount(fixture: Awaited<ReturnType<typeof bench>>) {
+   }))
+   const inputActions: InputActions = {
+     setDraft: vi.fn(),
++    insertText: vi.fn(),
+     addAttachments: vi.fn(() => false),
+     removeAttachment: vi.fn(),
+     pruneAttachments: vi.fn(),
+diff --git a/packages/client/ui-user-questions/tests/plan-review-panel.client.spec.tsx b/packages/client/ui-user-questions/tests/plan-review-panel.client.spec.tsx
+index e303ae5aa8..81b83c70d5 100644
+--- a/packages/client/ui-user-questions/tests/plan-review-panel.client.spec.tsx
++++ b/packages/client/ui-user-questions/tests/plan-review-panel.client.spec.tsx
+@@ -119,6 +119,7 @@ const kit: Omit<QuestionComposerProps, 'matched'> = {
+   useInput: selector => selector(inputState),
+   inputActions: {
+     setDraft: () => { throw new Error('unused') },
++    insertText: () => { throw new Error('unused') },
+     addAttachments: () => { throw new Error('unused') },
+     removeAttachment: () => { throw new Error('unused') },
+     pruneAttachments: () => { throw new Error('unused') },
+diff --git a/packages/client/ui-user-questions/tests/user-questions-composer.client.spec.tsx b/packages/client/ui-user-questions/tests/user-questions-composer.client.spec.tsx
+index 42313fc802..7ba372949e 100644
+--- a/packages/client/ui-user-questions/tests/user-questions-composer.client.spec.tsx
++++ b/packages/client/ui-user-questions/tests/user-questions-composer.client.spec.tsx
+@@ -118,6 +118,7 @@ const kitBase: Omit<QuestionComposerProps, 'matched' | 'useStore' | 'actions'> =
+   useInput: selector => selector(inputState),
+   inputActions: {
+     setDraft: () => { throw new Error('unused') },
++    insertText: () => { throw new Error('unused') },
+     addAttachments: () => { throw new Error('unused') },
+     removeAttachment: () => { throw new Error('unused') },
+     pruneAttachments: () => { throw new Error('unused') },
+diff --git a/packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx b/packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx
+index 123d08ef84..86f39abd12 100644
+--- a/packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx
++++ b/packages/client/ui-workflow-run/tests/workflow-run.client.spec.tsx
+@@ -318,6 +318,7 @@ function panelProps(data: WorkflowRunChatData, sessions = listState(), openSessi
+     useInput: () => { throw new Error('unused') },
+     inputActions: {
+       setDraft: () => {},
++      insertText: () => {},
+       addAttachments: () => false,
+       removeAttachment: () => {},
+       pruneAttachments: () => {},
+-- 
+2.50.1 (Apple Git-155)
+
