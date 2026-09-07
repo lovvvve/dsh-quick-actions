@@ -3,6 +3,7 @@
  * Host and Client both consume it; it never touches cordis, React, the DOM or storage.
  */
 export * from './types.js'
+export * from './json.js'
 export * from './text.js'
 export * from './validation.js'
 export * from './catalog.js'

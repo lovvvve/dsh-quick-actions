@@ -7,6 +7,7 @@
  * new Custom Action ID, so a UUID collision comes back as a refusal to retry
  * rather than as a silent overwrite.
  */
+import { deepEqualJson } from './json.js'
 import { normalizeQuickActionSettings } from './normalize.js'
 import { isLiveQuickAction } from './settings.js'
 import { projectQuickActions } from './projection.js'
@@ -82,28 +83,6 @@ function unknownAction(): QuickActionMutationOutcome {
   return refuse('unknown-action', [{ field: 'id', reason: 'missing' }])
 }
 
-/**
- * Structural comparison, not canonical-JSON comparison: tombstones carry whatever
- * key order the version that wrote them chose, and this has to answer "would this
- * write change anything" without depending on that order.
- */
-function deepEqual(left: unknown, right: unknown): boolean {
-  if (left === right) return true
-  if (typeof left !== 'object' || typeof right !== 'object' || left === null || right === null) return false
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) return false
-    return left.every((item, index) => deepEqual(item, right[index]))
-  }
-  const leftKeys = Object.keys(left)
-  const rightKeys = Object.keys(right)
-  if (leftKeys.length !== rightKeys.length) return false
-  return leftKeys.every(
-    (key) =>
-      Object.hasOwn(right, key) &&
-      deepEqual((left as Record<string, unknown>)[key], (right as Record<string, unknown>)[key]),
-  )
-}
-
 function planFrom(
   context: QuickActionMutationContext,
   current: QuickActionSettingsV1,
@@ -112,7 +91,7 @@ function planFrom(
   const canonical = normalizeQuickActionSettings(next, context.catalog)
   return {
     ok: true,
-    plan: { expectedRevision: context.revision, next: canonical, changed: !deepEqual(current, canonical) },
+    plan: { expectedRevision: context.revision, next: canonical, changed: !deepEqualJson(current, canonical) },
   }
 }
 
