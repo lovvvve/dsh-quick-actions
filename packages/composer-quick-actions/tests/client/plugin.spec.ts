@@ -1,65 +1,164 @@
 import { describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
-import { apply, inject } from '../../src/client/index.js'
+import { apply, inject, name } from '../../src/client/index.js'
 import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
 import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
+import { QUICK_ACTIONS_LOCALE_NAMESPACE } from '../../src/locales/index.js'
+import type { ComposerBlocks, SlotRegisterOptions } from '../../src/client/dsh.js'
 
-function fakeContext(document: FakeSettingsDocument, connection: FakeConnection): {
-  ctx: Context
-  unload: () => void
-} {
-  let disposer: (() => void) | undefined
-  const ctx = {
-    settingsScope: fakeSettingsScope(document),
-    connection,
-    effect: (execute: () => () => void) => {
-      disposer = execute()
-      return () => {}
-    },
-  } as unknown as Context
-  return { ctx, unload: () => disposer?.() }
+interface Registration {
+  readonly options: SlotRegisterOptions
+  readonly component: unknown
 }
 
-function registered(): FakeSettingsDocument {
-  const document = new FakeSettingsDocument()
-  document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {
-    base: { schemaVersion: 1, revision: 'r', presets: [{ id: 'a', kind: 'send', label: 'A', text: 'a', confirm: true }] },
-  })
-  document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
-    defaults: { schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
-  })
-  return document
+/** A fake Client context wide enough for the Client fiber's whole assembly. */
+class FakeClientContext {
+  readonly document = new FakeSettingsDocument()
+  readonly connection = new FakeConnection()
+  /** Slot keys the plugin waited on, in order. */
+  readonly injected: string[] = []
+  /** Entries registered while those declarations were live. */
+  readonly registered: Registration[] = []
+  /** Locale namespaces whose dictionaries were registered. */
+  readonly locales: string[] = []
+  /** Whether `conversation` is provided; the Composer-block guard reads it. */
+  conversation: { blocks: ComposerBlocks } | undefined
+  private readonly disposers: (() => void)[] = []
+
+  constructor() {
+    this.document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {
+      base: {
+        schemaVersion: 1,
+        revision: 'r',
+        presets: [{ id: 'a', kind: 'send', label: 'A', text: 'a', confirm: true }],
+      },
+    })
+    this.document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
+      defaults: { schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
+    })
+  }
+
+  get ctx(): Context {
+    return {
+      settingsScope: fakeSettingsScope(this.document),
+      connection: this.connection,
+      slots: {
+        inject: (key: string, callback: () => () => void) => {
+          this.injected.push(key)
+          const stop = callback()
+          this.disposers.push(stop)
+          return () => {
+            stop()
+          }
+        },
+        register: (options: SlotRegisterOptions, component: unknown) => {
+          this.registered.push({ options, component })
+          return () => {
+            this.registered.splice(
+              this.registered.findIndex((entry) => entry.options === options),
+              1,
+            )
+          }
+        },
+      },
+      locale: {
+        register: (ns: string) => {
+          this.locales.push(ns)
+          return () => {
+            this.locales.splice(this.locales.indexOf(ns), 1)
+          }
+        },
+        bind: () => (key: string) => key,
+      },
+      get: (service: string) => (service === 'conversation' ? this.conversation : undefined),
+      effect: (execute: () => () => void) => {
+        this.disposers.push(execute())
+        return () => {}
+      },
+    } as unknown as Context
+  }
+
+  unload(): void {
+    for (const dispose of this.disposers.reverse()) dispose()
+    this.disposers.length = 0
+  }
 }
 
 describe('the Client plugin surface', () => {
-  it('declares the two services it reaches Host state through', () => {
-    expect(inject).toEqual(['settingsScope', 'connection'])
+  it('names itself for fiber diagnostics', () => {
+    expect(name).toBe('composer-quick-actions')
+  })
+
+  it('declares exactly the services spec 7.3 lists', () => {
+    expect(inject).toEqual(['slots', 'settingsScope', 'connection', 'locale'])
   })
 
   it('binds the catalog namespace and the user-state namespace, and nothing else', () => {
-    const document = registered()
-    const { ctx } = fakeContext(document, new FakeConnection())
-    apply(ctx)
-    expect(document.bound).toEqual([QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE])
+    const host = new FakeClientContext()
+    apply(host.ctx)
+    expect(host.document.bound).toEqual([QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE])
   })
 
   it('costs no settings read of its own', () => {
-    const document = registered()
-    const { ctx } = fakeContext(document, new FakeConnection())
-    apply(ctx)
-    expect(document.describeReads).toBe(0)
+    const host = new FakeClientContext()
+    apply(host.ctx)
+    expect(host.document.describeReads).toBe(0)
   })
 
-  it('releases every subscription when the fiber unloads', () => {
-    const document = registered()
-    const connection = new FakeConnection()
-    const { ctx, unload } = fakeContext(document, connection)
-    apply(ctx)
-    expect(document.listenerCount).toBeGreaterThan(0)
+  it('registers its dictionaries under one namespace', () => {
+    const host = new FakeClientContext()
+    apply(host.ctx)
+    expect(host.locales).toEqual([QUICK_ACTIONS_LOCALE_NAMESPACE])
+  })
 
-    unload()
+  it('always registers both dock Slots, whatever the current layout is', () => {
+    const host = new FakeClientContext()
+    apply(host.ctx)
 
-    expect(document.listenerCount).toBe(0)
-    expect(connection.listenerCount).toBe(0)
+    expect(host.injected).toEqual(['conversation.input.dock', 'conversation.composer.dock'])
+    expect(host.registered.map((entry) => entry.options)).toEqual([
+      {
+        name: 'conversation.input.dock',
+        id: 'composer-quick-actions',
+        order: 100,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
+      {
+        name: 'conversation.composer.dock',
+        id: 'composer-quick-actions',
+        order: 100,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
+    ])
+  })
+
+  it('registers ids of its own rather than reusing a shipped entry', () => {
+    const host = new FakeClientContext()
+    apply(host.ctx)
+    for (const entry of host.registered) expect(entry.options.id).toBe('composer-quick-actions')
+  })
+
+  it('releases every registration and subscription when the fiber unloads', () => {
+    const host = new FakeClientContext()
+    apply(host.ctx)
+    expect(host.document.listenerCount).toBeGreaterThan(0)
+    expect(host.registered).toHaveLength(2)
+    expect(host.locales).toHaveLength(1)
+
+    host.unload()
+
+    expect(host.document.listenerCount).toBe(0)
+    expect(host.connection.listenerCount).toBe(0)
+    expect(host.registered).toHaveLength(0)
+    expect(host.locales).toHaveLength(0)
+  })
+
+  it('starts without the conversation service being provided', () => {
+    // `conversation` is read through `ctx.get`, not injected, so a context that
+    // does not carry it must still assemble.
+    const host = new FakeClientContext()
+    expect(() => {
+      apply(host.ctx)
+    }).not.toThrow()
   })
 })

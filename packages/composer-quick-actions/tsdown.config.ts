@@ -23,7 +23,10 @@ export default [
   host,
   dshClientBundle({
     id,
-    entry: 'src/client/index.ts',
+    entry: 'src/client/index.tsx',
     outDir: 'lib',
+    // The DSH module table's React, and nothing else: every other specifier is
+    // bundled, so the surfaces cannot silently pick up a second React copy.
+    external: ['react', 'react/jsx-runtime'],
   }),
 ]
