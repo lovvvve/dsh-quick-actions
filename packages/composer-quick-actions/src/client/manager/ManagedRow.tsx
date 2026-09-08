@@ -12,6 +12,7 @@
  * panel is where it stays recoverable (spec 3).
  */
 import type { ReactElement } from 'react'
+import { Button, Pill } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pressProps } from './press.js'
 import type { ManagerWriteGate } from './press.js'
 import { ActionFace } from '../surfaces/ActionFace.js'
@@ -52,14 +53,14 @@ export function ManagedRow({ action, index, total, gate, deleting, t, on }: Mana
     >
       <span className="dsh-cqa-list-head">
         <ActionFace action={action} t={t} />
-        <span className="dsh-cqa-tag">{t(action.editable ? 'manager.custom' : 'manager.preset')}</span>
+        <Pill className="dsh-cqa-tag">{t(action.editable ? 'manager.custom' : 'manager.preset')}</Pill>
         {action.hidden ? (
-          <span className="dsh-cqa-tag" data-quick-actions-state="hidden">
+          <Pill active className="dsh-cqa-tag">
             {t(action.editable ? 'manager.disabled' : 'manager.hidden')}
-          </span>
+          </Pill>
         ) : null}
         {action.clonedFromPresetId === undefined ? null : (
-          <span className="dsh-cqa-tag">{t('manager.clonedFrom')}</span>
+          <Pill className="dsh-cqa-tag">{t('manager.clonedFrom')}</Pill>
         )}
       </span>
 
@@ -67,8 +68,7 @@ export function ManagedRow({ action, index, total, gate, deleting, t, on }: Mana
       <span className="dsh-cqa-list-text">{action.text}</span>
 
       <span className="dsh-cqa-list-controls">
-        <button
-          type="button"
+        <Button variant="toolbar" size="sm"
           className="dsh-cqa-entry"
           data-quick-actions-move="up"
           {...pressProps(gate, index === 0, () => {
@@ -76,9 +76,8 @@ export function ManagedRow({ action, index, total, gate, deleting, t, on }: Mana
           })}
         >
           {t('manager.moveUp')}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button variant="toolbar" size="sm"
           className="dsh-cqa-entry"
           data-quick-actions-move="down"
           {...pressProps(gate, index === total - 1, () => {
@@ -86,16 +85,16 @@ export function ManagedRow({ action, index, total, gate, deleting, t, on }: Mana
           })}
         >
           {t('manager.moveDown')}
-        </button>
+        </Button>
 
         {action.editable ? (
           <>
-            <button type="button" className="dsh-cqa-entry" {...pressProps(gate, false, on.onEdit)}>
+            <Button variant="toolbar" size="sm" className="dsh-cqa-entry" {...pressProps(gate, false, on.onEdit)}>
               {t('manager.edit')}
-            </button>
-            <button type="button" className="dsh-cqa-entry" {...pressProps(gate, false, on.onToggleEnabled)}>
+            </Button>
+            <Button variant="toolbar" size="sm" className="dsh-cqa-entry" {...pressProps(gate, false, on.onToggleEnabled)}>
               {t(action.hidden ? 'manager.enable' : 'manager.disable')}
-            </button>
+            </Button>
             {/*
               Deleting is the one control here that destroys user data, so it
               asks once in place rather than behind a second modal. Backing out
@@ -103,42 +102,39 @@ export function ManagedRow({ action, index, total, gate, deleting, t, on }: Mana
             */}
             {deleting ? (
               <>
-                <button
-                  type="button"
+                <Button variant="toolbar" size="sm"
                   className="dsh-cqa-entry"
                   data-quick-actions-delete="confirm"
                   {...pressProps(gate, false, on.onConfirmDelete)}
                 >
                   {t('manager.delete.confirm')}
-                </button>
-                <button type="button" className="dsh-cqa-entry" onClick={on.onCancelDelete}>
+                </Button>
+                <Button variant="toolbar" size="sm" className="dsh-cqa-entry" onClick={on.onCancelDelete}>
                   {t('manager.delete.cancel')}
-                </button>
+                </Button>
               </>
             ) : (
-              <button
-                type="button"
+              <Button variant="toolbar" size="sm"
                 className="dsh-cqa-entry"
                 data-quick-actions-delete="ask"
                 {...pressProps(gate, false, on.onAskDelete)}
               >
                 {t('manager.delete')}
-              </button>
+              </Button>
             )}
           </>
         ) : (
           <>
-            <button type="button" className="dsh-cqa-entry" {...pressProps(gate, false, on.onToggleHidden)}>
+            <Button variant="toolbar" size="sm" className="dsh-cqa-entry" {...pressProps(gate, false, on.onToggleHidden)}>
               {t(action.hidden ? 'manager.restore' : 'manager.hide')}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button variant="toolbar" size="sm"
               className="dsh-cqa-entry"
               data-quick-actions-clone=""
               {...pressProps(gate, !gate.canAdd, on.onClone)}
             >
               {t('manager.clone')}
-            </button>
+            </Button>
           </>
         )}
       </span>

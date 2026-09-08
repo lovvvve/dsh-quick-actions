@@ -33,12 +33,13 @@
  */
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { ReactElement } from 'react'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ActionForm } from './ActionForm.js'
 import { ManagedRow } from './ManagedRow.js'
 import { pressProps } from './press.js'
 import type { ManagerWriteGate } from './press.js'
 import { managerFailureMessage, managerReadOnlyReason } from './status.js'
-import { useFocusReturn, useInitialFocus, useModalKeys } from '../modal.js'
+import { useFocusReturn, useInitialFocusIn, useModalKeys } from '../modal.js'
 import {
   QUICK_ACTION_LAYOUTS,
   newQuickActionDraft,
@@ -95,7 +96,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
 
   useFocusReturn()
   const { panelRef, onKeyDown } = useModalKeys<HTMLDivElement>(close)
-  const closeRef = useInitialFocus<HTMLButtonElement>()
+  useInitialFocusIn(panelRef, '[data-quick-actions-manager-close]')
   const titleId = useId()
   const layoutTitleId = useId()
   const listTitleId = useId()
@@ -217,9 +218,15 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
           <h2 className="dsh-cqa-manager-title" id={titleId}>
             {t('manager.title')}
           </h2>
-          <button type="button" className="dsh-cqa-entry" ref={closeRef} onClick={close}>
+          <Button
+            variant="toolbar"
+            size="sm"
+            className="dsh-cqa-entry"
+            data-quick-actions-manager-close=""
+            onClick={close}
+          >
             {t('manager.close')}
-          </button>
+          </Button>
         </div>
 
         {projection === undefined ? (
@@ -293,9 +300,8 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
               </span>
               <div className="dsh-cqa-group" role="group" aria-labelledby={layoutTitleId}>
                 {QUICK_ACTION_LAYOUTS.map((layout: QuickActionLayout) => (
-                  <button
+                  <Button variant="toolbar" size="sm"
                     key={layout}
-                    type="button"
                     className="dsh-cqa-entry"
                     data-quick-actions-layout-choice={layout}
                     aria-pressed={projection.layout === layout}
@@ -304,7 +310,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                     })}
                   >
                     {t(`manager.layout.${layout}`)}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -317,8 +323,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                 <span className="dsh-cqa-field-hint" data-quick-actions-count="">
                   {t('manager.count', { total: counts?.total ?? 0, limit: counts?.limit ?? 0 })}
                 </span>
-                <button
-                  type="button"
+                <Button variant="toolbar" size="sm"
                   className="dsh-cqa-entry"
                   data-quick-actions-new=""
                   {...pressProps(gate, !gate.canAdd || form?.target.kind === 'new', () => {
@@ -326,7 +331,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                   })}
                 >
                   {t('manager.new')}
-                </button>
+                </Button>
               </div>
 
               {/*

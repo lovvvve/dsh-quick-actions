@@ -47,7 +47,8 @@
       ],
       "external": [
         "react",
-        "react/jsx-runtime"
+        "react/jsx-runtime",
+        "@deepseek-ai/dsh-client-ui-primitives"
       ]
     }
   },
@@ -64,6 +65,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.2-rc.1",
     "@deepseek-ai/dsh-settings": "^0.1.2-rc.1",
     "@deepseek-ai/schemastery": "^3.18.2",
     "@dsh-plugins/dsh-client-bundle": "workspace:*",

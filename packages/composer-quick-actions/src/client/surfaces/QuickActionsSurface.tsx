@@ -19,6 +19,7 @@
  */
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject, ReactElement } from 'react'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ActionFace } from './ActionFace.js'
 import { densityFor, fitActionCount } from './layout.js'
 import type { SurfaceDensity } from './layout.js'
@@ -52,24 +53,14 @@ function ActionControl(props: {
   readonly reason: QuickActionUnavailableReason | undefined
   readonly t: Translate
   readonly onActivate: (action: ProjectedQuickAction) => void
-  readonly measure?: (key: string, width: number) => void
 }): ReactElement {
-  const { action, reason, t, onActivate, measure } = props
-  const key = quickActionRefKey(action.ref)
-  const ref = useRef<HTMLButtonElement | null>(null)
-
-  useLayoutEffect(() => {
-    if (measure === undefined) return
-    const width = ref.current?.offsetWidth ?? 0
-    if (width > 0) measure(key, width)
-  }, [key, measure, action.label, action.icon])
-
+  const { action, reason, t, onActivate } = props
   return (
-    <button
-      type="button"
-      ref={ref}
+    <Button
+      variant="toolbar"
+      size="sm"
       className="dsh-cqa-action"
-      data-quick-action={key}
+      data-quick-action={quickActionRefKey(action.ref)}
       disabled={reason !== undefined}
       title={reason === undefined ? action.text : t(`unavailable.${reason}`)}
       onClick={() => {
@@ -77,7 +68,7 @@ function ActionControl(props: {
       }}
     >
       <ActionFace action={action} t={t} />
-    </button>
+    </Button>
   )
 }
 
@@ -113,18 +104,29 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   const [fitRef, fitWidth] = useElementWidth()
   const density: SurfaceDensity = densityFor(width)
   const [panelOpen, setPanelOpen] = useState(false)
-  const panelTriggerRef = useRef<HTMLButtonElement | null>(null)
   const panelTitleId = useId()
 
   // Measured control widths, cached by action identity: they depend on the
   // label, not on the container, so a resize re-runs only the arithmetic.
+  //
+  // The scan runs here rather than inside each control because `Button` forwards
+  // no ref — primitives publish no `forwardRef` at all — and reading the whole
+  // region in one layout effect is less machinery than threading a callback
+  // through every control anyway.
   const widths = useRef(new Map<string, number>())
   const [measured, setMeasured] = useState(0)
-  const measure = useCallback((key: string, value: number) => {
-    if (widths.current.get(key) === value) return
-    widths.current.set(key, value)
-    setMeasured((seen) => seen + 1)
-  }, [])
+  useLayoutEffect(() => {
+    if (layout !== 'bar') return
+    let changed = false
+    for (const node of Array.from(fitRef.current?.querySelectorAll<HTMLElement>('[data-quick-action]') ?? [])) {
+      const key = node.dataset['quickAction']
+      const value = node.offsetWidth
+      if (key === undefined || value <= 0 || widths.current.get(key) === value) continue
+      widths.current.set(key, value)
+      changed = true
+    }
+    if (changed) setMeasured((seen) => seen + 1)
+  })
 
   const shown = useMemo(() => {
     if (layout !== 'bar') return actions.length
@@ -138,10 +140,21 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   }, [layout, actions, fitWidth, measured])
 
   const overflow = layout === 'bar' ? actions.slice(shown) : actions
+  /**
+   * Resolve one of this surface's own controls by its data marker.
+   *
+   * `Button` takes no ref, so the focus contract of spec 8.4 addresses controls
+   * the way the stylesheet does: through a marker attribute, queried from the
+   * row this surface already measures. The selector and the attribute that
+   * answers it live in this one file, so the coupling stays local.
+   */
+  const control = useCallback((marker: string): HTMLElement | null => {
+    return rowRef.current?.querySelector<HTMLElement>(`[${marker}]`) ?? null
+  }, [rowRef])
   const closePanel = useCallback(() => {
     setPanelOpen(false)
-    panelTriggerRef.current?.focus()
-  }, [])
+    control('data-quick-actions-entry')?.focus()
+  }, [control])
 
   // Focus return after the confirmation closes (spec 8.4): the control that
   // opened it gets the caret back. The opener is captured in the activation
@@ -156,7 +169,6 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
     },
     [onActivate],
   )
-  const manageRef = useRef<HTMLButtonElement | null>(null)
   useEffect(() => {
     if (confirming !== undefined) return
     const opener = confirmOpener.current
@@ -167,8 +179,8 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
     // list is unmounted with the list. The management entry is the one control
     // every layout always has, so focus lands there rather than on the body.
     const usable = opener.isConnected && !(opener as HTMLButtonElement).disabled
-    ;(usable ? opener : manageRef.current)?.focus()
-  }, [confirming])
+    ;(usable ? opener : control('data-quick-actions-manage'))?.focus()
+  }, [confirming, control])
 
   // A layout switch, or an emptied overflow, must not leave a panel open over
   // an entry that no longer exists.
@@ -177,9 +189,9 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   }, [overflow.length])
 
   const manage = (
-    <button
-      type="button"
-      ref={manageRef}
+    <Button
+      variant="toolbar"
+      size="sm"
       className="dsh-cqa-entry"
       data-quick-actions-manage=""
       // A tooltip, never a name: `aria-label` here would replace the visible
@@ -188,7 +200,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
       onClick={onManage}
     >
       <span className="dsh-cqa-label">{t('manage')}</span>
-    </button>
+    </Button>
   )
 
   const rootClass = layout === 'bar' ? 'dsh-cqa-bar' : layout === 'launcher' ? 'dsh-cqa-launcher' : 'dsh-cqa-ribbon'
@@ -223,7 +235,6 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
                 reason={unavailableReasonFor(action, session)}
                 t={t}
                 onActivate={activate}
-                measure={measure}
               />
             ))}
           </div>
@@ -232,9 +243,9 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
         <div className="dsh-cqa-trailing">
           {layout === 'launcher' || (layout === 'bar' && overflow.length > 0) ? (
             <span className="dsh-cqa-anchor">
-              <button
-                type="button"
-                ref={panelTriggerRef}
+              <Button
+                variant="toolbar"
+                size="sm"
                 className="dsh-cqa-entry"
                 data-quick-actions-entry={layout}
                 aria-expanded={panelOpen}
@@ -249,7 +260,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
                     ? t('launcher', { count: actions.length })
                     : t('more', { count: overflow.length })}
                 </span>
-              </button>
+              </Button>
               {panelOpen ? (
                 <ActionPanel
                   actions={overflow}

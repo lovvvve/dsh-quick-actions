@@ -90,38 +90,29 @@ export const QUICK_ACTIONS_CSS = `
   margin-left: auto;
 }
 
+/*
+ * The capsule itself — height, radius, padding, colours, hover, ":disabled"
+ * and the focus ring — belongs to the official "Button". What is left here is
+ * only what a shared control cannot know: how it behaves inside these rows.
+ * Nothing below may restate a Button property, because the plugin's class is
+ * applied after the primitive's and would win on equal specificity.
+ */
 .dsh-cqa-action,
 .dsh-cqa-entry {
-  box-sizing: border-box;
   flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  /* Long labels truncate rather than pushing the row's other controls out. */
   max-width: 240px;
-  height: 26px;
-  padding: 0 10px;
-  border: 0;
-  border-radius: 13px;
-  background: var(--dsw-specific-selector);
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  font-size: 12px;
-  line-height: 18px;
-  cursor: pointer;
 }
-.dsh-cqa-action:hover:not(:disabled),
-.dsh-cqa-entry:hover:not(:disabled) {
-  background: var(--dsw-alias-interactive-bg-hover-solid);
-}
-.dsh-cqa-action:disabled,
-.dsh-cqa-entry:disabled,
+/* "aria-disabled" is not ":disabled": a control kept focusable while a write is
+   in flight still has to read as inert, and no primitive expresses that. */
 .dsh-cqa-entry[aria-disabled='true'] {
   opacity: 0.5;
   cursor: default;
 }
-.dsh-cqa-action:focus-visible,
-.dsh-cqa-entry:focus-visible,
-.dsh-cqa-panel-item:focus-visible {
+/* The searchable panel's rows stay native — a full-width, left-aligned list row
+   is not a capsule — so they still need a focus ring of their own. */
+.dsh-cqa-panel-item:focus-visible,
+.dsh-cqa-link:focus-visible {
   outline: 2px solid var(--dsw-alias-state-business-primary);
   outline-offset: 1px;
 }
@@ -134,14 +125,10 @@ export const QUICK_ACTIONS_CSS = `
 .dsh-cqa-icon {
   flex: none;
 }
-.dsh-cqa-badge {
+/* The chip look is "Pill"'s; only its behaviour in a flex row is ours. */
+.dsh-cqa-badge,
+.dsh-cqa-tag {
   flex: none;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: var(--dsw-alias-state-business-tertiary);
-  color: var(--dsw-alias-label-primary-bluish);
-  font-size: 11px;
-  line-height: 16px;
 }
 
 .dsh-cqa-note {
@@ -285,6 +272,9 @@ export const QUICK_ACTIONS_CSS = `
   font-weight: 500;
 }
 
+.dsh-cqa-search {
+  width: 100%;
+}
 .dsh-cqa-input,
 .dsh-cqa-textarea {
   box-sizing: border-box;
@@ -449,15 +439,6 @@ export const QUICK_ACTIONS_CSS = `
   align-items: center;
   gap: 4px;
   flex-wrap: wrap;
-}
-.dsh-cqa-tag {
-  flex: none;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: var(--dsw-specific-selector);
-  color: var(--dsw-alias-label-tertiary);
-  font-size: 11px;
-  line-height: 16px;
 }
 
 .dsh-cqa-form {

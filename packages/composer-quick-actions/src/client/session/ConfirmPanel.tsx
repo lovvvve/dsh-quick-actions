@@ -12,8 +12,9 @@
  * follows a confirmation lives in the execution engine, not here.
  */
 import type { ReactElement } from 'react'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { PendingQuickActionConfirmation } from './execution.js'
-import { useInitialFocus, useModalKeys } from '../modal.js'
+import { useInitialFocusIn, useModalKeys } from '../modal.js'
 import type { Translate } from '../dsh.js'
 
 export interface ConfirmPanelProps {
@@ -30,7 +31,7 @@ export function ConfirmPanel({ pending, t, onConfirm, onCancel }: ConfirmPanelPr
   // confirmation is usually disabled or unmounted by the time it closes, so the
   // surface owns the fallback (spec 8.4).
   const { panelRef, onKeyDown } = useModalKeys<HTMLDivElement>(onCancel)
-  const confirmRef = useInitialFocus<HTMLButtonElement>()
+  useInitialFocusIn(panelRef, '[data-quick-actions-confirm-send]')
 
   return (
     <>
@@ -58,12 +59,18 @@ export function ConfirmPanel({ pending, t, onConfirm, onCancel }: ConfirmPanelPr
           </p>
         ) : null}
         <div className="dsh-cqa-confirm-actions">
-          <button type="button" className="dsh-cqa-entry" onClick={onCancel}>
+          <Button variant="toolbar" size="sm" className="dsh-cqa-entry" onClick={onCancel}>
             {t('confirm.cancel')}
-          </button>
-          <button type="button" className="dsh-cqa-entry" ref={confirmRef} onClick={onConfirm}>
+          </Button>
+          <Button
+            variant="toolbar"
+            size="sm"
+            className="dsh-cqa-entry"
+            data-quick-actions-confirm-send=""
+            onClick={onConfirm}
+          >
             {t('confirm.send')}
-          </button>
+          </Button>
         </div>
       </div>
     </>

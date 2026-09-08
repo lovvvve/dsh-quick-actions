@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。**剩下的是自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。**剩下的是构建适配器的 watch staging 清理（票据 22）、自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
 
 真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base`、常驻判定、等宽与端到端发送都归票据 18 在前台 GUI 会话实测。
 
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（18、21、22 未认领；16、17 与 20 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（18、21、22 未认领；16、17、20 与 23 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -102,3 +102,4 @@ pnpm vitest run -t 'rejects computed require calls'
 - 发布身份已由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案：正式采纳无 scope 的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve），**暂不发布**（不设 `publishConfig`、不 `npm publish`，试用走本地 tarball）。身份已由[票据 17](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md) 落进两个 `package.json`、`cordis.patch.yml` 与四份 README；根 `LICENSE` 由 pnpm 打包时自动带入各 tarball，无需复制。**不要**给任何包加 `publishConfig` 或执行 `npm publish`。
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。
+- **`@deepseek-ai/dsh-client-ui-primitives` 是 web shell 的构建期依赖**，由冻结 seed 表无条件提供（`makeRequire` 第一优先命中），磁盘上不存在该包也 require 得到；取证见 `research/client-ui-primitives-availability.md`。它必须同时出现在 `tsdown.config.ts` 的 `external` 与 `package.json` 的 `dsh.client.external`（票据 17 的契约测试做严格相等断言），devDependency **精确锁 `0.1.2-rc.1`**——`latest` dist-tag 停在陈旧的 `0.0.1-rc.1`，少 17 个导出且不发 CSS。它**没有 `forwardRef`**，`Button`/`Input`/`Pill` 都不能接 `ref`；开场焦点用 `modal.ts` 的 `useInitialFocusIn(container, selector)` 按标记属性寻址。它的裸 ESM 会 `import` 自己的 CSS Modules，所以 `vitest.config.ts` 必须把它列进 `test.server.deps.inline`，否则测试在 import 阶段就报 `Unknown file extension ".css"`。

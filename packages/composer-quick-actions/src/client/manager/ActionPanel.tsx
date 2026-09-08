@@ -19,7 +19,8 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { filterQuickActions, hasQuickActionQuery } from './search.js'
-import { useInitialFocus, useModalKeys } from '../modal.js'
+import { IconSearchOutline16, Input } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useInitialFocusIn, useModalKeys } from '../modal.js'
 import { ActionFace } from '../surfaces/ActionFace.js'
 import { unavailableReasonFor } from '../session/availability.js'
 import type { QuickActionSessionState } from '../session/execution.js'
@@ -42,7 +43,7 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
   const { actions, session, t, labelledBy, onActivate, onClose } = props
   const [query, setQuery] = useState('')
   const { panelRef, onKeyDown } = useModalKeys<HTMLDivElement>(onClose)
-  const searchRef = useInitialFocus<HTMLInputElement>()
+  useInitialFocusIn(panelRef, '[data-quick-actions-search]')
 
   const matches = filterQuickActions(actions, query)
   // "Nothing to run" and "nothing matched what you typed" are different answers,
@@ -79,9 +80,9 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
 
         <label className="dsh-cqa-field">
           <span className="dsh-cqa-field-label">{t('panel.search')}</span>
-          <input
-            className="dsh-cqa-input"
-            ref={searchRef}
+          <Input
+            className="dsh-cqa-search"
+            icon={<IconSearchOutline16 />}
             type="search"
             value={query}
             data-quick-actions-search=""

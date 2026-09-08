@@ -12,6 +12,7 @@
  * `<button>`, a list row — and its own layout box.
  */
 import type { ReactElement } from 'react'
+import { Pill } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ProjectedQuickAction } from '../../model/index.js'
 import type { Translate } from '../dsh.js'
 
@@ -30,7 +31,7 @@ export function ActionFace({ action, t }: ActionFaceProps): ReactElement {
         </span>
       )}
       <span className="dsh-cqa-label">{action.label}</span>
-      {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
+      {action.command ? <Pill className="dsh-cqa-badge">{t('command.badge')}</Pill> : null}
     </>
   )
 }

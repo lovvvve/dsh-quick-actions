@@ -116,3 +116,25 @@ export function useInitialFocus<T extends HTMLElement>(): MutableRefObject<T | n
   }, [])
   return target
 }
+
+/**
+ * Move focus into a panel once, on open, addressing the target through the
+ * panel rather than through a ref (spec 8.4).
+ *
+ * `@deepseek-ai/dsh-client-ui-primitives` publishes no `forwardRef` at all, so
+ * an official `Button` or `Input` cannot carry one. Addressing the opening
+ * target by marker attribute — the way the Tab boundary above already addresses
+ * the focusable set — keeps that limitation in this one module instead of
+ * pushing every panel back onto native controls.
+ *
+ * @param container - the panel whose subtree holds the target.
+ * @param selector - CSS selector for the control that should open focused.
+ */
+export function useInitialFocusIn<T extends HTMLElement>(
+  container: MutableRefObject<T | null>,
+  selector: string,
+): void {
+  useEffect(() => {
+    container.current?.querySelector<HTMLElement>(selector)?.focus()
+  }, [container, selector])
+}

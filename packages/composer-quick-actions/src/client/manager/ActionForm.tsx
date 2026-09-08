@@ -26,6 +26,7 @@
  */
 import { useId } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react'
+import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { pressProps } from './press.js'
 import type { ManagerWriteGate } from './press.js'
 import {
@@ -244,12 +245,12 @@ export function ActionForm(props: ActionFormProps): ReactElement {
           mid-write panel that could not be backed out of would leave the user
           holding an open draft with no way out of it.
         */}
-        <button type="button" className="dsh-cqa-entry" onClick={onCancel}>
+        <Button variant="toolbar" size="sm" className="dsh-cqa-entry" onClick={onCancel}>
           {t('form.cancel')}
-        </button>
-        <button type="button" className="dsh-cqa-entry" {...pressProps(gate, false, onSave)}>
+        </Button>
+        <Button variant="toolbar" size="sm" className="dsh-cqa-entry" {...pressProps(gate, false, onSave)}>
           {t('form.save')}
-        </button>
+        </Button>
       </div>
     </div>
   )
