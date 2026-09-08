@@ -336,6 +336,24 @@ client.js size: 146124
 
 快捷动作只在 Resident Composer 渲染，而 Resident Composer 必然是用户自己的会话，因此 Playwright 的**自动全页截图与 trace 一律关闭**（`screenshot: 'off'`、`trace: 'off'`、`video: 'off'`）：全页捕获会把真实对话内容写进证据，违反本文件开头的约束。需要图像的用例改为对 composer 区域做裁剪截图。断言只读插件自有的 `data-quick-action*` 标记与几何量，不读会话内容。
 
+### 卸载（按用户指示于本轮收尾执行）
+
+`plugin --profile web remove dsh-composer-quick-actions-bundle`（同样需要一次性 `--config.minimumReleaseAge=0`）后逐项核对：
+
+| 检查 | 结果 |
+|---|---|
+| 合成 profile 树 | `--dump-config` 中 `composer-quick-actions` 出现次数 **0**，row 已消失 |
+| `profiles/web/package.json` | 与安装前**逐字一致** |
+| `profiles/web/pnpm-workspace.yaml` | 与安装前**逐字一致**（override 块与注释一并删除） |
+| `profiles/web/node_modules` | 功能包已移除 |
+| `settings.yaml` | 插件命名空间整块移除（安装前本就不存在该命名空间），用户其余 4 个命名空间原样保留 |
+
+GUI 层的「UI 消失」观测存在**混淆，不作为结论**：卸载落盘（07:26:09）时 3080 上是桌面应用于 07:23:59 启动的服务，该服务既可能因 `patchReload: "live"` 对移除热生效而卸下插件，也可能本就走 shim 优先的全局 `0.1.1-rc.2` 运行时（不满足插件 peer）。诊断确实读到 `layoutAttr: null` / `actionCount: 0`，但在受控服务下的复测留给下一轮。
+
+### 下一轮必须先修的 harness 卫生问题
+
+本轮结束时发现测试**误建了 2 条克隆动作**（`总结对话`、`压缩上下文`，带 `clonedFromPresetId`），已随命名空间清除。管理面板用例必须改成严格只读，或在每次运行前后重置插件命名空间；否则规模矩阵（0/1/6/25/50）会被残留数据污染。
+
 ### 本轮未覆盖
 
 - 发送动作全部项（单飞、确认面板、失败草稿保留、命令发送动作的两种确认设置、queue）——按用户指示不触发真实模型调用，暂缓。
