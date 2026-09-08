@@ -15,6 +15,20 @@ import type {
   StoredQuickActionValue,
 } from './types.js'
 
+/**
+ * The one namespace holding user data (spec 4.2); renaming it orphans every
+ * stored section. It lives in the shared model because both faces address it:
+ * the Host registers it, the Client binds the same name.
+ */
+export const QUICK_ACTIONS_SETTINGS_NAMESPACE = 'composer-quick-actions'
+
+/**
+ * The read-only namespace carrying the Preset Catalog to Clients (spec 17.2).
+ * The plugin never writes its user layer, so it holds no persisted section —
+ * `composer-quick-actions` remains the only persisted namespace (spec 4.2).
+ */
+export const QUICK_ACTIONS_CATALOG_NAMESPACE = 'composer-quick-actions-catalog'
+
 /** The state a fresh install starts from (spec 4.2). */
 export const DEFAULT_QUICK_ACTION_SETTINGS: QuickActionSettingsV1 = Object.freeze({
   schemaVersion: 1,

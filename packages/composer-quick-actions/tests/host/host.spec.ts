@@ -5,12 +5,11 @@ import {
   startQuickActionsHost,
   type QuickActionsSettingsProvider,
 } from '../../src/host/index.js'
+import { quickActionCatalogSchema, quickActionSettingsSchema } from '../../src/host/settings.js'
 import {
   QUICK_ACTIONS_CATALOG_NAMESPACE,
   QUICK_ACTIONS_SETTINGS_NAMESPACE,
-  quickActionCatalogSchema,
-  quickActionSettingsSchema,
-} from '../../src/host/settings.js'
+} from '../../src/model/index.js'
 
 class FakeSettings implements QuickActionsSettingsProvider {
   writable = true

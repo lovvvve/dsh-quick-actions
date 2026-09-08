@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildPresetCatalog, type PresetCatalog } from '../../src/model/index.js'
 import {
   QUICK_ACTIONS_SETTINGS_NAMESPACE,
+  buildPresetCatalog,
+  type PresetCatalog,
+} from '../../src/model/index.js'
+import {
   quickActionSettingsSchema,
   rewriteCanonicalSettings,
   type SettingsRewriteProvider,

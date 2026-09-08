@@ -10,12 +10,11 @@
  */
 import { readComposerQuickActionsConfig } from './config.js'
 import {
-  QUICK_ACTIONS_CATALOG_NAMESPACE,
-  QUICK_ACTIONS_SETTINGS_NAMESPACE,
   quickActionCatalogSchema,
   quickActionSettingsSchema,
   rewriteCanonicalSettings,
 } from './settings.js'
+import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../model/index.js'
 import type { CanonicalRewriteOutcome, SettingsRewriteProvider } from './settings.js'
 import type { PresetCatalog } from '../model/index.js'
 
