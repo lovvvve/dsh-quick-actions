@@ -13,8 +13,15 @@ import Schema from '@deepseek-ai/schemastery'
 import { decodeQuickActionSettings, deepEqualJson, normalizeQuickActionSettings } from '../model/index.js'
 import type { PresetCatalog, QuickActionSettingsV1 } from '../model/index.js'
 
-/** The one namespace this plugin owns; renaming it orphans every stored section. */
+/** The one namespace holding user data; renaming it orphans every stored section. */
 export const QUICK_ACTIONS_SETTINGS_NAMESPACE = 'composer-quick-actions'
+
+/**
+ * The read-only namespace carrying the Preset Catalog to Clients (spec 17.2).
+ * The plugin never writes its user layer, so it holds no persisted section —
+ * `composer-quick-actions` remains the only persisted namespace (spec 4.2).
+ */
+export const QUICK_ACTIONS_CATALOG_NAMESPACE = 'composer-quick-actions-catalog'
 
 /**
  * Shape and defaults of the persisted section (spec 4.2). The three collections
@@ -28,6 +35,17 @@ export const quickActionSettingsSchema = Schema.object({
   userActionsById: Schema.any().default({}),
   actionOrder: Schema.any().default([]),
   presetStateById: Schema.any().default({}),
+})
+
+/**
+ * Shape of the catalog namespace. Its authoritative content is the composition
+ * `base` layer the Host declares; a user layer is never written and, if one were
+ * hand-written into the document, Clients would still read `base` (spec 17.2).
+ */
+export const quickActionCatalogSchema = Schema.object({
+  schemaVersion: Schema.number().default(1),
+  revision: Schema.string().default(''),
+  presets: Schema.any().default([]),
 })
 
 /** One namespace as the provider describes it. */
