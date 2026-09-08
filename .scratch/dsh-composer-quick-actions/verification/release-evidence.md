@@ -114,3 +114,90 @@ dsh --profile web --dump-config    # exit 0，合成树共 136 条 row
 3. 卸载后 `<DSH_HOME>/settings.yaml` 中 `composer-quick-actions` section 的保留，以及手工彻底清理的逐条执行。
 4. spec 第 11.2 节「关闭时不得遗留临时 staging」：经核查**不成立**，已拆为[票据 22](../issues/22-clean-client-staging-on-watch-close.md)，须在票据 18 收口前完成。
 5. spec 第 13.2 节的自动化行为矩阵（0/1/6/25/50 动作、53 项被动超限等）与浏览器检查截图。
+
+---
+
+## 票据 24 — 打包验证与工作树隔离（2026-09-08）
+
+### 环境
+
+| 项目 | 值 |
+|---|---|
+| 运行时间 | 2026-09-08T16:50:19+08:00 起，同一工作树连续执行 |
+| 分支 | `main` |
+| 基线提交 | `70798a2`（票据 23 收尾 + 票据 24 立项） |
+| Node | v24.18.0 |
+| pnpm | 11.7.0 |
+| 副本位置 | `mkdtempSync(join(tmpdir(), 'quick-actions-pack-'))`，仓库外 |
+
+### 质量门
+
+| 命令 | 退出码 | 结果 |
+|---|---|---|
+| `pnpm typecheck` | 0 | 两遍（`tsc -b` + `tsconfig.test.json`）均通过 |
+| `pnpm lint` | 0 | 0 warning / 0 error |
+| `pnpm test` | 0 | 22 files / 481 tests 全绿，11.72s；`tests/release/` 两个 spec 共 87 tests |
+| `pnpm build` | 0 | 工作树 `lib/` 重新落地，无 `lib.dsh-client-stage` 残留 |
+
+### 工作树不被触碰（票据验收第 1 条）
+
+`pnpm test` 前后对 `packages/composer-quick-actions/lib/` 取 `find -printf '%P %s %T@'`（路径 + 字节数 + mtime，共 **44 个文件**）：
+
+```text
+$ diff lib-pre-test.txt lib-post-test.txt && echo "FULL pnpm test: LIB UNCHANGED (content+mtime)"
+FULL pnpm test: LIB UNCHANGED (content+mtime)
+```
+
+同一条不变量已由 `packing isolation` 的三条断言固定在测试里（`size:mtimeMs:sha256` 指纹、副本必须在仓库外、packed 产物必须是副本本次构建的），回归会红而不是无人拦。
+
+### 刻意失败后 `lib/` 仍完整（票据验收第 3 条）
+
+往 `src/index.ts` 追加一行语法错误，跑 `tests/release/packaging.spec.ts`：
+
+```text
+❯ packages/composer-quick-actions/tests/release/packaging.spec.ts (27 tests | 27 skipped) 2948ms
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+Error: Command failed: pnpm pack --pack-destination /tmp/quick-actions-pack-p0U0tV/tarballs
+ Test Files  1 failed (1)
+```
+
+失败发生在副本的 `prepack` 构建期（正是修复前会先删掉工作树 `lib/` 的那一步之后）。工作树指纹比对：
+
+```text
+LIB INTACT AFTER FAILURE
+```
+
+随后从备份还原 `src/index.ts`（`git diff --stat` 为空）。
+
+### watch 与 test 并存（票据「四种咬人方式」场景 2）
+
+`pnpm watch:client` 在后台运行、首次发布完成后立即跑全量 `pnpm test`：
+
+```text
+watcher pid=3686272 first publish: yes
+staging present while watching: no
+lib fingerprint before test: 46796ad2ae005b5563cfd2636205562286853a115fc19a75d24c9a299449d6bb
+ Test Files  22 passed (22)
+lib fingerprint after test:  46796ad2ae005b5563cfd2636205562286853a115fc19a75d24c9a299449d6bb
+COEXIST: lib untouched by the test run
+client.js size: 146124  loadable: yes
+watcher still alive after the test run
+```
+
+`node --check lib/client.js` 通过，说明并存期间线上 bundle 始终是完整可加载的产物。这条解除了票据 18 的前置风险：GUI 实测所需的 watcher 现在可以与验证同时运行。
+
+### 打包契约覆盖面未缩水
+
+副本构建出的 `lib/client.js` 为 146124 字节，与工作树 `pnpm build` 产物同尺寸；tarball 的 JS/map 清单仍是：
+
+```text
+package/lib/client.js  package/lib/index.js  package/lib/types.js
+package/lib/client.js.map
+```
+
+两个 tarball 的 `LICENSE`、bundle 的 `dependencies: {"dsh-composer-quick-actions": "0.1.0"}`（`workspace:*` 已替换）均照旧成立——这两项是「副本仍是一个 pnpm workspace」的验证点，副本因此必须携带 `pnpm-workspace.yaml` 与根 `LICENSE`。
+
+### 本节未覆盖
+
+1. SIGTERM 关闭 watcher 后没有遗留 `lib.dsh-client-stage`，但构建失败后再关闭的路径仍归[票据 22](../issues/22-clean-client-staging-on-watch-close.md)，本节不作结论。
+2. 一切 GUI 侧行为仍归票据 18；本节只证明验证流程不再破坏 GUI 所加载的产物。

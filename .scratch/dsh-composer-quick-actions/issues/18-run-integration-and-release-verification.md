@@ -33,3 +33,5 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 ### 2026-09-08 — 打包验证不得改写工作树
 
 票据 23 的独立审查发现 `pnpm test` 会删掉并重建工作树里线上的 `lib/`（`prepack` → `build` → `rmSync('lib')`，而打包契约在真实包目录执行 `pnpm pack`）。本票据要一边 `pnpm watch:client` 对着 `127.0.0.1:3080` 实测 watcher 与页面加载的关系、一边跑验证，带着这个缺陷开工会浪费一轮，因此已加入 `Blocked by`，见[票据 24](./24-isolate-pack-from-the-working-tree.md)。
+
+**2026-09-08 补记**：票据 24 已 resolved——打包契约改为在仓库外的 workspace 副本里 `pnpm pack`，工作树 `lib/` 在 `pnpm test` 前后内容与 mtime 均不变；`pnpm watch:client` 与 `pnpm test` 并存已实测（watcher 存活、`lib` 指纹不变、`node --check lib/client.js` 通过），证据见 `verification/release-evidence.md` 的票据 24 节。本票据的 `Blocked by` 至此全部 resolved（`Blocked by` 行保留历史，不删项），可以直接开工；票据 22 仍须在收口前完成。
