@@ -81,7 +81,6 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
         <label className="dsh-cqa-field">
           <span className="dsh-cqa-field-label">{t('panel.search')}</span>
           <Input
-            className="dsh-cqa-search"
             icon={<IconSearchOutline16 />}
             type="search"
             value={query}

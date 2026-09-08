@@ -287,6 +287,20 @@ describe('peer range', () => {
     )
   })
 
+  it('declares every module-table external it requires, so resolution can warn about a missing one', () => {
+    // A `dsh.client.external` is a `require` the browser module table has to
+    // answer at plugin load. Declaring it as a peer is what makes an install
+    // against a shell that seeds a different build fail at resolution time
+    // rather than at load time with an unresolvable specifier. `react` is
+    // already covered above; subpaths like `react/jsx-runtime` resolve through
+    // their own package, so only whole DSH packages are checked here.
+    const peers = Object.keys(feature.peerDependencies ?? {})
+    for (const external of declaredExternals) {
+      if (!external.startsWith('@deepseek-ai/')) continue
+      expect(peers, external).toContain(external)
+    }
+  })
+
   it('leaves every DSH range open above the verified baseline, naming no first supported release', () => {
     const peers = feature.peerDependencies ?? {}
     for (const [name, range] of Object.entries(peers)) {

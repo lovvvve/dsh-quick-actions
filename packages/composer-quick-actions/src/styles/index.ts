@@ -91,17 +91,33 @@ export const QUICK_ACTIONS_CSS = `
 }
 
 /*
- * The capsule itself — height, radius, padding, colours, hover, ":disabled"
- * and the focus ring — belongs to the official "Button". What is left here is
- * only what a shared control cannot know: how it behaves inside these rows.
- * Nothing below may restate a Button property, because the plugin's class is
- * applied after the primitive's and would win on equal specificity.
+ * The capsule itself — height, radius, padding, colours, hover and ":disabled"
+ * — belongs to the official "Button". What is left here is what a shared
+ * control cannot know (how it behaves inside these rows) plus what the
+ * primitive does not supply. Nothing below may restate a Button property,
+ * because the plugin class is applied after the primitive's and would win on
+ * equal specificity.
+ *
+ * The focus ring is one of the things it does not supply: "Button.module.css"
+ * and "Pill.module.css" carry no ":focus" rule at all — the library leaves the
+ * ring to each component that wants one ("Input.module.css" has
+ * ":focus-within", "HoverCard" and "JsonTree" their own). Spec 8.4 makes a
+ * clear focus ring a hard gate, so it stays here for every control this plugin
+ * renders.
  */
 .dsh-cqa-action,
 .dsh-cqa-entry {
+  /* No global border-box reset exists in this stylesheet, and Button pads
+     itself, so the cap has to count that padding to mean 240px on screen. */
+  box-sizing: border-box;
   flex: none;
   /* Long labels truncate rather than pushing the row's other controls out. */
   max-width: 240px;
+}
+.dsh-cqa-action:focus-visible,
+.dsh-cqa-entry:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 1px;
 }
 /* "aria-disabled" is not ":disabled": a control kept focusable while a write is
    in flight still has to read as inert, and no primitive expresses that. */
@@ -272,9 +288,6 @@ export const QUICK_ACTIONS_CSS = `
   font-weight: 500;
 }
 
-.dsh-cqa-search {
-  width: 100%;
-}
 .dsh-cqa-input,
 .dsh-cqa-textarea {
   box-sizing: border-box;

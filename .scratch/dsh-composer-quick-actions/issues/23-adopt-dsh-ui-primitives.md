@@ -76,6 +76,16 @@ primitives 对这四类没有对应导出，强行替代会退化：
 
 已知取舍：命令标记与来源标签现在都是默认 `Pill`，失去了原先的配色区分，靠文案区分（「命令」vs「预置」/「自定义」）。
 
+### 独立审查发现并已修的三条
+
+1. **焦点环被误删**（spec 第 8.4 节硬门槛）。我在样式注释里断言「焦点环归官方 `Button`」，**这是错的**：`Button.module.css` 与 `Pill.module.css` 的 `focus` 规则数为 **0**——该库不集中管焦点，需要环的组件各自定义（`Input.module.css` 用 `:focus-within`，`HoverCard` / `JsonTree` / `ConnectionIndicator` / `RiskConfirmation` 各有自己的）。删掉后，确认面板打开时 `useInitialFocusIn` 把焦点移到「发送」，用户看不出哪个按钮已就位；整条动作行与约 20 个管理行控件同样失去指示。已恢复 `.dsh-cqa-action:focus-visible, .dsh-cqa-entry:focus-visible`，并改正注释。
+2. **`.dsh-cqa-search { width: 100% }` 会溢出容器约 17px**。`Input` 把 `className` 放在包裹 `<span>` 上，而 `Input.module.css` 的 `.wrap` 有 `padding: 0 8px` + `border: 0.5px` 且**没有 `box-sizing`**；本样式表也没有全局 border-box reset（它在 6 处显式声明）。而且这条声明本就不必要：`.dsh-cqa-field` 是 `flex-direction: column`，默认 `align-items: stretch` 已经撑满。已删掉该类与该 className。同类小疏漏：`.dsh-cqa-action, .dsh-cqa-entry` 丢了 `box-sizing: border-box`，使 `max-width: 240px` 变成内容盒上限（实际约 260px），已补回。
+3. **运行时 external 却只有 devDependency**。票据 17 已确立的策略是每个运行时 external 都进 `peerDependencies`（`@deepseek-ai/dsh-*` 一律 `>=0.1.2-rc.1`，react `^18.3.1`），而 primitives 现在是 external（产物 `require` 它）却没有 peer 条目——打出的 tarball 对自己 bundle 所 require 的模块不声明任何要求，装进 seed 不同的 shell 会在插件加载时抛无法解析的 `require`，解析期毫无警告。已加 `>=0.1.2-rc.1` peer（devDependency 仍精确锁 `0.1.2-rc.1` 供类型）。原有 peer 断言只覆盖 `SERVICE_PROVIDERS` / `CTX_GET_PROVIDERS` / `react`，抓不到它，故在 `tests/release/packaging.spec.ts` 补一条契约：`dsh.client.external` 里每个 `@deepseek-ai/*` 都必须是 peer（`react/jsx-runtime` 这类子路径经自身包解析，不计）。**已负向验证**：临时删掉该 peer，新断言变红。
+
+### 交给后续票据的一条（不属本票据）
+
+`prepack` → `build` → `rmSync('lib')`，而 `tests/release/packaging.spec.ts` 在**真实包目录**执行 `pnpm pack`，所以 `pnpm test` 会删掉并重建线上的 `lib/client.js`。票据 18 的验证回路要一边 `pnpm watch:client` 对着 `127.0.0.1:3080`、一边跑测试，届时页面可能载入缺失或写了一半的 bundle，还会与 watcher 的写入竞争。`rmSync` 本身是对的（票据 17 修的是孤立声明随包发布），只是不该在 watch/GUI 所服务的工作树里跑——打包到临时副本，或把破坏性清理拆成单独脚本。属票据 17 的发布契约，须另开票据或并入票据 22。
+
 ### 新鲜验证
 
 - `pnpm typecheck` 通过（两遍）；`pnpm lint` 0 warning / 0 error。
