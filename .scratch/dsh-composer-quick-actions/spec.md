@@ -271,8 +271,8 @@ Client 每个连接 generation 至多调用一次 `describeCatalog()`；不得�
 
 ### 7.3 Fiber 和错误隔离
 
-- Client 依赖 `slots`、`settingsScope`、`remote.settings`、`remote.composerQuickActions` 和 `locale`。部署一个第三方功能 Remote 所需的实际装配机制必须以目标 DSH 的生成式/运行时契约为准并在实施中验证，不得抽象假设或硬编码应用级装配方式。
-- Remote、Settings binding、连接监听、Slot 注入、样式和订阅都必须返回 disposer 并归 Client fiber 所有。
+- Client 依赖 `slots`、`settingsScope`、`connection` 和 `locale`。`remote.composerQuickActions` 已由第 17 节作废；`remote.settings` 由 `settingsScope` 内部持有，插件不直接注入。`connection` 承担第 10 节的连接 generation 与断线只读语义。任何 Host→Client 通道的实际装配机制必须以目标 DSH 的生成式/运行时契约为准并在实施中验证，不得抽象假设或硬编码应用级装配方式。
+- Settings binding、共享 settings mirror 订阅、连接监听、Slot 注入、样式和订阅都必须返回 disposer 并归 Client fiber 所有。
 - 组件局部 effect 必须在卸载时清理。
 - 每个 Slot 入口必须有局部错误边界；错误只替换快捷动作区域，允许重试，不得破坏 Composer。
 - 管理、确认和会话执行错误彼此隔离；不得捕获、替换或重复显示 DSH 官方提交错误。
@@ -647,6 +647,7 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 |---|---|
 | Host 注册只读目录命名空间并发布 `base` 快照；不再发布 Remote | 13 |
 | Client 改由 `settingsScope` 读取目录 `base`，去掉 `remote.composerQuickActions` 与每 generation 一次的目录 RPC | 14 |
+| 第 7.3 节 Client 依赖清单相应改为 `slots`、`settingsScope`、`connection`、`locale`（实施票据 14 时落实） | 14 |
 | 功能包不再输出 `./typert` / `./remote` 生成产物；README 与兼容矩阵相应描述 | 17 |
 | 去掉 Remote 契约与生成产物的验证项，改为目录命名空间与 `base` 通道的验证 | 18 |
 | 不受影响 | 11、12、15、16、19、20、21 |
