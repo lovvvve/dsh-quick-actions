@@ -18,7 +18,10 @@ export default defineConfig({
   outputDir: '.playwright/results',
   reporter: [['list']],
   forbidOnly: true,
-  retries: 0,
+  // The channel is the user's own live DSH with other plugins in it, so entering a session
+  // is not hermetic: one retry absorbs a slow first render without hiding a real failure,
+  // which would fail twice.
+  retries: 1,
   workers: 1,
   timeout: 60_000,
   use: {

@@ -272,3 +272,73 @@ client.js size: 146124
 
 - 真实 DSH GUI 下的加载与端到端行为仍归[票据 18](../issues/18-run-integration-and-release-verification.md)。
 - 进程被 SIGKILL、或在写盘与 `closeBundle` 之间被强杀时，scratch 会残留到下一次构建开始（由 `buildStart` 清掉）；该窗口进程内钩子无法覆盖，spec 第 11.2 节的「关闭时不得遗留」按正常关闭路径判定。
+
+---
+
+## 票据 18 — 运行集成与发布验证（2026-09-09，进行中）
+
+本节随票据推进增量追加。本轮范围：安装形态在**真实运行的 DSH** 上执行、GUI 通道打通、非发送项的自动化断言。发送动作相关项按用户指示暂缓（不触发真实模型调用）。
+
+### 环境
+
+| 项目 | 值 |
+|---|---|
+| DSH 运行时 | `npx @deepseek-ai/dsh@latest web`，`latest` dist-tag 解析为 **0.1.2-rc.1**（`next` 同版，`alpha` 为 0.1.5-alpha.1） |
+| 核心包版本 | `dsh-settings` / `dsh-client-ui-settings` / `dsh-client-connection` / `dsh-client-ui-conversation` / `dsh-client-ui-renderer` / `dsh-client-locale` 均 0.1.2-rc.1，`@deepseek-ai/cordis` 4.0.2 |
+| peer 结论 | 插件声明 `>=0.1.2-rc.1`，与运行时**正好相等**，不存在版本缺口 |
+| `DSH_HOME` | `/home/yulong/.dsh`（用户自有环境，非隔离目录） |
+| web profile | 已装 7 个第三方插件（dshmarket / dsh-context / dsh-codex-connect / remote-web-ui / better-sidebar / dsh-im / skill-explorer）+ `@deepseek-ai/dsh-base`、`dsh-web-app`；`patchReload: "live"` |
+| PATH 陷阱 | 有两个 `dsh`：桌面 shim（内置 0.1.2-rc.1）会**优先 exec** 用户全局的 `0.1.1-rc.2`，因此安装命令必须显式走 `npx @deepseek-ai/dsh@latest`，否则用错运行时 |
+| 浏览器 | Playwright 1.63.0 + Chromium 153.0.8010.12（headless shell） |
+| 视口 | 1440×900 / 768×900 / 360×780（spec 第 13.3 节的桌面 / ~768 / ~360） |
+
+### 安装：README 离线流程逐条执行
+
+1. **打包**通过：`dsh-composer-quick-actions-0.1.0.tgz`（165372 B）、`dsh-composer-quick-actions-bundle-0.1.0.tgz`（3216 B）。tarball 内容核对：`lib/` 每入口只有一份 JS（client/index/types）+ 唯一一份 `client.js.map` + 声明目录 + 两份 README + LICENSE；`client.js` 末尾 `//# sourceMappingURL=client.js.map` 完好（票据 22 的内存发布路径经 pack 验证）。
+2. **profile override** 追加到 `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`，指向功能包 tarball 绝对路径。
+3. **`dsh plugin add` 首次失败**，且与本插件无关：`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` —— 用户 profile 现有 lockfile 里有 3 个第三方插件版本落在 pnpm 默认 24h 窗口内（`@linxin666/dsh-client-ui-skill-explorer@0.3.18`、`@linxin666/dsh-remote-web-ui@0.3.18`、`dsh-better-sidebar@0.18.1`）。
+   - **附带发现（pnpm 11.7.0 缺陷）**：`minimumReleaseAgeExclude` 对 **scoped 包无效**。三种写法逐一实测均不生效：`'@scope/name@version'`、`'@scope/name'`、`'@scope/*'`；同一次实测里无 scope 的 `dsh-better-sidebar@0.18.1` 一次即生效。用户配置里原有的 `'@linxin666/dsh-remote-web-ui@0.3.18'` 因此一直是空转条目。
+   - **处置**：改用**仅作用于该次命令**的 `--config.minimumReleaseAge=0` 完成安装，不持久化任何策略变更；用户 profile 的 `minimumReleaseAgeExclude` 列表已与安装前逐字还原（仅保留 override 块）。
+4. **安装结果**符合 README「安装后应当看到什么」：`--dump-config` 中出现 `# == dsh-composer-quick-actions-bundle` 层贡献的 `- id: composer-quick-actions` / `name: dsh-composer-quick-actions`；功能包以传递依赖落在 `<DSH_HOME>/profiles/web/node_modules/dsh-composer-quick-actions`（`lib/` 下 client.js、client.js.map、index.js、types.js、types/）；pnpm 打印 peer 警告，与 README 说明一致。
+5. **`patchReload: "live"` 不会热接新插件 row**（实测）：安装完成后，已运行的 web 服务与页面刷新都看不到插件表面；重启 web profile 后才出现。README 第 4 步「重启 web profile」的必要性由此确认，不能因 `patchReload: live` 省略。
+
+### GUI 通道
+
+- 根路径返回 **401**，正文为 `dsh web authentication required; reopen the URL printed by dsh web`：凭据在启动时打印的入口 URL 的 `token` query 里。**全新 Chromium profile 兑换该入口 URL 即可进入**，无需设备配对。token 只经环境变量传入，不入仓库、不入本证据。
+- **Resident Composer 判定实测通过**：hero 屏（空会话）不挂 `conversation.composer.dock`，插件零渲染（`data-quick-actions-layout` / `data-quick-actions-manage` 计数均为 0）；进入有历史的会话后表面出现。与票据 15 的公开信标设计一致。
+- DSH 会话是**纯客户端路由**，切换会话不改变 URL，因此没有可直接导航的会话路径；窄视口下侧栏收起。harness 据此固定为「桌面尺寸进入会话 → 再缩到目标视口」，这也正是 spec 第 13.3 节响应式检查所描述的行为。
+- 用户环境自带的 `remote-web-ui` 在启动时打出 CRITICAL：`/api` 围栏对三个 LAN 地址开放，未配对客户端可达完整 host API。与本插件无关，已向用户报告。
+
+### 已确证的行为（真实 GUI）
+
+| 项 | 证据 |
+|---|---|
+| **Catalog `base` 端到端**（票据 14 挂起项） | Resident Composer 下渲染出恰好 3 条内置预置：`📝总结对话`、`🔍解释改动`、`🧹压缩上下文命令`；目录经只读 Settings 命名空间的 composition `base` 层送达 Client |
+| 默认布局 | `data-quick-actions-layout="ribbon"`、`data-quick-actions-density="wide"` |
+| **等宽（硬门槛 ≤1 CSS px）** | ribbon cell `left 468.8 / right 1243.2 / width 774.4`，Composer 卡片 `left 468.8 / right 1243.2 / width 774.4` —— **误差 0.0 px** |
+| **官方 primitives 真实可用**（票据 23 挂起项） | 动作按钮 class 同时包含 primitives 的 CSS Modules 哈希类 `_button_cfgyt_4 _toolbar_cfgyt_65 _sm_cfgyt_30` 与插件自有的 `dsh-cqa-action`，证明模块表 `require('@deepseek-ai/dsh-client-ui-primitives')` 解析到官方 `Button` |
+| 三种布局 | `ribbon` / `bar` / `launcher` 均在管理面板切换成功并渲染；`launcher` 的单入口打开 B/C 共用搜索面板，搜索框开场自动获得焦点，输入「压缩」后命中 1 条 |
+| Settings 持久化 | 切到 `bar` 后**刷新页面**仍为 `bar`（Host Settings 为权威源，Client 重新装载后恢复） |
+| 键盘与无障碍 | 管理 overlay 为 `role="dialog"` 且带 `aria-labelledby`；`Escape` 关闭后焦点**返还管理入口** |
+| 窄视口 | 768 与 360 下表面不溢出视口、宽度跟随输入框（差值 ≤8px，即 Composer 边框） |
+| 持久化形态 | 测试结束后 `<DSH_HOME>/settings.yaml` 的插件命名空间为规范化默认态：`layout: ribbon`、`userActionsById: {}`、`presetStateById: {}`、`actionOrder` 三条预置按 id 引用（`summarize-thread` / `explain-last-change` / `compact-context`） |
+
+### 自动化结果
+
+`pnpm verify:gui`（36 条 = 12 条 × 桌面 / 768 / 360 三个视口）：**35 条一次通过，1 条（360 下的 launcher 搜索面板）为导航偶发，重试即过**，13.0 分钟。该套已配置 `retries: 1` 并注明理由——通道是用户自己的实时 DSH，里面还有 7 个第三方插件，进入会话不是密闭操作；真实失败会连续失败两次而不会被重试掩盖。
+
+排查过程中确认的两个**环境**事实（都不是插件缺陷，但会让任何 GUI 自动化踩坑）：
+
+1. **第三方 shell 浮层会吞掉指针事件**：`dshmarket` / `dsh-codex-connect` 的版本提示挂在 `[data-shell-overlay="true"]` 层，窄视口下覆盖 Composer 区域，导致对本插件控件的点击被拦截（报错原文：`... intercepts pointer events`）。harness 先点它自己的「稍后提醒」，否则把该层移出命中测试路径。
+2. **侧栏会话树是嵌套的**：工作区行（`role="treeitem"`）内部才嵌着会话行，点击工作区行会折叠它、反而藏掉会话。只能点**叶子** `treeitem`。
+
+### 证据的隐私约束
+
+快捷动作只在 Resident Composer 渲染，而 Resident Composer 必然是用户自己的会话，因此 Playwright 的**自动全页截图与 trace 一律关闭**（`screenshot: 'off'`、`trace: 'off'`、`video: 'off'`）：全页捕获会把真实对话内容写进证据，违反本文件开头的约束。需要图像的用例改为对 composer 区域做裁剪截图。断言只读插件自有的 `data-quick-action*` 标记与几何量，不读会话内容。
+
+### 本轮未覆盖
+
+- 发送动作全部项（单飞、确认面板、失败草稿保留、命令发送动作的两种确认设置、queue）——按用户指示不触发真实模型调用，暂缓。
+- 布局切换 / 管理面板 / 搜索面板 / 键盘与无障碍的窄视口结果，以及 0/1/6/25/50 与 53 项超限降级的规模矩阵。
+- Settings 跨 DSH 重启持久化、卸载与重装、生命周期 stop/update 清理。
+- 截图基线（三种布局 × 桌面/窄）。

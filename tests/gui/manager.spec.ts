@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { layoutCell, manageEntry, openResidentComposer } from './support.js'
+import { ensureLayout, layoutCell, manageEntry, openResidentComposer } from './support.js'
 
 /**
  * The management overlay and the layout setting, on the live GUI. Layout is a global
@@ -13,13 +13,11 @@ test.describe('quick actions management', () => {
   })
 
   test.afterEach(async ({ page }) => {
-    // Leave the user's DSH on the default layout however the test ended.
+    // Leave the user's DSH on the default layout however the test ended. An open panel
+    // holds a backdrop that would swallow the manage click, so dismiss it first.
     if (await layoutCell(page).count() === 0) return
-    if (await layoutCell(page).getAttribute('data-quick-actions-layout') === 'ribbon') return
-    await manageEntry(page).click()
-    await page.locator('[data-quick-actions-layout-choice="ribbon"]').click()
-    await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', 'ribbon')
-    await page.locator('[data-quick-actions-manager-close]').click()
+    await page.keyboard.press('Escape')
+    await ensureLayout(page, 'ribbon')
   })
 
   test('opens a labelled dialog that lists the packaged presets', async ({ page }) => {
@@ -73,5 +71,8 @@ test.describe('quick actions management', () => {
 
     // Search matches labels and texts only, so one packaged preset survives.
     await expect(panel.locator('[data-quick-action]')).toHaveCount(1)
+
+    await page.keyboard.press('Escape')
+    await expect(panel).toHaveCount(0)
   })
 })

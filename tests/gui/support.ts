@@ -1,5 +1,3 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
 import { expect, type Locator, type Page, type Response } from '@playwright/test'
 
 /**
@@ -54,55 +52,70 @@ export function composerBoxEdges(page: Page): Promise<{ left: number; right: num
 }
 
 /**
+ * Other plugins in this profile put notices in DSH's shell overlay layer — a market
+ * update banner, for instance — and that layer swallows pointer events over the composer
+ * at narrow viewports. Dismiss it through its own affordance when there is one, and
+ * otherwise take it out of the hit-testing path: it belongs to an unrelated plugin, so
+ * leaving it up would test that plugin's z-index rather than this one's surface.
+ */
+export async function dismissShellOverlays(page: Page): Promise<void> {
+  const overlay = page.locator('[data-shell-overlay="true"]')
+  if (await overlay.count() === 0) return
+
+  for (const label of ['稍后提醒', '知道了', '关闭', 'Later', 'Dismiss']) {
+    const button = overlay.getByRole('button', { name: label })
+    if (await button.count() > 0) {
+      await button.first().click({ timeout: 5_000 }).catch(() => undefined)
+    }
+  }
+
+  await page.evaluate(() => {
+    for (const layer of document.querySelectorAll<HTMLElement>('[data-shell-overlay="true"]')) {
+      layer.style.pointerEvents = 'none'
+    }
+  })
+}
+
+/**
  * Quick actions render at the Resident Composer, and DSH's hero screen — what an empty
  * session shows — deliberately does not mount `conversation.composer.dock`. Reaching the
- * plugin therefore means entering a session that has history.
+ * plugin therefore means entering a session that has history, which means clicking a
+ * sidebar row: DSH routes sessions client-side without touching the URL, so there is no
+ * session path to navigate to directly.
  *
- * The sidebar reorders by recency as sessions are opened, so a row index is not stable
- * across tests: the first discovery caches the session's own path and every later test
- * navigates straight to it. `DSH_GUI_SESSION_PATH` pins one explicitly.
+ * The sidebar is collapsed on narrow viewports, so entry always happens at desktop width
+ * and the requested viewport is applied afterwards — resizing the window is also what the
+ * responsive rule of spec section 13.3 actually describes.
  */
-const sessionPathCache = '.playwright/session-path'
-
-function readCachedSessionPath(): string | undefined {
-  const pinned = process.env.DSH_GUI_SESSION_PATH
-  if (pinned !== undefined) return pinned
-  try {
-    const cached = readFileSync(sessionPathCache, 'utf8').trim()
-    return cached === '' ? undefined : cached
-  } catch {
-    return undefined
-  }
-}
-
-let sessionPath: string | undefined = readCachedSessionPath()
-
-function withEntryCredential(pathname: string): string {
-  const url = new URL(guiEntry, 'http://127.0.0.1:3080')
-  url.pathname = pathname
-  return url.toString()
-}
-
 export async function openResidentComposer(page: Page): Promise<void> {
-  if (sessionPath !== undefined && await enterKnownSession(page, sessionPath)) return
+  const requested = page.viewportSize()
+  if (requested !== null && requested.width < 1000) {
+    await page.setViewportSize({ width: 1440, height: Math.max(requested.height, 800) })
+  }
 
   await openGui(page)
   await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
+  await dismissShellOverlays(page)
   const rows = page.locator('[role="treeitem"]')
   await expect(rows.first()).toBeVisible({ timeout: 20_000 })
 
-  for (let index = 0; index < Math.min(await rows.count(), 8); index += 1) {
+  // The tree nests sessions inside workspace rows, and clicking a workspace row collapses
+  // it — which hides the very sessions we are looking for. Only leaf rows are sessions.
+  const leaves = await rows.evaluateAll(elements => elements
+    .map((element, index) => ({ index, leaf: element.querySelector('[role="treeitem"]') === null }))
+    .filter(row => row.leaf)
+    .map(row => row.index))
+
+  for (const index of leaves.slice(0, 8)) {
     await rows.nth(index).click()
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
     try {
       // The surface mounts only after the controller has read the catalog and settings,
       // so an immediate count would race the first render.
-      await layoutCell(page).first().waitFor({ state: 'visible', timeout: 8_000 })
-      sessionPath = new URL(page.url()).pathname
-      // Persist it: the narrow viewports collapse the sidebar, so a later run has no
-      // rows to walk and must navigate to the session directly.
-      mkdirSync(dirname(sessionPathCache), { recursive: true })
-      writeFileSync(sessionPathCache, sessionPath)
+      await layoutCell(page).first().waitFor({ state: 'visible', timeout: 12_000 })
+      if (requested !== null) await page.setViewportSize(requested)
+      await expect(layoutCell(page)).toBeVisible()
+      await dismissShellOverlays(page)
       return
     } catch {
       // This session shows the hero: no Resident Composer here, try the next row.
@@ -115,17 +128,17 @@ export async function openResidentComposer(page: Page): Promise<void> {
   )
 }
 
-async function enterKnownSession(page: Page, pathname: string): Promise<boolean> {
-  // A fresh browser context carries no credential, so the token entry has to be redeemed
-  // before the session path can be opened directly.
-  await openGui(page)
-  await page.goto(withEntryCredential(pathname), { waitUntil: 'domcontentloaded' })
-  try {
-    await layoutCell(page).first().waitFor({ state: 'visible', timeout: 20_000 })
-    return true
-  } catch {
-    return false
-  }
+/**
+ * Layout is a global persisted setting, so one spec's choice leaks into the next: every
+ * spec that depends on a layout states it instead of assuming the default.
+ */
+export async function ensureLayout(page: Page, layout: 'ribbon' | 'bar' | 'launcher'): Promise<void> {
+  if (await layoutCell(page).getAttribute('data-quick-actions-layout') === layout) return
+  await manageEntry(page).click()
+  await page.locator(`[data-quick-actions-layout-choice="${layout}"]`).click()
+  await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', layout)
+  await page.locator('[data-quick-actions-manager-close]').click()
+  await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
 }
 
 /** Rounded rect, in CSS px, of one element — the geometry spec section 13.3 measures. */

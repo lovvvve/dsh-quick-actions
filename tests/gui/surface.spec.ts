@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { actionFaces, composerBoxEdges, composerInput, edges, layoutCell, manageEntry, openResidentComposer } from './support.js'
+import { actionFaces, composerBoxEdges, composerInput, edges, ensureLayout, layoutCell, manageEntry, openResidentComposer } from './support.js'
 
 /**
  * The plugin's surface at a Resident Composer, on the live GUI: what spec section 13.3
@@ -9,6 +9,8 @@ import { actionFaces, composerBoxEdges, composerInput, edges, layoutCell, manage
 test.describe('quick actions surface', () => {
   test.beforeEach(async ({ page }) => {
     await openResidentComposer(page)
+    // Layout persists globally, so state it rather than inheriting the previous spec's.
+    await ensureLayout(page, 'ribbon')
   })
 
   test('renders the packaged preset catalog', async ({ page }) => {
@@ -24,7 +26,7 @@ test.describe('quick actions surface', () => {
     expect(names.join('|')).toContain('压缩上下文')
   })
 
-  test('defaults to the ribbon layout', async ({ page }) => {
+  test('renders the ribbon layout with a manage entry', async ({ page }) => {
     await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', 'ribbon')
     await expect(manageEntry(page)).toHaveCount(1)
   })
