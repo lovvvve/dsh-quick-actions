@@ -399,7 +399,7 @@ Command Send Action（命令发送动作）走完全相同的两步；命令的�
 
 仓库使用 pnpm workspace，并交付两个逻辑包：
 
-1. Host+Client 双面功能包，公开根入口、`./client`、`./types`、`./remote` 和 `./package.json`；
+1. Host+Client 双面功能包，公开根入口、`./client`、`./types` 和 `./package.json`；（本行原列 `./remote`，已由第 17.4 节取代——首版没有自有 Remote，该入口由[票据 17](./issues/17-finish-install-bundle-and-release-docs.md)删除。）
 2. 安装 bundle，只负责 `dsh.bundle.patch`，依赖功能包并向全局 `web` profile 插入功能包 Host row。
 
 正式发布身份已由[票据 20](./issues/20-choose-publishing-identity-and-license.md)于 2026-09-08 定案：功能包 `dsh-composer-quick-actions`、安装 bundle `dsh-composer-quick-actions-bundle`（均无 scope，为**正式采纳**而非脚手架沿用），初始语义版本 `0.1.0`，许可证 MIT、copyright holder lovvvve，**暂不发布**（不设 `publishConfig`、不执行 `npm publish`，试用走本地 tarball）。根 `LICENSE` 已就位；`package.json` 的 `name`/`version`/`license` 与 README、`cordis.patch.yml` 的身份落地归票据 17，在此之前仓库内仍为 `0.0.0` 且无 `license` 字段，属预期状态。
