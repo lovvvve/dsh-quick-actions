@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）与 Client 控制器 `src/client/controller.ts`（票据 14：两个命名空间绑定、投影、串行 revision-fenced 写入队列、连接状态）。Client 还没有任何界面——Slot 注册、三种布局、管理面板和动作执行都未实现。
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）与 Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程）。**管理面板、共享可搜索动作面板与自定义动作表单尚未实现**（票据 16）。
 
-真正完成的有五件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`），以及 Client 控制器（`src/client/`）。**后两者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base` 的端到端行为归票据 18 在前台 GUI 会话实测。
+真正完成的有六件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器，以及 Composer 界面与动作执行。**后三者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base`、常驻判定、等宽与端到端发送都归票据 18 在前台 GUI 会话实测。
 
 ## 命令
 
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [15 实现 Composer 布局与动作执行](.scratch/dsh-composer-quick-actions/issues/15-implement-composer-surfaces-and-action-execution.md)（15–18、20 均未认领）。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [16 实现管理、动作面板与发送确认](.scratch/dsh-composer-quick-actions/issues/16-implement-management-and-confirmation-ui.md)（16–18、20 均未认领）。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
