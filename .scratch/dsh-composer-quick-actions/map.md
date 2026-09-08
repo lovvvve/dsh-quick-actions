@@ -46,6 +46,7 @@ Label: `wayfinder:map`
 - [实现 Client 快捷动作控制器](./issues/14-implement-client-quick-actions-controller.md) — 已交付 Client 全局控制器：目录改读 Settings 命名空间的 `base` 层且目录 RPC 为 0，共享模型防御性解码；串行 revision-fenced 写入队列与插件内部判定的结构化写入结果（成功/拒绝/conflict/失败），不新增任何 DSH 核心接口；第 10 节的首次读取失败、只读、断线与重连语义；disposer 释放 mirror/scope 订阅与连接监听。真实 GUI 下读取 `base` 的实测归票据 18。
 - [实现三种 Composer 界面与动作执行](./issues/15-implement-composer-surfaces-and-action-execution.md) — 已交付 `ribbon`/`bar`/`launcher` 三种布局、共享动作控件与每会话执行层：Resident Composer 判定改用 `conversation.composer.dock` 挂载作为公开信标（hero 不渲染该 dock，取证与测试见票据），杜绝 hero 渲染且不复刻私有 hero 公式；单飞锁由插件自持，关闭时机由公开 Input snapshot 的 `phase` / `draft` / `draftRev` 判定，同一 tick 重复激活只发送一次；发送前置条件覆盖 `draft`（含纯空白）、`imageIds`、`occurrences`，`queue` 明确不计，`blocked` 经 `ctx.get('conversation')` 公开读取而 `inject` 仍为第 7.3 节四项；最终重验、两步 `setDraft`+`submit`、无内容丢失的失败语义、等宽公式与窄布局密度、空投影下的紧凑管理入口、每 Slot 错误边界均已实现并测试。管理面板与共享可搜索动作面板仍属票据 16。
 - [Catalog Remote 改走 Settings base 层](./spec.md)（spec 第 17 节，无票据） — 已发布的 typert 生成器无法为单仓外的包生成 strict Remote 产物，用户据此修订第 6.2 节；该节优先级高于正文与第 15、16 节。
+- [确定插件发布身份与许可证](./issues/20-choose-publishing-identity-and-license.md) — 正式采纳无 scope 的 `dsh-composer-quick-actions` 与 `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve）；**暂不发布**——只定身份不推包，试用走本地 tarball，票据 17/18/21 不再被发布决策阻塞。已排除 `@deepseek-ai`（DeepSeek 官方 scope）与 `@dsh-plugins`（第三方社区 org）。
 
 ## Not yet specified（尚未明确）
 

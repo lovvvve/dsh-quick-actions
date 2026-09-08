@@ -99,6 +99,6 @@ pnpm vitest run -t 'rejects computed require calls'
 - 现有 GUI 是 `http://127.0.0.1:3080`（非本项目启动）。`pnpm watch:client` **不等于** DSH GUI HMR；同一 DSH checkout 的 watcher 与页面加载关系必须实测。
 - Client `cordis_inspect_query` 只能由有活动 GUI 页面的前台父会话执行，后台子代理会无限等待。Host Inspect 和读已打包源码在子代理里安全。
 - 必须交付持久化功能包；不得改成进程内 dynamic Cordis Plugin 来充数。
-- `0.0.0` 和当前无 scope 包名是脚手架身份，不是发布结论（票据 20 未决）；不要代填许可证。
+- 发布身份已由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案：正式采纳无 scope 的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve），**暂不发布**（不设 `publishConfig`、不 `npm publish`，试用走本地 tarball）。根 `LICENSE` 已就位；`package.json` 的 `name`/`version`/`license` 与 README、`cordis.patch.yml` 的身份落地归票据 17，在此之前仓库里仍是 `0.0.0` 且无 `license` 字段，属预期状态而非遗漏。
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。

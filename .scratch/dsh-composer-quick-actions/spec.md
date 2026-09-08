@@ -1,6 +1,6 @@
 # DSH 消息编辑器快捷动作规格
 
-- Status: baseline（发布身份仍由票据 20 决定；实施边界已收敛）
+- Status: baseline（发布身份已由票据 20 定案；实施边界已收敛）
 - Map: [`map.md`](./map.md)
 - Domain language: [`CONTEXT.md`](../../CONTEXT.md)
 - Publishing decision: [`issues/20-choose-publishing-identity-and-license.md`](./issues/20-choose-publishing-identity-and-license.md)
@@ -402,7 +402,7 @@ Command Send Action（命令发送动作）走完全相同的两步；命令的�
 1. Host+Client 双面功能包，公开根入口、`./client`、`./types`、`./remote` 和 `./package.json`；
 2. 安装 bundle，只负责 `dsh.bundle.patch`，依赖功能包并向全局 `web` profile 插入功能包 Host row。
 
-当前工作区目录和无 scope 名称是脚手架身份，不自动成为正式发布身份。正式 npm 名称/scope、registry、访问级别、初始语义版本、许可证和 copyright holder 必须由[票据 20](./issues/20-choose-publishing-identity-and-license.md)确定；在此之前不得把 `0.0.0`、脚手架包名或 DSH 核心许可证写成发布结论。
+正式发布身份已由[票据 20](./issues/20-choose-publishing-identity-and-license.md)于 2026-09-08 定案：功能包 `dsh-composer-quick-actions`、安装 bundle `dsh-composer-quick-actions-bundle`（均无 scope，为**正式采纳**而非脚手架沿用），初始语义版本 `0.1.0`，许可证 MIT、copyright holder lovvvve，**暂不发布**（不设 `publishConfig`、不执行 `npm publish`，试用走本地 tarball）。根 `LICENSE` 已就位；`package.json` 的 `name`/`version`/`license` 与 README、`cordis.patch.yml` 的身份落地归票据 17，在此之前仓库内仍为 `0.0.0` 且无 `license` 字段，属预期状态。
 
 最终 README、安装命令、bundle 依赖和兼容矩阵必须统一使用票据 20 的结果。规范安装形态为：
 
@@ -555,7 +555,7 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 - 票据 13/14 必须基于目标 DSH 的生成式/运行时契约明确自有 Catalog Remote 的生成、可用与卸载所有权；在关键装配契约未核实前，13/14 不能宣称 Remote 已可用。
 - 票据 16 已把 `Blocked by` 改为 `14, 15`，确认流程共享票据 15 的每 Session 单飞/执行契约，不维护私有第二把锁。
 - 票据 11 的现有实现需补充验证 JavaScript 与 sourcemap 不会跨代发布、watch 关闭清理 staging；否则应把该修复交给 17 前置票据。
-- [票据 20](./issues/20-choose-publishing-identity-and-license.md)仍须确定正式包名/scope、registry、访问级别、初始版本和许可证。
+- [票据 20](./issues/20-choose-publishing-identity-and-license.md)仍须确定正式包名/scope、registry、访问级别、初始版本和许可证。**（已处置：2026-09-08 定案为无 scope 的 `dsh-composer-quick-actions` / `-bundle`、`0.1.0`、MIT / lovvvve、暂不发布；落地归票据 17。）**
 - 票据 17 必须在发布身份确定后改用唯一正式名称，并定义两个本地 tarball 的可复现解析/安装流程。
 - 票据 18 当前为 AFK，但最终门槛要求用户明确回复“生产验收通过”；应把最终阶段改为 HITL，或新增一个阻塞地图完成的 HITL 验收票据。**（已处置：拆出 HITL [票据 21](./issues/21-run-final-human-acceptance.md)，票据 18 保持 AFK 并到自动化证据为止。）**
 
