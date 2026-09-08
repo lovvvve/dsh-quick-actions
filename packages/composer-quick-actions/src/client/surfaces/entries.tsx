@@ -12,6 +12,14 @@
  *   beacon's mark stands — that Slot also mounts on the blank-session hero, and
  *   the first release must never appear there.
  *
+ * A third entry rides the same input dock: the centralized management overlay,
+ * which spec 8.1 requires to be registered independently of the layout entries.
+ * It is a separate Slot cell with its own id, order and error boundary, so a
+ * failure in the management panel cannot take a Composer layout down with it and
+ * vice versa (spec 7.3). Because the overlay is global state rendered from a
+ * session-scoped Slot, only the Session the residency registry elects primary
+ * draws it — two Resident Composers on screen must not stack two overlays.
+ *
  * Each entry carries its own error boundary, so a failure replaces the Quick
  * Action area alone.
  */
@@ -19,6 +27,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useSyncExternalStore 
 import type { ReactElement } from 'react'
 import { SurfaceErrorBoundary } from './ErrorBoundary.js'
 import { QuickActionsSurface } from './QuickActionsSurface.js'
+import { ManagerPanel } from '../manager/ManagerPanel.js'
 import type { ResidentComposerRegistry } from './residency.js'
 import type { QuickActionSessionRegistry } from '../session/execution.js'
 import type { QuickActionsClientState, QuickActionsController } from '../controller.js'
@@ -59,6 +68,14 @@ function useResident(residency: ResidentComposerRegistry, sessionId: string): bo
   return useSyncExternalStore(
     useCallback((listener: () => void) => residency.subscribe(listener), [residency]),
     () => residency.isResident(sessionId),
+  )
+}
+
+/** Whether this Session is the one that draws anything global (see the registry). */
+function usePrimaryResident(residency: ResidentComposerRegistry, sessionId: string): boolean {
+  return useSyncExternalStore(
+    useCallback((listener: () => void) => residency.subscribe(listener), [residency]),
+    () => residency.primarySessionId() === sessionId,
   )
 }
 
@@ -171,6 +188,7 @@ function CatalogNotice(props: {
 export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
   readonly InputDock: (props: InputDockProps) => ReactElement
   readonly ComposerDock: (props: ComposerDockProps) => ReactElement
+  readonly ManagerDock: (props: InputDockProps) => ReactElement
 } {
   function Body(props: SessionSlotProps & { readonly owns: readonly QuickActionLayout[] }): ReactElement | null {
     const { owns, ...slot } = props
@@ -223,7 +241,26 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
     )
   }
 
-  return { InputDock, ComposerDock }
+  /**
+   * The centralized management overlay (spec 8.1, 8.3).
+   *
+   * It renders only where a Resident Composer's own "manage" entry could have
+   * opened it, and only for the primary Session, so the global panel stays
+   * single however many composers are on screen.
+   */
+  function ManagerDock(props: InputDockProps): ReactElement {
+    const primary = usePrimaryResident(deps.residency, props.sessionId)
+    const client = useControllerState(deps.controller)
+    return (
+      <SurfaceErrorBoundary t={props.t}>
+        {primary && client.manager.open ? (
+          <ManagerPanel client={client} controller={deps.controller} t={props.t} />
+        ) : null}
+      </SurfaceErrorBoundary>
+    )
+  }
+
+  return { InputDock, ComposerDock, ManagerDock }
 }
 
 /** `ribbon` and `launcher` render above the composer card (spec 8.1). */

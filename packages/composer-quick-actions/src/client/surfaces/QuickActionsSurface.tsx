@@ -18,10 +18,12 @@
  *   management panel's business (spec 3).
  */
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject, ReactElement } from 'react'
+import type { MutableRefObject, ReactElement } from 'react'
 import { densityFor, fitActionCount } from './layout.js'
 import type { SurfaceDensity } from './layout.js'
+import { ActionPanel } from '../manager/ActionPanel.js'
 import { ConfirmPanel } from '../session/ConfirmPanel.js'
+import { unavailableReasonFor } from '../session/availability.js'
 import type { QuickActionSessionState } from '../session/execution.js'
 import type { QuickActionUnavailableReason } from '../session/guards.js'
 import { quickActionRefKey } from '../../model/index.js'
@@ -42,21 +44,6 @@ export interface QuickActionsSurfaceProps {
   readonly onCancelConfirm: () => void
   readonly onDismissFeedback: () => void
   readonly onManage: () => void
-}
-
-/** Which control a Quick Action renders as, given the Session's execution state. */
-function reasonFor(
-  action: ProjectedQuickAction,
-  session: QuickActionSessionState,
-): QuickActionUnavailableReason | undefined {
-  if (session.unavailable === 'sending') {
-    // Only the action holding the flight explains itself as "sending"; the rest
-    // are simply unavailable while the Composer is busy with it.
-    return session.activeRef !== undefined && quickActionRefKey(session.activeRef) === quickActionRefKey(action.ref)
-      ? 'sending'
-      : 'composer-busy'
-  }
-  return session.unavailable
 }
 
 function ActionControl(props: {
@@ -96,80 +83,6 @@ function ActionControl(props: {
       <span className="dsh-cqa-label">{action.label}</span>
       {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
     </button>
-  )
-}
-
-/**
- * The list behind `bar`'s "more" and `launcher`'s entry.
- *
- * It is the layouts' own overflow affordance: a plain list of the same actions
- * in the same order. The searchable action panel spec 8.1 asks these two entries
- * to share is the management task's to build; when it lands, both entries move
- * onto it and this list goes away.
- */
-function ActionList(props: {
-  readonly actions: readonly ProjectedQuickAction[]
-  readonly session: QuickActionSessionState
-  readonly t: Translate
-  readonly labelledBy: string
-  readonly onActivate: (action: ProjectedQuickAction) => void
-  readonly onClose: () => void
-}): ReactElement {
-  const { actions, session, t, labelledBy, onActivate, onClose } = props
-  const first = useRef<HTMLButtonElement | null>(null)
-
-  useEffect(() => {
-    first.current?.focus()
-  }, [])
-
-  const onKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Escape') return
-      event.stopPropagation()
-      onClose()
-    },
-    [onClose],
-  )
-
-  return (
-    <div
-      className="dsh-cqa-panel"
-      role="dialog"
-      aria-labelledby={labelledBy}
-      data-quick-actions-panel=""
-      onKeyDown={onKeyDown}
-    >
-      <div className="dsh-cqa-panel-title" id={labelledBy}>
-        {t('panel.title')}
-      </div>
-      {actions.length === 0 ? <div className="dsh-cqa-panel-title">{t('empty')}</div> : null}
-      {actions.map((action, index) => {
-        const reason = reasonFor(action, session)
-        return (
-          <button
-            key={quickActionRefKey(action.ref)}
-            type="button"
-            ref={index === 0 ? first : undefined}
-            className="dsh-cqa-panel-item"
-            data-quick-action={quickActionRefKey(action.ref)}
-            disabled={reason !== undefined}
-            title={reason === undefined ? action.text : t(`unavailable.${reason}`)}
-            onClick={() => {
-              onActivate(action)
-              onClose()
-            }}
-          >
-            {action.icon === undefined ? null : (
-              <span className="dsh-cqa-icon" aria-hidden="true">
-                {action.icon}
-              </span>
-            )}
-            <span className="dsh-cqa-label">{action.label}</span>
-            {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
-          </button>
-        )
-      })}
-    </div>
   )
 }
 
@@ -269,7 +182,16 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   }, [overflow.length])
 
   const manage = (
-    <button type="button" ref={manageRef} className="dsh-cqa-entry" data-quick-actions-manage="" onClick={onManage}>
+    <button
+      type="button"
+      ref={manageRef}
+      className="dsh-cqa-entry"
+      data-quick-actions-manage=""
+      // A tooltip, never a name: `aria-label` here would replace the visible
+      // label as the accessible name, which spec 8.4 forbids.
+      title={t('manage.aria')}
+      onClick={onManage}
+    >
       <span className="dsh-cqa-label">{t('manage')}</span>
     </button>
   )
@@ -288,7 +210,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
               <ActionControl
                 key={quickActionRefKey(action.ref)}
                 action={action}
-                reason={reasonFor(action, session)}
+                reason={unavailableReasonFor(action, session)}
                 t={t}
                 onActivate={activate}
               />
@@ -303,7 +225,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
               <ActionControl
                 key={quickActionRefKey(action.ref)}
                 action={action}
-                reason={reasonFor(action, session)}
+                reason={unavailableReasonFor(action, session)}
                 t={t}
                 onActivate={activate}
                 measure={measure}
@@ -334,7 +256,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
                 </span>
               </button>
               {panelOpen ? (
-                <ActionList
+                <ActionPanel
                   actions={overflow}
                   session={session}
                   t={t}

@@ -4,7 +4,7 @@ import { apply, inject, name } from '../../src/client/index.js'
 import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
 import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
 import { QUICK_ACTIONS_LOCALE_NAMESPACE } from '../../src/locales/index.js'
-import type { ComposerBlocks, SlotRegisterOptions } from '../../src/client/dsh.js'
+import type { ComposerBlocks, SlotInjectionEffect, SlotRegisterOptions } from '../../src/client/dsh.js'
 
 interface Registration {
   readonly options: SlotRegisterOptions
@@ -43,12 +43,15 @@ class FakeClientContext {
       settingsScope: fakeSettingsScope(this.document),
       connection: this.connection,
       slots: {
-        inject: (key: string, callback: () => () => void) => {
+        // The shipped `inject` accepts one disposer or an iterable of them; the
+        // input dock declares two cells through one declaration lifetime.
+        inject: (key: string, callback: () => SlotInjectionEffect) => {
           this.injected.push(key)
-          const stop = callback()
-          this.disposers.push(stop)
+          const effect = callback()
+          const stops = typeof effect === 'function' ? [effect] : Array.from(effect)
+          for (const stop of stops) this.disposers.push(stop)
           return () => {
-            stop()
+            for (const stop of stops) stop()
           }
         },
         register: (options: SlotRegisterOptions, component: unknown) => {
@@ -123,6 +126,14 @@ describe('the Client plugin surface', () => {
         order: 100,
         locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
       },
+      // The centralized management overlay, registered independently of the
+      // layout entry rather than nested inside it (spec 8.1).
+      {
+        name: 'conversation.input.dock',
+        id: 'composer-quick-actions-manager',
+        order: 101,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
       {
         name: 'conversation.composer.dock',
         id: 'composer-quick-actions',
@@ -135,14 +146,17 @@ describe('the Client plugin surface', () => {
   it('registers ids of its own rather than reusing a shipped entry', () => {
     const host = new FakeClientContext()
     apply(host.ctx)
-    for (const entry of host.registered) expect(entry.options.id).toBe('composer-quick-actions')
+    for (const entry of host.registered) expect(entry.options.id).toMatch(/^composer-quick-actions/)
+    // The two cells on one Slot must not collide: a Slot id is a cell key.
+    const inputDock = host.registered.filter((entry) => entry.options.name === 'conversation.input.dock')
+    expect(new Set(inputDock.map((entry) => entry.options.id)).size).toBe(inputDock.length)
   })
 
   it('releases every registration and subscription when the fiber unloads', () => {
     const host = new FakeClientContext()
     apply(host.ctx)
     expect(host.document.listenerCount).toBeGreaterThan(0)
-    expect(host.registered).toHaveLength(2)
+    expect(host.registered).toHaveLength(3)
     expect(host.locales).toHaveLength(1)
 
     host.unload()

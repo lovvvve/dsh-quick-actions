@@ -11,9 +11,9 @@
  * click on the backdrop — has no side effect at all. The re-verification that
  * follows a confirmation lives in the execution engine, not here.
  */
-import { useCallback, useEffect, useRef } from 'react'
-import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 import type { PendingQuickActionConfirmation } from './execution.js'
+import { useInitialFocus, useModalKeys } from '../manager/modal.js'
 import type { Translate } from '../dsh.js'
 
 export interface ConfirmPanelProps {
@@ -24,38 +24,13 @@ export interface ConfirmPanelProps {
 }
 
 export function ConfirmPanel({ pending, t, onConfirm, onCancel }: ConfirmPanelProps): ReactElement {
-  const panelRef = useRef<HTMLDivElement | null>(null)
-  const confirmRef = useRef<HTMLButtonElement | null>(null)
-
-  useEffect(() => {
-    confirmRef.current?.focus()
-  }, [])
-
-  /**
-   * Escape cancels, and Tab stays inside: the panel renders in place rather than
-   * through a portal, so without this a keyboard user would tab straight past
-   * the backdrop into the draft the confirmation is guarding — and every route
-   * back out of the panel would take the Escape handler with it.
-   */
-  const onKeyDown = useCallback(
-    (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation()
-        onCancel()
-        return
-      }
-      if (event.key !== 'Tab') return
-      const focusable = Array.from(panelRef.current?.querySelectorAll('button') ?? [])
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
-      if (first === undefined || last === undefined) return
-      const edge = event.shiftKey ? first : last
-      if (event.target !== edge) return
-      event.preventDefault()
-      ;(event.shiftKey ? last : first).focus()
-    },
-    [onCancel],
-  )
+  // Escape cancellation, the Tab boundary and the opening focus are the shared
+  // modal semantics of spec 8.4; this panel adds no rule of its own. Focus
+  // return is the surface's, not this panel's: the control that opened a
+  // confirmation is usually disabled or unmounted by the time it closes, so the
+  // surface owns the fallback (spec 8.4).
+  const { panelRef, onKeyDown } = useModalKeys<HTMLDivElement>(onCancel)
+  const confirmRef = useInitialFocus<HTMLButtonElement>()
 
   return (
     <>

@@ -52,6 +52,8 @@ export const inject: readonly string[] = ['slots', 'settingsScope', 'connection'
 
 /** Ascending position among the shipped dock entries; late enough to sit last. */
 const DOCK_ORDER = 100
+/** The management overlay's own cell, right after the layout's (spec 8.1). */
+const MANAGER_ORDER = 101
 
 /**
  * Start the feature and tie every piece of it to this fiber.
@@ -80,7 +82,7 @@ export function apply(ctx: Context): void {
   )
   ctx.effect(installQuickActionStyles, 'composer-quick-actions: surface styles')
 
-  const { InputDock, ComposerDock } = createQuickActionDockEntries({
+  const { InputDock, ComposerDock, ManagerDock } = createQuickActionDockEntries({
     controller,
     sessions,
     residency,
@@ -90,7 +92,12 @@ export function apply(ctx: Context): void {
   // Both docks are always registered; the current layout decides which one draws
   // (spec 8.1). The composer dock is also the Resident Composer beacon, so it is
   // registered whatever the layout is.
-  ctx.slots.inject('conversation.input.dock', () =>
+  //
+  // The input dock carries two cells, not one: the layout entry and — registered
+  // independently, as spec 8.1 requires — the centralized management overlay.
+  // One `inject` declares both, because a Slot injection accepts an iterable of
+  // disposers and the two cells share one declaration lifetime.
+  ctx.slots.inject('conversation.input.dock', () => [
     ctx.slots.register(
       {
         name: 'conversation.input.dock',
@@ -100,7 +107,16 @@ export function apply(ctx: Context): void {
       },
       InputDock as ComponentType<never>,
     ),
-  )
+    ctx.slots.register(
+      {
+        name: 'conversation.input.dock',
+        id: 'composer-quick-actions-manager',
+        order: MANAGER_ORDER,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
+      ManagerDock as ComponentType<never>,
+    ),
+  ])
   ctx.slots.inject('conversation.composer.dock', () =>
     ctx.slots.register(
       {

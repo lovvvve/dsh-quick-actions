@@ -49,6 +49,18 @@ export interface ResidentComposerRegistry {
    */
   mark(sessionId: string): () => void
   isResident(sessionId: string): boolean
+  /**
+   * The Session that owns anything global, or `undefined` when none is resident.
+   *
+   * The centralized management panel is global state rendered from a
+   * session-scoped Slot (spec 8.1 asks for it to be registered independently,
+   * and this release has no Slot outside a Session to register into). So if two
+   * Resident Composers were ever on screen at once, both entries would render
+   * the same overlay. Electing one owner — the Session that has been resident
+   * longest, which is stable while it stays mounted — is what keeps the panel
+   * single.
+   */
+  primarySessionId(): string | undefined
   subscribe(listener: () => void): () => void
 }
 
@@ -75,6 +87,9 @@ export function createResidentComposerRegistry(): ResidentComposerRegistry {
       }
     },
     isResident: (sessionId) => marks.has(sessionId),
+    // Insertion-ordered: the first key is the Session marked longest ago that is
+    // still marked, so the owner only changes when it actually stops being one.
+    primarySessionId: () => marks.keys().next().value,
     subscribe(listener) {
       listeners.add(listener)
       return () => {

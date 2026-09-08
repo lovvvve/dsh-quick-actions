@@ -114,7 +114,8 @@ export const QUICK_ACTIONS_CSS = `
   background: var(--dsw-alias-interactive-bg-hover-solid);
 }
 .dsh-cqa-action:disabled,
-.dsh-cqa-entry:disabled {
+.dsh-cqa-entry:disabled,
+.dsh-cqa-entry[aria-disabled='true'] {
   opacity: 0.5;
   cursor: default;
 }
@@ -246,6 +247,222 @@ export const QUICK_ACTIONS_CSS = `
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Fields, shared by the search box and the Custom Quick Action form         */
+/* ------------------------------------------------------------------------- */
+
+.dsh-cqa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
+}
+.dsh-cqa-field-label {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.dsh-cqa-field-hint {
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+.dsh-cqa-field-error {
+  color: var(--dsw-alias-state-danger-primary, var(--dsw-alias-label-primary));
+  font-size: 11px;
+  line-height: 16px;
+  font-weight: 500;
+}
+
+.dsh-cqa-input,
+.dsh-cqa-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+}
+.dsh-cqa-textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: var(--ds-font-family-code);
+  white-space: pre-wrap;
+}
+.dsh-cqa-input:focus-visible,
+.dsh-cqa-textarea:focus-visible {
+  outline: 2px solid var(--dsw-alias-state-business-primary);
+  outline-offset: 1px;
+}
+.dsh-cqa-input:disabled,
+.dsh-cqa-textarea:disabled {
+  opacity: 0.5;
+}
+
+.dsh-cqa-switch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------------- */
+/* The centralized management overlay                                        */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * The overlay sits above the anchored popovers, and its click-catching backdrop
+ * with it. Neither paints: only DSH alias theme tokens may be used here, and
+ * this release has no token to spend on a modal scrim (spec 8.4).
+ */
+.dsh-cqa-manager-backdrop {
+  z-index: 30;
+}
+.dsh-cqa-manager {
+  position: fixed;
+  z-index: 31;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: min(560px, calc(100vw - 24px));
+  max-height: min(80vh, 680px);
+  overflow-y: auto;
+  padding: 12px;
+  border: 0.5px solid var(--dsw-alias-border-l1);
+  border-radius: 12px;
+  background: var(--dsw-specific-tip);
+  color: var(--dsw-alias-label-primary);
+  box-shadow: var(--dsw-elevation-soft);
+}
+
+.dsh-cqa-manager-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dsh-cqa-manager-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  color: var(--dsw-alias-label-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.dsh-cqa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+  border-top: 0.5px solid var(--dsw-alias-border-l1);
+}
+.dsh-cqa-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dsh-cqa-section-head .dsh-cqa-section-title {
+  flex: 1 1 auto;
+}
+.dsh-cqa-section-title {
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+.dsh-cqa-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.dsh-cqa-entry[aria-pressed='true'] {
+  background: var(--dsw-alias-state-business-tertiary);
+  color: var(--dsw-alias-label-primary-bluish);
+  opacity: 1;
+}
+
+.dsh-cqa-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dsh-cqa-list-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+/* A hidden or disabled action stays legible: it is managed here, not removed. */
+.dsh-cqa-list-item[data-quick-action-hidden] .dsh-cqa-list-head,
+.dsh-cqa-list-item[data-quick-action-hidden] .dsh-cqa-list-text {
+  opacity: 0.6;
+}
+.dsh-cqa-list-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.dsh-cqa-list-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--dsw-alias-label-tertiary);
+  font-family: var(--ds-font-family-code);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.dsh-cqa-list-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.dsh-cqa-tag {
+  flex: none;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: var(--dsw-specific-selector);
+  color: var(--dsw-alias-label-tertiary);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.dsh-cqa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 0 0;
+  border-top: 0.5px solid var(--dsw-alias-border-l1);
+}
+.dsh-cqa-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 6px;
 }
 `
 
