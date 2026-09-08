@@ -336,6 +336,38 @@ client.js size: 146124
 
 快捷动作只在 Resident Composer 渲染，而 Resident Composer 必然是用户自己的会话，因此 Playwright 的**自动全页截图与 trace 一律关闭**（`screenshot: 'off'`、`trace: 'off'`、`video: 'off'`）：全页捕获会把真实对话内容写进证据，违反本文件开头的约束。需要图像的用例改为对 composer 区域做裁剪截图。断言只读插件自有的 `data-quick-action*` 标记与几何量，不读会话内容。
 
+### 第 13.2 节行为矩阵对账（485 条自动化的归属）
+
+第 13.2 节要求「覆盖率以行为矩阵而非统一行覆盖率为门槛」。逐条核对现有 22 个 spec 文件 / 485 条用例的归属，**矩阵在模型 / Host / Client 三层已完整**，缺口只剩需要真实 GUI 或真实模型调用的项：
+
+| 第 13.2 节条目 | 承接位置 |
+|---|---|
+| 0、1、6、25、50 个正常动作 | `model/projection.spec.ts:101` —— `it.each([0, 1, 6, 25, QUICK_ACTION_TOTAL_LIMIT])` |
+| 53 个既有动作无损被动超限 | `client/controller.spec.ts`、`client/manager.spec.tsx` |
+| 隐藏与停用动作计数 | `model/projection.spec.ts`、`model/settings.spec.ts`、`model/mutations.spec.ts` |
+| 模型不变量、默认值、校验与迁移分支 | `model/validation.spec.ts`、`model/settings.spec.ts`、`model/normalize.spec.ts` |
+| 排序重复引用 / 失效自定义引用 / 未知预置保留 / 缺失动作追加 | `model/normalize.spec.ts` |
+| 预置新增、文案更新、移除、重新加入、行为签名换 ID | `model/catalog.spec.ts` |
+| 幂等规范重写、目录 revision 稳定性、revision 冲突 | `model/normalize.spec.ts`、`model/catalog.spec.ts`、`model/mutations.spec.ts` |
+| Host 等待 settings-file 后端、注册/卸载、无效配置、重复 ID、超限目录 | `host/host.spec.ts`、`host/config.spec.ts`、`host/settings.spec.ts` |
+| Settings 持久化先于 UI 提交；写入拒绝与 revision 冲突分类 | `client/controller.spec.ts`、`client/manager.spec.tsx` |
+| 首次目录失败、首次 Settings 失败、只读、断线与重连 | `client/controller.spec.ts:191`（断线期间只读地继续服务最后确认快照）等 |
+| 每连接 generation 最多一次目录读取、无按动作 RPC | `client/controller.spec.ts`（`generation` 用例组） |
+| fiber dispose 后无监听器 / Remote / namespace / 样式 / 订阅泄漏 | `client/plugin.spec.ts:155`（fiber unload 时释放每一项注册与订阅） |
+| 三种布局、溢出、搜索、管理、确认、宽窄响应式、焦点 | `client/layout.spec.ts`、`client/surfaces.spec.tsx`、`client/manager.spec.tsx`、`client/search.spec.ts` |
+| 占用草稿、最终重验、确认取消、动作删除、会话切换、按会话单飞 | `client/execution.spec.ts` |
+| 模型运行期 queue、装载后失败草稿保留、失败不重复报错 | `client/execution.spec.ts` |
+| 规范化恒写 `kind: 'send'`；Host Config 非 `send` 加载失败 | `model/normalize.spec.ts`、`host/config.spec.ts` |
+| 已存储 `kind: 'insert'` 墓碑保留与降级往返无损 | `model/normalize.spec.ts`、`model/projection.spec.ts`、`model/settings.spec.ts` |
+| Command Send Action 三种判定 | `model/text.spec.ts:11/15/19`（前导 `/`、空白后 `/`、非 `/`） |
+| 规范化不改写 `confirm` | `model/normalize.spec.ts`、`model/lifecycle.spec.ts` |
+| 命令动作确认开 / 关的面板与执行路径 | `client/execution.spec.ts`、`client/surfaces.spec.tsx` |
+| 两个包的 build / bundle / pack / 安装（两个 tarball 明确解析） | `release/packaging.spec.ts`、`tools/dsh-client-bundle/tests/bundle.spec.ts`，安装矩阵见本节与票据 17 节 |
+| README 步骤逐条执行 | 内容契约由 `release/docs.spec.ts` 固定；**执行**由本轮在真实 DSH 上完成（见上「安装」与「卸载」两节） |
+| stop / update / unload / 卸载 / 重装 / 重启激活 / 配置恢复 | `model/lifecycle.spec.ts`、`client/plugin.spec.ts`、`host/host.spec.ts`；真实 DSH 上的重装恢复与重启激活仍缺 |
+
+因此第 13.2 节的**剩余缺口**只有三类，且都必须在真实 GUI 或获得模型调用许可后才能补：GUI 层的规模矩阵与截图基线、跨 DSH 重启的持久化与重装恢复、全部发送动作项。
+
 ### 卸载（按用户指示于本轮收尾执行）
 
 `plugin --profile web remove dsh-composer-quick-actions-bundle`（同样需要一次性 `--config.minimumReleaseAge=0`）后逐项核对：

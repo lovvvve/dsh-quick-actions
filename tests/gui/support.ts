@@ -141,6 +141,37 @@ export async function ensureLayout(page: Page, layout: 'ribbon' | 'bar' | 'launc
   await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
 }
 
+/**
+ * The packaged catalog is three presets and no custom actions. Every spec that counts
+ * actions depends on that, and a stray custom action would quietly shift the counts — so
+ * state it, rather than discovering it as an off-by-one somewhere else.
+ */
+export async function expectPackagedProjection(page: Page): Promise<void> {
+  await expect(actionFaces(page), 'projection is not the packaged catalog: leftover custom actions?')
+    .toHaveCount(3)
+}
+
+/**
+ * Delete every custom action the run may have created. A management spec that clicks its
+ * way through the overlay can land on a clone control, and a clone persists in the user's
+ * Settings — so teardown removes them instead of trusting that no click ever strays.
+ * Presets carry a clone control and customs carry a delete control, which is what tells
+ * the two apart.
+ */
+export async function removeStrayCustomActions(page: Page): Promise<void> {
+  if (await manageEntry(page).count() === 0) return
+  await manageEntry(page).click()
+
+  const ask = page.locator('[data-quick-actions-delete="ask"]')
+  for (let guard = 0; guard < 60 && await ask.count() > 0; guard += 1) {
+    await ask.first().click()
+    await page.locator('[data-quick-actions-delete="confirm"]').first().click()
+  }
+
+  await page.locator('[data-quick-actions-manager-close]').click()
+  await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
+}
+
 /** Rounded rect, in CSS px, of one element — the geometry spec section 13.3 measures. */
 export async function edges(locator: Locator): Promise<{ left: number; right: number; width: number }> {
   const box = await locator.boundingBox()

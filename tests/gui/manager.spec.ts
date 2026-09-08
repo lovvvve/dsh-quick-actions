@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { ensureLayout, layoutCell, manageEntry, openResidentComposer } from './support.js'
+import { ensureLayout, expectPackagedProjection, layoutCell, manageEntry, openResidentComposer, removeStrayCustomActions } from './support.js'
 
 /**
  * The management overlay and the layout setting, on the live GUI. Layout is a global
@@ -10,6 +10,8 @@ import { ensureLayout, layoutCell, manageEntry, openResidentComposer } from './s
 test.describe('quick actions management', () => {
   test.beforeEach(async ({ page }) => {
     await openResidentComposer(page)
+    // A leftover custom action from an earlier run would shift every count below.
+    await expectPackagedProjection(page)
   })
 
   test.afterEach(async ({ page }) => {
@@ -18,6 +20,10 @@ test.describe('quick actions management', () => {
     if (await layoutCell(page).count() === 0) return
     await page.keyboard.press('Escape')
     await ensureLayout(page, 'ribbon')
+    // These specs write to the user's own Settings, so they hand the profile back the way
+    // they found it: the packaged catalog, on the default layout.
+    await removeStrayCustomActions(page)
+    await expectPackagedProjection(page)
   })
 
   test('opens a labelled dialog that lists the packaged presets', async ({ page }) => {
