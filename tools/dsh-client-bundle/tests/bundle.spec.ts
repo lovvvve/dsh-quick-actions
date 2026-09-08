@@ -7,6 +7,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { SourceMapConsumer, type RawSourceMap } from 'source-map-js'
 import { afterEach, describe, expect, it } from 'vitest'
+import { dshClientBundle } from '../src/index.js'
 
 const roots: string[] = []
 const children: ChildProcess[] = []
@@ -54,6 +55,14 @@ async function targetDependency(
   await writeFile(join(dependency, 'default.js'), `export const target = 'default'\n`)
 }
 
+async function entriesOf(target: string): Promise<string[]> {
+  const entries = await readdir(target).catch((error: unknown) => {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') return []
+    throw error
+  })
+  return entries.sort()
+}
+
 function runTsdown(config: string): Promise<void> {
   return new Promise((resolveRun, reject) => {
     execFile(process.execPath, [tsdownCli, '--config', config], { cwd: repositoryRoot }, (error, _stdout, stderr) => {
@@ -92,6 +101,28 @@ async function waitUntil(check: () => Promise<boolean>, timeoutMs = 10_000): Pro
     await new Promise(resolveWait => setTimeout(resolveWait, 25))
   }
   throw new Error('timed out waiting for client bundle output')
+}
+
+const brokenEntry = `export const inject = []; export function apply() { return eval("'broken'") }\n`
+
+function startWatch(config: string): { child: ChildProcess; diagnostics: () => string } {
+  const child = spawn(process.execPath, [tsdownCli, '--config', config, '--watch'], {
+    cwd: repositoryRoot,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  children.push(child)
+  let diagnostics = ''
+  child.stdout?.on('data', chunk => { diagnostics += String(chunk) })
+  child.stderr?.on('data', chunk => { diagnostics += String(chunk) })
+  return { child, diagnostics: () => diagnostics }
+}
+
+/** `brokenEntry` fails the build on rolldown's EVAL warning, which `failOnWarn` escalates. */
+function waitForBrokenBuild(diagnostics: () => string, since: number): Promise<void> {
+  return waitUntil(async () => {
+    const failedBuild = diagnostics().slice(since)
+    return /eval/i.test(failedBuild) && /build failed|error/i.test(failedBuild)
+  })
 }
 
 async function waitForApply(
@@ -250,6 +281,7 @@ describe('dshClientBundle', () => {
     expect(executed.requests).toEqual(['fixture-external'])
     expect(executed.exports.inject).toEqual(['slots'])
     expect((executed.exports.apply as () => unknown)()).toBe('external-value')
+    expect(source.trimEnd().endsWith('//# sourceMappingURL=client.js.map')).toBe(true)
     const map = JSON.parse(await readFile(`${built.output}.map`, 'utf8')) as RawSourceMap
     expect(map.sources.some(item => item.endsWith('/src/client.ts'))).toBe(true)
     expect(map.sourcesContent?.some(item => item.includes(`export function apply()`))).toBe(true)
@@ -265,20 +297,46 @@ describe('dshClientBundle', () => {
     expect(original.line).toBe(3)
   })
 
-  it('keeps failed staging outside a trailing-separator final outDir', async () => {
+  it('keeps bundler scratch output beside a trailing-separator outDir instead of inside it', () => {
+    const config = dshClientBundle({
+      id: 'dsh-client-fixture',
+      entry: resolve('fixture/src/client.ts'),
+      outDir: `${resolve('fixture/lib')}/`,
+    })
+
+    expect(config.outDir).toBe(`${resolve('fixture/lib')}.dsh-client-stage`)
+  })
+
+  it('discards bundler scratch inherited from an interrupted run', async () => {
     const built = await fixture([
+      `import { missing } from 'missing-dependency'`,
       `export const inject = []`,
-      `export function apply() { return eval("'broken'") }`,
+      `export function apply() { return missing }`,
       '',
-    ].join('\n'), true)
+    ].join('\n'))
+    const scratch = join(built.root, 'lib.dsh-client-stage')
+    await mkdir(scratch, { recursive: true })
+    await writeFile(join(scratch, 'client.js'), 'interrupted')
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/UNRESOLVED_IMPORT|missing-dependency/)
+
+    expect(await entriesOf(built.root)).toEqual(['src', 'tsdown.config.ts'])
+  })
+
+  it('leaves no build scratch anywhere when a build fails', async () => {
+    const built = await fixture(brokenEntry, true)
 
     await expect(runTsdown(built.config)).rejects.toThrow(/eval/i)
 
-    const finalEntries = await readdir(dirname(built.output)).catch((error: unknown) => {
-      if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') return []
-      throw error
-    })
-    expect(finalEntries).toEqual([])
+    expect(await entriesOf(built.root)).toEqual(['src', 'tsdown.config.ts'])
+    expect(await entriesOf(dirname(built.output))).toEqual([])
+  })
+
+  it('fails the build loudly when the generated client cannot be published', async () => {
+    const built = await fixture(`export const inject = []; export function apply() { return 'one' }\n`)
+    await writeFile(dirname(built.output), 'not a directory')
+
+    await expect(runTsdown(built.config)).rejects.toThrow(/dshClientBundle: publishing client\.js failed/)
   })
 
   it('keeps sourcemap paths valid when outDir has a trailing separator', async () => {
@@ -295,28 +353,38 @@ describe('dshClientBundle', () => {
 
   it('rebuilds the same client artifact when the watched entry changes', async () => {
     const built = await fixture(`export const inject = []; export function apply() { return 'one' }\n`)
-    const child = spawn(process.execPath, [tsdownCli, '--config', built.config, '--watch'], {
-      cwd: repositoryRoot,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-    children.push(child)
-    let diagnostics = ''
-    child.stdout?.on('data', chunk => { diagnostics += String(chunk) })
-    child.stderr?.on('data', chunk => { diagnostics += String(chunk) })
+    const watching = startWatch(built.config)
 
-    await waitForApply(child, built.output, 'one', () => diagnostics)
+    await waitForApply(watching.child, built.output, 'one', watching.diagnostics)
     const lastGood = await readFile(built.output, 'utf8')
-    const diagnosticsStart = diagnostics.length
+    const failedFrom = watching.diagnostics().length
 
-    await writeFile(built.entry, `export const inject = []; export function apply() { return eval("'broken'") }\n`)
-    await waitUntil(async () => {
-      const failedBuild = diagnostics.slice(diagnosticsStart)
-      return /eval/i.test(failedBuild) && /build failed|error/i.test(failedBuild)
-    })
+    await writeFile(built.entry, brokenEntry)
+    await waitForBrokenBuild(watching.diagnostics, failedFrom)
     expect(await readFile(built.output, 'utf8')).toBe(lastGood)
 
     await writeFile(built.entry, `export const inject = []; export function apply() { return 'two' }\n`)
 
-    await waitForApply(child, built.output, 'two', () => diagnostics)
+    await waitForApply(watching.child, built.output, 'two', watching.diagnostics)
+  }, 35_000)
+
+  it('leaves no build scratch behind when the watcher closes after a failed build', async () => {
+    const built = await fixture(`export const inject = []; export function apply() { return 'one' }\n`)
+    const watching = startWatch(built.config)
+
+    await waitForApply(watching.child, built.output, 'one', watching.diagnostics)
+    const lastGood = await readFile(built.output, 'utf8')
+    const failedFrom = watching.diagnostics().length
+
+    await writeFile(built.entry, brokenEntry)
+    await waitForBrokenBuild(watching.diagnostics, failedFrom)
+
+    const closed = once(watching.child, 'close')
+    watching.child.kill('SIGTERM')
+    await closed
+
+    expect(await entriesOf(built.root)).toEqual(['lib', 'src', 'tsdown.config.ts'])
+    expect(await entriesOf(dirname(built.output))).toEqual(['client.js', 'client.js.map'])
+    expect(await readFile(built.output, 'utf8')).toBe(lastGood)
   }, 35_000)
 })

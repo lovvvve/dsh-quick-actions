@@ -1,6 +1,14 @@
-import { copyFile, mkdir, rename, rm } from 'node:fs/promises'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import type { UserConfig } from 'tsdown'
+
+const CLIENT_FILE = 'client.js'
+const CLIENT_MAP_FILE = `${CLIENT_FILE}.map`
+
+interface GeneratedClient {
+  readonly code: string
+  readonly map: string
+}
 
 export interface DshClientBundleOptions {
   readonly id: string
@@ -43,9 +51,9 @@ function errorCode(error: unknown): string | undefined {
     : undefined
 }
 
-async function replaceFile(source: string, destination: string): Promise<void> {
+async function replaceFile(destination: string, content: string): Promise<void> {
   const next = `${destination}.${process.pid}.next`
-  await copyFile(source, next)
+  await writeFile(next, content)
   try {
     await rename(next, destination)
   } catch (error) {
@@ -57,11 +65,16 @@ async function replaceFile(source: string, destination: string): Promise<void> {
   }
 }
 
-async function publishClientBundle(staging: string, destination: string): Promise<void> {
+function sourceMapText(source: unknown): string {
+  if (typeof source === 'string') return source
+  if (source instanceof Uint8Array) return new TextDecoder().decode(source)
+  throw new Error(`dshClientBundle: ${CLIENT_MAP_FILE} is not text`)
+}
+
+async function publishClientBundle(destination: string, generated: GeneratedClient): Promise<void> {
   await mkdir(destination, { recursive: true })
-  await replaceFile(join(staging, 'client.js.map'), join(destination, 'client.js.map'))
-  await replaceFile(join(staging, 'client.js'), join(destination, 'client.js'))
-  await rm(staging, { recursive: true, force: true })
+  await replaceFile(join(destination, CLIENT_MAP_FILE), generated.map)
+  await replaceFile(join(destination, CLIENT_FILE), generated.code)
 }
 
 /**
@@ -71,11 +84,15 @@ async function publishClientBundle(staging: string, destination: string): Promis
 export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
   const external = new Set(options.external ?? [])
   const destination = resolve(options.outDir)
-  const staging = `${destination}.dsh-client-stage`
+  // The bundler writes here instead of into `outDir`; it sits beside `outDir` rather than
+  // inside it, keeping the source map paths of a published artifact resolvable. The `-stage`
+  // suffix is the historical name of this directory and is what `.gitignore` matches.
+  const scratch = `${destination}.dsh-client-stage`
+  let generated: GeneratedClient | undefined
   return {
     name: `${options.id}/client`,
     entry: { client: options.entry },
-    outDir: staging,
+    outDir: scratch,
     format: 'cjs',
     platform: 'browser',
     target: 'es2024',
@@ -83,7 +100,18 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
     sourcemap: true,
     clean: false,
     failOnWarn: true,
-    onSuccess: async () => { await publishClientBundle(staging, destination) },
+    onSuccess: async () => {
+      // tsdown calls `onSuccess` without awaiting or catching it, so a rejection would
+      // surface as an unhandled rejection and take the watcher down. Report and mark the
+      // run failed instead: what is already published stays, and the next build republishes.
+      try {
+        if (generated === undefined) throw new Error('the build generated no client bundle')
+        await publishClientBundle(destination, generated)
+      } catch (error) {
+        console.error(`dshClientBundle: publishing ${CLIENT_FILE} failed`, error)
+        process.exitCode = 1
+      }
+    },
     deps: {
       neverBundle: specifier => external.has(specifier),
       alwaysBundle: specifier => !external.has(specifier),
@@ -95,6 +123,31 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
       },
     },
     plugins: [{
+      /**
+       * DSH loads `client.js` straight off disk, so only a build tsdown reports as
+       * successful may reach `destination`. The generated pair is therefore published
+       * from memory, never from what the bundler wrote: a failed build writes its scratch
+       * output too — tsdown escalates `failOnWarn` after the write — and tsdown offers no
+       * close hook on process exit (`Symbol.asyncDispose` runs on config reload only,
+       * while `q`, SIGINT and SIGTERM end the watcher outright). Publishing from memory is
+       * what lets the scratch directory be discarded as each build closes, so closing a
+       * watcher after a failed build leaves nothing behind.
+       */
+      name: 'dsh-client-atomic-publish',
+      async buildStart() {
+        generated = undefined
+        // Nothing in-process can clean up after a killed build, so each build starts clean.
+        await rm(scratch, { recursive: true, force: true })
+      },
+      async closeBundle() { await rm(scratch, { recursive: true, force: true }) },
+      generateBundle(_outputOptions, bundle) {
+        const chunk = bundle[CLIENT_FILE]
+        const map = bundle[CLIENT_MAP_FILE]
+        if (chunk?.type !== 'chunk') throw new Error(`dshClientBundle: the build generated no ${CLIENT_FILE} chunk`)
+        if (map?.type !== 'asset') throw new Error(`dshClientBundle: the build generated no ${CLIENT_MAP_FILE} asset`)
+        generated = { code: chunk.code, map: sourceMapText(map.source) }
+      },
+    }, {
       name: 'dsh-client-module-table-boundary',
       renderChunk(code) {
         visitSyntax(this.parse(code) as unknown as SyntaxNode, (node, parent) => {
@@ -137,7 +190,7 @@ export function dshClientBundle(options: DshClientBundleOptions): UserConfig {
     }],
     outputOptions: {
       codeSplitting: false,
-      entryFileNames: 'client.js',
+      entryFileNames: CLIENT_FILE,
       sourcemapExcludeSources: false,
       banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(options.id)}, factory: (require) => {`,
       intro: 'var module = { exports: {} }; var exports = module.exports;',

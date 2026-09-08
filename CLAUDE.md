@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。**剩下的是构建适配器的 watch staging 清理（票据 22）、自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。**剩下的是自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
 
 真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base`、常驻判定、等宽与端到端发送都归票据 18 在前台 GUI 会话实测。
 
@@ -65,7 +65,7 @@ pnpm vitest run -t 'rejects computed require calls'
 - 产物固定为 `lib/client.js` + sourcemap，用 `banner`/`intro`/`footer` 包成 `window.__ModuleLoader__.load({ id, factory: (require) => { ... } })`。
 - **只有调用方在 `external` 里显式列出的 specifier 才能 `require`**；其余一律 `alwaysBundle`。一个 `renderChunk` AST 插件在构建期硬性拒绝：间接 `require` 引用（`const load = require`）、计算型 `require(id)`、任何 `ImportExpression`（动态 import）、未声明的 external。内部动态 import 必须被内联进同一产物。
 - browser platform 在 tsdown 和 Rolldown `inputOptions` **两层**都强制，`conditionNames` 以 `browser` 优先——Node builtin、Node 条件导出会构建失败而不是悄悄进产物。`failOnWarn: true`。
-- **原子发布**：先构建到相邻的 `lib.dsh-client-stage/`，`onSuccess` 才把 map、再把 js 逐个 rename 到 `lib/`。watch 构建失败时保留上一次完整成功产物。
+- **原子发布**：产物由 `generateBundle` 捕获在内存里，`onSuccess` 才把 map、再把 js 逐个原子写入 `lib/`——**绝不从磁盘 scratch 目录发布**。bundler 仍会往相邻的 `lib.dsh-client-stage/` 写，那里的内容一律不可信：`failOnWarn` 是在写完之后才升级为错误的，失败构建照样会写盘，而 `write: false`（本仓库**未设置**）在 watch 模式会被忽略，救不了场；该目录在每次构建开始与 `closeBundle` 时无条件删除（票据 22：tsdown 在进程退出时没有关闭钩子，`Symbol.asyncDispose` 只在配置重载时跑，`q`/SIGINT/SIGTERM 直接终止 watcher，因此清理不能挂在关闭时机上）。构建失败时 `lib/` 里上一次完整成功产物原样保留。**tsdown 调 `onSuccess` 时既不 await 也不 catch**，所以发布必须自己兜住异常（打印 + `process.exitCode = 1`），否则 unhandled rejection 会直接打死 watcher。
 - `tools/dsh-client-bundle/tests/bundle.spec.ts` 用真实 tsdown 子进程 + 假 ModuleLoader（`node:vm`）验证上述每条边界、sourcemap 原始位置映射和 watch 恢复。改适配器就要改这里，这些是契约测试不是 smoke test。
 
 ## 规格驱动的工作流
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（22、18、21 未认领；16、17、20、23 与 24 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成；票据 24 已解除票据 18 的最后一项阻塞。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（18、21 未认领；16、17、20、22、23 与 24 已 resolved）。票据 24 已解除票据 18 的最后一项阻塞，票据 22 已补齐 spec 第 11.2 节的关闭清理前置项。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
