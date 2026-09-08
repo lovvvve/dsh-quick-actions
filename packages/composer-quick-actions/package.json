@@ -31,7 +31,7 @@
     "README.en.md"
   ],
   "scripts": {
-    "build": "tsc -b && tsdown",
+    "build": "node --eval \"require('node:fs').rmSync('lib',{recursive:true,force:true})\" && tsc -b && tsdown",
     "watch:client": "tsdown --watch",
     "prepack": "pnpm run build"
   },

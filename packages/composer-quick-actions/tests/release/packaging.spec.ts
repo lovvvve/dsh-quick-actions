@@ -23,7 +23,7 @@ import { join } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { inject as clientInject } from '../../src/client/index.js'
-import { bundleDir, featureDir, manifest, type Manifest } from './support.js'
+import { bundleDir, featureDir, manifest, sourceModules, type Manifest } from './support.js'
 
 const feature = manifest(featureDir)
 const bundle = manifest(bundleDir)
@@ -239,6 +239,20 @@ describe('packed file list', () => {
     const underTypes = packedFeature.entries.filter((entry) => entry.startsWith('lib/types/'))
     expect(underTypes.length).toBeGreaterThan(0)
     expect(underTypes.filter((entry) => !entry.endsWith('.d.ts'))).toStrictEqual([])
+  })
+
+  /**
+   * `tsc -b` never prunes output it no longer has a source for, so a deleted or
+   * renamed module leaves its `.d.ts` behind and `files` happily ships the
+   * orphan. Deriving the expected set from `src/` is what turns that into a
+   * failure instead of a stale declaration riding along in the tarball.
+   */
+  it('ships one declaration per source module and no orphans', () => {
+    const sources = sourceModules(join(featureDir, 'src'))
+      .map((path) => `lib/types/${path.replace(/\.tsx?$/, '.d.ts')}`)
+      .sort()
+    const shipped = packedFeature.entries.filter((entry) => entry.startsWith('lib/types/')).sort()
+    expect(shipped).toStrictEqual(sources)
   })
 
   it('ships no build metadata and no sources', () => {

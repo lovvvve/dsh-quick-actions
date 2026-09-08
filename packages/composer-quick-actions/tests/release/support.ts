@@ -1,5 +1,5 @@
 /** Shared fixtures for the release specs: the two package directories and their manifests. */
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -40,4 +40,18 @@ export function releasedVersion(): string {
   const version = manifest(featureDir).version
   if (typeof version !== 'string') throw new Error('the feature manifest declares no version')
   return version
+}
+
+/**
+ * Every TypeScript module under `dir`, as paths relative to it. Used to derive
+ * the declarations a build owes, so orphaned output is detectable.
+ */
+export function sourceModules(dir: string, prefix = ''): readonly string[] {
+  const found: string[] = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`
+    if (entry.isDirectory()) found.push(...sourceModules(join(dir, entry.name), relative))
+    else if (/\.tsx?$/.test(entry.name)) found.push(relative)
+  }
+  return found
 }
