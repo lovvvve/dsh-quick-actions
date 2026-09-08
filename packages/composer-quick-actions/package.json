@@ -1,7 +1,8 @@
 {
   "name": "dsh-composer-quick-actions",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Persistent Quick Actions for the DSH message composer",
+  "license": "MIT",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",
@@ -18,31 +19,48 @@
       "types": "./lib/types/types.d.ts",
       "default": "./lib/types.js"
     },
-    "./remote": {
-      "types": "./lib/types/remote.d.ts",
-      "default": "./lib/remote.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [
-    "lib/**/*.js",
-    "lib/**/*.d.ts",
-    "lib/**/*.map",
-    "README.md"
+    "lib/index.js",
+    "lib/types.js",
+    "lib/client.js",
+    "lib/client.js.map",
+    "lib/types/**/*.d.ts",
+    "README.md",
+    "README.en.md"
   ],
   "scripts": {
     "build": "tsc -b && tsdown",
-    "watch:client": "tsdown --watch"
+    "watch:client": "tsdown --watch",
+    "prepack": "pnpm run build"
   },
   "dsh": {
     "client": {
-      "platform": "web"
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ],
+      "external": [
+        "react",
+        "react/jsx-runtime"
+      ]
     }
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",
-    "@deepseek-ai/dsh-settings": "^0.1.2-rc.1",
-    "@deepseek-ai/schemastery": "^3.18.2"
+    "@deepseek-ai/dsh-client-connection": ">=0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-locale": ">=0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-conversation": ">=0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-renderer": ">=0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-settings": ">=0.1.2-rc.1",
+    "@deepseek-ai/dsh-settings": ">=0.1.2-rc.1",
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "react": "^18.3.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",

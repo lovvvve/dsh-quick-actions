@@ -8,7 +8,6 @@ const host: UserConfig = {
   entry: {
     index: 'src/index.ts',
     types: 'src/types.ts',
-    remote: 'src/remote.ts',
   },
   outDir: 'lib',
   format: 'esm',

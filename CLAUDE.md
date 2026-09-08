@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），以及管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示）。**剩下的是安装身份与文档（票据 17）、自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。**剩下的是自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
 
 真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base`、常驻判定、等宽与端到端发送都归票据 18 在前台 GUI 会话实测。
 
@@ -35,7 +35,7 @@ pnpm vitest run tools/dsh-client-bundle/tests/bundle.spec.ts
 pnpm vitest run -t 'rejects computed require calls'
 ```
 
-注意 `typecheck` 是**两遍**：`*.spec.ts` 和 `tsdown.config.ts` 不在项目引用里，只有第二遍 `tsconfig.test.json` 才覆盖它们；只跑 `tsc -b` 会漏掉测试侧类型错误。`lib/` 是 gitignored 的构建产物。
+注意 `typecheck` 是**两遍**：`*.spec.ts` 和 `tsdown.config.ts` 不在项目引用里，只有第二遍 `tsconfig.test.json` 才覆盖它们；只跑 `tsc -b` 会漏掉测试侧类型错误。`lib/` 是 gitignored 的构建产物；包级 `tsc -b` 只发 `.d.ts`（`emitDeclarationOnly`），别让它重新向 `lib/types/` 发 JS 或 sourcemap——那会把整包第二份 JS 打进 tarball（票据 17 修复，`tests/release/packaging.spec.ts` 固定）。
 
 ## 架构
 
@@ -43,7 +43,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 | 路径 | 角色 |
 |---|---|
-| `packages/composer-quick-actions` | Host + Client **双面功能包**，导出 `.`、`./client`、`./types`、`./remote`、`./package.json` |
+| `packages/composer-quick-actions` | Host + Client **双面功能包**，导出 `.`、`./client`、`./types`、`./package.json`（`./remote` 已按 spec 第 17 节于票据 17 删除，不要加回） |
 | `packages/composer-quick-actions-bundle` | 安装 bundle，只有 `cordis.patch.yml`，把功能包 Host row 插进 DSH `web` profile |
 | `tools/dsh-client-bundle` | 私有构建适配器（不发布），把浏览器 CJS 产物包成 DSH ModuleLoader 要的 lazy-CJS |
 
@@ -53,8 +53,8 @@ pnpm vitest run -t 'rejects computed require calls'
 
 一个包同时被两侧加载，两侧都导出 Cordis 的 `inject` + `apply(ctx)`，但走完全不同的构建管线（见 `tsdown.config.ts` 导出的数组：`host` 配置 + `dshClientBundle(...)`）：
 
-- **Host**：Node ESM，`lib/index.js` / `lib/types.js` / `lib/remote.js`。拥有 Settings namespace（`composer-quick-actions`，落在 `<DSH_HOME>/settings.yaml`）、预置目录校验与合并、只读 Catalog Remote (`remote.composerQuickActions`)。**Host 独占校验与迁移权威。**
-- **Client**：browser-only 单文件 `lib/client.js`。通过 `settingsScope` / `remote.settings` 读写 Host 权威状态（每次修改携带预期 revision），注册 `conversation.input.dock` / `conversation.composer.dock` Slots。Client 不直接写文件、不用浏览器存储作权威源、不做迁移。
+- **Host**：Node ESM，`lib/index.js` / `lib/types.js`。拥有两个 Settings namespace（持久化的 `composer-quick-actions` 落在 `<DSH_HOME>/settings.yaml`；只读目录 `composer-quick-actions-catalog` 只发 composition `base`，不写用户层）、预置目录校验与合并。**Host 独占校验与迁移权威。** 不存在自有 Catalog Remote。
+- **Client**：browser-only 单文件 `lib/client.js`。经 `ctx.settingsScope` 读写 Host 权威状态（每次修改携带预期 revision），目录只读命名空间的 `base` 层；`remote.settings` 由 `settingsScope` 内部持有，插件不直接注入。注册 `conversation.input.dock`（布局 + 管理 overlay 两个 cell）与 `conversation.composer.dock`（常驻信标 + `bar` 布局）Slots。Client 不直接写文件、不用浏览器存储作权威源、不做迁移。
 
 规范源码边界见 spec 第 14 节：`src/model/`（纯 JSON 领域模型，Host/Client 共享）、`src/host/`、`src/client/{controller.ts,surfaces/,manager/,session/}`、`src/locales/`、`src/styles/`。内部 controller、构建适配器实现不得成为公共导出。
 
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [17 完成安装 bundle 与发布文档](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md)（17、18、21 未认领；16 与 20 已 resolved）。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（18、21、22 未认领；16、17 与 20 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -99,6 +99,6 @@ pnpm vitest run -t 'rejects computed require calls'
 - 现有 GUI 是 `http://127.0.0.1:3080`（非本项目启动）。`pnpm watch:client` **不等于** DSH GUI HMR；同一 DSH checkout 的 watcher 与页面加载关系必须实测。
 - Client `cordis_inspect_query` 只能由有活动 GUI 页面的前台父会话执行，后台子代理会无限等待。Host Inspect 和读已打包源码在子代理里安全。
 - 必须交付持久化功能包；不得改成进程内 dynamic Cordis Plugin 来充数。
-- 发布身份已由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案：正式采纳无 scope 的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve），**暂不发布**（不设 `publishConfig`、不 `npm publish`，试用走本地 tarball）。根 `LICENSE` 已就位；`package.json` 的 `name`/`version`/`license` 与 README、`cordis.patch.yml` 的身份落地归票据 17，在此之前仓库里仍是 `0.0.0` 且无 `license` 字段，属预期状态而非遗漏。
+- 发布身份已由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案：正式采纳无 scope 的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve），**暂不发布**（不设 `publishConfig`、不 `npm publish`，试用走本地 tarball）。身份已由[票据 17](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md) 落进两个 `package.json`、`cordis.patch.yml` 与四份 README；根 `LICENSE` 由 pnpm 打包时自动带入各 tarball，无需复制。**不要**给任何包加 `publishConfig` 或执行 `npm publish`。
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。
