@@ -11,6 +11,8 @@
     "packages/**/*.spec.tsx",
     "packages/**/tests/**/*.ts",
     "packages/**/tests/**/*.tsx",
-    "packages/**/tsdown.config.ts"
+    "packages/**/tsdown.config.ts",
+    "playwright.config.ts",
+    "tests/gui/**/*.spec.ts"
   ]
 }

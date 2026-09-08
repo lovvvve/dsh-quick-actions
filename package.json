@@ -12,9 +12,11 @@
     "test": "vitest run",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "lint": "oxlint . --deny-warnings",
-    "watch:client": "pnpm --filter dsh-composer-quick-actions run watch:client"
+    "watch:client": "pnpm --filter dsh-composer-quick-actions run watch:client",
+    "verify:gui": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@testing-library/react": "^16.3.3",
     "@types/node": "^22.20.0",
     "jsdom": "^30.0.1",

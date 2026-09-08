@@ -2,6 +2,7 @@
 
 Type: task
 Mode: AFK
+Status: claimed
 Blocked by: 08, 13, 14, 15, 16, 17, 24
 
 ## Question（问题）
