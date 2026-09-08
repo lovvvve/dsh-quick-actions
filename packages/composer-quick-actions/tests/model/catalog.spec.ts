@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { QUICK_ACTION_CATALOG_LIMIT, buildPresetCatalog, type PresetCatalog } from '../../src/model/index.js'
+import {
+  QUICK_ACTION_CATALOG_LIMIT,
+  buildPresetCatalog,
+  decodeCatalogSnapshot,
+  type PresetCatalog,
+} from '../../src/model/index.js'
 import { presetConfig as config } from './support.js'
 
 function built(input: { builtins?: readonly unknown[]; configured?: readonly unknown[] }): PresetCatalog {
@@ -110,5 +115,58 @@ describe('Preset Catalog revision', () => {
     const first = built({ builtins: [config('a'), config('b')] }).revision
     const second = built({ builtins: [config('b'), config('a')] }).revision
     expect(first).not.toBe(second)
+  })
+})
+
+describe('Catalog snapshot decoding', () => {
+  const catalog = built({ builtins: [config('a'), config('b', { icon: '\u{1F642}', confirm: false })] })
+  const wire = JSON.parse(JSON.stringify(catalog)) as unknown
+
+  it('reads back a snapshot the Host published', () => {
+    expect(decodeCatalogSnapshot(wire)).toEqual(catalog)
+  })
+
+  it('keeps the revision the Host determined rather than recomputing one', () => {
+    const relabelled = { ...(wire as Record<string, unknown>), revision: 'host-determined' }
+    expect(decodeCatalogSnapshot(relabelled)?.revision).toBe('host-determined')
+  })
+
+  it('reads an empty catalog', () => {
+    expect(decodeCatalogSnapshot({ schemaVersion: 1, revision: 'r', presets: [] })).toEqual({
+      schemaVersion: 1,
+      revision: 'r',
+      presets: [],
+    })
+  })
+
+  it.each([
+    ['nothing published yet', undefined],
+    ['a section that is not an object', 'catalog'],
+    ['the registered schema default, before a base layer exists', { schemaVersion: 1, revision: '', presets: [] }],
+    ['a missing revision', { schemaVersion: 1, presets: [] }],
+    ['a presets field that is not a list', { schemaVersion: 1, revision: 'r', presets: {} }],
+    ['a schemaVersion this release cannot read', { schemaVersion: 2, revision: 'r', presets: [] }],
+  ])('publishes no catalog for %s', (_name, raw) => {
+    expect(decodeCatalogSnapshot(raw)).toBeUndefined()
+  })
+
+  it('refuses the whole snapshot when one preset is unreadable, never a truncated catalog', () => {
+    const broken = { schemaVersion: 1, revision: 'r', presets: [config('a'), config('b', { label: '' })] }
+    expect(decodeCatalogSnapshot(broken)).toBeUndefined()
+  })
+
+  it('refuses a snapshot carrying a duplicate Preset Action ID', () => {
+    const duplicated = { schemaVersion: 1, revision: 'r', presets: [config('a'), config('a')] }
+    expect(decodeCatalogSnapshot(duplicated)).toBeUndefined()
+  })
+
+  it('refuses a snapshot over the catalog limit', () => {
+    const presets = Array.from({ length: QUICK_ACTION_CATALOG_LIMIT + 1 }, (_unused, index) => config(`p${String(index)}`))
+    expect(decodeCatalogSnapshot({ schemaVersion: 1, revision: 'r', presets })).toBeUndefined()
+  })
+
+  it('refuses a preset whose kind this release cannot run', () => {
+    const higher = { schemaVersion: 1, revision: 'r', presets: [config('a', { kind: 'insert' })] }
+    expect(decodeCatalogSnapshot(higher)).toBeUndefined()
   })
 })

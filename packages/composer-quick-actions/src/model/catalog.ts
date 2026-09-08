@@ -191,3 +191,54 @@ export function buildPresetCatalog(input: PresetCatalogInput): PresetCatalogResu
   if (issues.length > 0) return { ok: false, issues }
   return { ok: true, catalog: { schemaVersion: 1, revision: revisionOf(presets), presets } }
 }
+
+/**
+ * Read one published catalog snapshot back (spec 17.2). The Host is the catalog's
+ * single validation authority, so this is a defensive decode of an already
+ * confirmed snapshot rather than a second authority — but it is a decode, not a
+ * cast: a snapshot this release cannot read in full yields no catalog at all.
+ *
+ * All-or-nothing on purpose. Dropping the entries it cannot read would show the
+ * user a silently truncated action list, which is exactly what spec 5.1 forbids
+ * the Host to do; the consumer reports a catalog error instead (spec 10).
+ *
+ * The Host's `revision` is carried through rather than recomputed. It is the
+ * catalog's published identity, and a Client that recomputed it would be
+ * asserting an authority it does not have.
+ */
+export function decodeCatalogSnapshot(raw: unknown): PresetCatalog | undefined {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined
+  const { schemaVersion, revision, presets } = raw as Record<string, unknown>
+  if (schemaVersion !== 1) return undefined
+  if (typeof revision !== 'string' || revision === '') return undefined
+  if (!Array.isArray(presets)) return undefined
+
+  const read = readPublishedPresets(presets)
+  if (read === undefined) return undefined
+  return { schemaVersion: 1, revision, presets: read }
+}
+
+/**
+ * Validate an already-published preset list against the same field rules the
+ * Host applied. Nothing is reported field by field: the Host is the authority
+ * that names an author's mistake, and a Client can only refuse the snapshot.
+ */
+function readPublishedPresets(entries: readonly unknown[]): PresetQuickAction[] | undefined {
+  if (entries.length > QUICK_ACTION_CATALOG_LIMIT) return undefined
+
+  const presets: PresetQuickAction[] = []
+  const seen = new Set<PresetActionId>()
+  for (const entry of entries) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return undefined
+    const record = entry as Record<string, unknown>
+
+    const identity = readId(record)
+    if ('issue' in identity || seen.has(identity.id)) return undefined
+    const read = readPreset(record, identity.id)
+    if ('issue' in read) return undefined
+
+    seen.add(identity.id)
+    presets.push(read.preset)
+  }
+  return presets
+}
