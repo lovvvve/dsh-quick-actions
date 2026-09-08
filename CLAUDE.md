@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [16 实现管理、动作面板与发送确认](.scratch/dsh-composer-quick-actions/issues/16-implement-management-and-confirmation-ui.md)（16–18、20 均未认领）。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [16 实现管理、动作面板与发送确认](.scratch/dsh-composer-quick-actions/issues/16-implement-management-and-confirmation-ui.md)（16–18 均未认领；20 已 resolved）。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
