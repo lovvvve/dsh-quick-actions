@@ -653,3 +653,30 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 | 不受影响 | 11、12、15、16、19、20、21 |
 
 第 6.2 节的 `ComposerQuickActionsRemote` 接口与 `remote.composerQuickActions` 名称**作废**；`CatalogSnapshot` 的形状与 revision 要求保留。第 13.2 节中「自有 Catalog Remote 契约、生成产物和卸载清理」一项相应改为「目录命名空间注册、`base` 快照契约与卸载清理」。
+
+## 18. 首版接受的样式作者格式偏离
+
+### 18.1 决定
+
+第 8.4 节要求「使用 DSH UI primitives、主题 token、CSS Modules 和 `locale`」。**首版满足其中三项，第四项（CSS Modules）按作者格式接受偏离**：插件样式以带 `dsh-cqa-` 前缀的样式字符串编写，由 `src/styles/index.ts` 在运行时注入 `<style data-plugin-css>`。
+
+### 18.2 依据：投递机制与第一方插件逐字相同
+
+第一方**插件**（`dsh-client-ui-chat`、`dsh-client-ui-conversation` 等，区别于 shell 的构建期依赖）的 CSS 路径是：作者写 `.module.css`，构建期编译成**内联字符串 + hash 类名**，运行时注入 `<style data-plugin-css="<包名>/<文件>.module.css">`，附带同一套幂等判断。
+
+本插件的投递路径与之逐字相同——同样的注入方式、同样的 tag 属性、同样的幂等判断。差距只有两条：
+
+1. **作者格式**：手写样式字符串 vs `.module.css` 文件；
+2. **类名生成**：约定前缀 vs 编译期 hash。
+
+两条都是作者体验与生成方式，用户不可见。第 8.4 节的实质要求——官方视觉语言、主题 token、不覆盖全局主题——由票据 23（控件改用官方 primitives）与现有样式（只用 `--dsw-alias-*` token）共同满足，并由 `tests/client/layout.spec.ts` 的四条断言守住等宽公式、`max-width` 上限、居中与「不得出现裸颜色值」。
+
+### 18.3 已知并接受的取舍
+
+- 类名靠 `dsh-cqa-` 前缀而非 hash 保证不冲突。前缀由约定维持，不由编译器强制。
+- 改造为 CSS Modules 需拆 77 条规则、改 9 个文件里 **109 处**类名引用、重写上述四条依赖 `QUICK_ACTIONS_CSS` 导出的断言，并先核实 `@tsdown/css` 能把 CSS **内联进单文件 `client.js`**——DSH ModuleLoader 只加载 `lib/client.js`，输出成独立 `.css` 资产则无人加载。该内联能力**未经核实**，是改造的成败关键。
+- 在首版收尾阶段（仅剩票据 22、24、18、21）引入这一规模的回归风险不划算。
+
+### 18.4 后续
+
+若日后要抹平该偏离，须先做 `@tsdown/css` 的内联验证，通过后另开票据；**不得**在其他票据里顺手改。本节不重开第 8.4 节的其余三项要求。

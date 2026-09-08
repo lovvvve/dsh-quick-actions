@@ -25,12 +25,19 @@ This is a **dual-face feature package**: the Host half owns configuration valida
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
 | React (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile |
+| DSH UI primitives (browser side) | peer `>=0.1.2-rc.1`, also supplied by the module table; the devDependency pins `0.1.2-rc.1` exactly, for typechecking only |
 | Platform | `web` profile only (`dsh.client.platform: web`) |
 | Public contracts consumed | Host injects `settings`; the Client injects `slots`, `settingsScope`, `connection`, `locale` and reads `conversation` through `ctx.get` |
 
 The floor is the core package version this effort took all of its evidence on. It is **not** the first officially supported DSH release — that release is not knowable yet, and this document makes no such claim. There is no upper bound because DSH is still in 0.x rc, where `^0.1.2-rc.1` would exclude 0.2.x outright.
 
 This release does **not** depend on `insertText` and detects no DSH capability at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
+
+### Known limitation: how the styles are authored
+
+The controls are the official `@deepseek-ai/dsh-client-ui-primitives` (`Button`, `Pill`, `Input` and the official icons), colours come from DSH theme tokens only, and no global theme is overridden. The plugin's own layout styles, however, are **written as a `dsh-cqa-`-prefixed style string rather than as CSS Modules**.
+
+Delivery is identical to what first-party DSH plugins do — a `<style data-plugin-css>` tag injected at runtime behind the same idempotence check that `dsh-client-ui-chat` and friends use. The difference is only in how the styles are authored (a hand-written string rather than `.module.css`) and how class names are generated (a prefix by convention rather than a compile-time hash), and **neither is visible to the user**. Collision safety rests on the prefix convention rather than on the compiler. This is a known and accepted trade-off for the first release.
 
 ## Install
 

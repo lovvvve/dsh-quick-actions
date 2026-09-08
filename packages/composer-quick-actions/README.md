@@ -25,12 +25,19 @@
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
 | React（浏览器侧） | `^18.3.1`，由 web shell 的模块表提供，不从 profile 安装 |
+| DSH UI primitives（浏览器侧） | peer `>=0.1.2-rc.1`，同样由模块表提供；devDependency 精确锁 `0.1.2-rc.1` 仅供类型检查 |
 | 平台 | 只支持 `web` profile（`dsh.client.platform: web`） |
 | 消费的公共契约 | Host 注入 `settings`；Client 注入 `slots`、`settingsScope`、`connection`、`locale`，并经 `ctx.get` 读 `conversation` |
 
 下界取的是本 effort 全程取证所用的核心包版本。它**不是**首个正式支持的 DSH 发布版本——首发版本尚不可知，本文不做该断言。不设上界是因为 DSH 仍在 0.x rc 阶段，`^0.1.2-rc.1` 会把 0.2.x 直接排除在外。
 
 首版**不依赖 `insertText`**，安装与运行都不检测任何 DSH 能力，因此不存在随 DSH 版本变化的功能分档：要么整个插件能装能跑，要么装不上。
+
+### 已知限制：样式的作者格式
+
+界面控件用的是官方 `@deepseek-ai/dsh-client-ui-primitives`（`Button` / `Pill` / `Input` 与官方图标），配色只取 DSH 主题 token，不覆盖全局主题。但插件自己的布局样式**以带 `dsh-cqa-` 前缀的样式字符串编写，而非 CSS Modules**。
+
+投递方式与第一方 DSH 插件逐字相同——运行时注入 `<style data-plugin-css>` 附带幂等判断，与 `dsh-client-ui-chat` 等包的做法一致。差别只在作者格式（手写字符串 vs `.module.css`）与类名生成（约定前缀 vs 编译期 hash），**用户不可见**。类名的不冲突由前缀约定维持，不由编译器强制。这是首版已知并接受的取舍。
 
 ## 安装
 
