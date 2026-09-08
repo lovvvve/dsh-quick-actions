@@ -201,3 +201,74 @@ package/lib/client.js.map
 
 1. SIGTERM 关闭 watcher 后没有遗留 `lib.dsh-client-stage`，但构建失败后再关闭的路径仍归[票据 22](../issues/22-clean-client-staging-on-watch-close.md)，本节不作结论。
 2. 一切 GUI 侧行为仍归票据 18；本节只证明验证流程不再破坏 GUI 所加载的产物。
+
+---
+
+## 票据 22 — Client scratch 目录关闭清理（2026-09-09）
+
+### 环境
+
+| 项目 | 值 |
+|---|---|
+| 运行时间 | 2026-09-09T00:04:36+08:00 起至 00:23:06+08:00，同一 worktree 连续执行 |
+| 分支 | `worktree-ticket-22-staging-cleanup`（`.claude/worktrees/` 隔离检出） |
+| 基线提交 | `3c46800`（票据 24 收尾） |
+| Node | v24.18.0 |
+| pnpm | 11.7.0 |
+| tsdown / rolldown | 0.22.14 / 1.2.7 |
+
+### 质量门
+
+| 命令 | 退出码 | 结果 |
+|---|---|---|
+| `pnpm typecheck` | 0 | 两遍（`tsc -b` + `tsconfig.test.json`）均通过 |
+| `pnpm lint` | 0 | 0 warning / 0 error |
+| `pnpm test` | 0 | 22 files / **485 tests** 全绿，11.57s |
+| `pnpm vitest run tools/dsh-client-bundle/tests/bundle.spec.ts` | 0 | 16 tests / 3.71s（基线 12 tests / 2.58s） |
+| `pnpm vitest run packages/composer-quick-actions/tests/release/packaging.spec.ts` | 0 | 27 tests / 5.67s，打包契约未受影响 |
+| `pnpm build` | 0 | `lib/client.js` 146124 字节 + map 落地，无 `lib.dsh-client-stage` 残留 |
+
+### 关闭时机取证（票据决策 1 的依据）
+
+`eval` + `failOnWarn` 的失败构建，插件钩子实际序列：
+
+```text
+[HOOK] buildStart
+[HOOK] buildEnd          ← 无 error 参数
+[HOOK] renderStart
+[HOOK] generateBundle
+[HOOK] writeBundle       ← 失败构建照样把产物写进了 scratch
+[HOOK] closeBundle
+```
+
+错误是 rolldown 事后在 `unwrapBindingResult` 把升级后的警告聚合成 JS 错误抛出的，因此 `buildEnd(err)` / `renderError` 都拿不到错误：**失败与成功在钩子层面不可区分**，"按失败清理"不成立。tsdown 侧则确认进程退出时没有关闭钩子（`disposeCbs` 只在配置重载的 `restart()` 里执行，`q + enter` 直接 `process.exit(0)`，全无 SIGINT / SIGTERM 处理）。
+
+`write: false` 实测：一次性构建完全不落盘（`generateBundle` 仍拿到 `client.js` 与 `client.js.map`，`writeBundle` 不触发，连 `lib` 都不建）；但 **watch 模式忽略它**，坏产物会被直接写进 `outDir`。故 `outDir` 仍指向同级 scratch，该选项不采用。
+
+### 真实功能包 watch 实测（非 fixture）
+
+```text
+published after 5 polls: 1
+scratch during watch: none
+scratch after close: none
+client.js size: 146124
+```
+
+`pnpm watch:client` 启动后正常发布与 `pnpm build` 同尺寸的产物；watch 期间与 SIGTERM 关闭之后，包目录都没有 `lib.dsh-client-stage`，watcher 自身正常退出（无遗留子进程）。
+
+### 变异校验（新用例不是装饰）
+
+| 刻意破坏 | 结果 |
+|---|---|
+| 删掉 `closeBundle` 里的 scratch 清理 | `leaves no build scratch behind when the watcher closes after a failed build` 立刻红，其余 15 条绿 |
+| 删掉 `onSuccess` 的异常兜底 | `fails the build loudly when the generated client cannot be published` 立刻红，失败信息退化成裸的 `node:internal/fs/promises` unhandled rejection |
+| 删掉 `buildStart` 里的预清理 | 仍全绿——`closeBundle` 连早期失败构建也会触发。预清理保留为「进程被强杀后无人清理」的唯一兜底 |
+
+### 既有缺陷：`onSuccess` 不被 await（本票据顺手修掉）
+
+`tsdown@0.22.14` 的 `executeOnSuccess` 为 `config.onSuccess(config, ab.signal)`，**既不 await 也不 catch**（`build-D_enfyvD.mjs:177`）。发布过程中的任何异常都会变成 unhandled rejection，在 Node 24 默认策略下直接打死 watcher，与第 11.2 节「修复后继续发布」相悖。修法：发布包在 try/catch 内，失败时打印带 `dshClientBundle:` 前缀的错误并设 `process.exitCode = 1`（与 tsdown 自身 `logger.error` 一致），watch 会话得以存活，一次性构建仍以非零退出码失败。
+
+### 本节未覆盖
+
+- 真实 DSH GUI 下的加载与端到端行为仍归[票据 18](../issues/18-run-integration-and-release-verification.md)。
+- 进程被 SIGKILL、或在写盘与 `closeBundle` 之间被强杀时，scratch 会残留到下一次构建开始（由 `buildStart` 清掉）；该窗口进程内钩子无法覆盖，spec 第 11.2 节的「关闭时不得遗留」按正常关闭路径判定。

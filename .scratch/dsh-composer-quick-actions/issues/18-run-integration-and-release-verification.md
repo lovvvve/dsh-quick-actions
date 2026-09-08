@@ -28,6 +28,8 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 
 票据 17 在核实 spec 第 15 节的两条前置项时发现「watch 关闭不得遗留临时 staging」（第 11.2 节）并不成立，已拆为[票据 22](./22-clean-client-staging-on-watch-close.md)。它属于第 11.2 节的发布要求，本票据的发布验证**收口之前**必须确认票据 22 已完成；`Blocked by` 未改动，因为本票据的其余验证不依赖它，可以并行推进。
 
+**2026-09-09 补记**：票据 22 已 resolved——Client 产物改为从内存原子发布，bundler 的 scratch 目录不再参与发布并在每次构建开始与 `closeBundle` 时无条件清除，watch 失败后关闭已不留残留（真实功能包 + fixture 双向实测，四条用例加三次变异校验）。顺带修掉 `tsdown` 不 await `onSuccess` 导致发布异常打死 watcher 的既有缺陷。证据见 `verification/release-evidence.md` 的票据 22 节。本票据的收口前置条件至此全部清空。
+
 同时，票据 17 已按 spec 第 13.1 节建立 `verification/release-evidence.md`，其中记录了本票据需要接续的内容：两个 tarball 的可复现解析方式、隔离 `DSH_HOME` 下的安装/卸载证据，以及尚未做的真实 GUI 实测清单。本票据应向该文件追加证据，而不是另起一份。
 
 ### 2026-09-08 — 打包验证不得改写工作树
