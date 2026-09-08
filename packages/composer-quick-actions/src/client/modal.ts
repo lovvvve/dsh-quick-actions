@@ -8,6 +8,12 @@
  * panel into the draft behind it, and every route back into the panel would take
  * the Escape handler with it.
  *
+ * This module is a leaf beside `dsh.ts`, owned by no directory of spec 14's
+ * source map: the confirmation panel (`session/`), the action panel and the
+ * management panel (`manager/`) all need it, and putting it inside any one of
+ * them would make another depend on that one's directory for something that is
+ * neither an action nor an execution concern.
+ *
  * Both hooks are deliberately tiny and DOM-only: they read `document.activeElement`
  * and call `focus()`, which is the browser's own focus contract, not DSH's. No
  * Composer state, private event or Lexical path is touched (spec 9.1).
@@ -20,7 +26,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, MutableRefObject } from 'reac
  * what keeps the boundary correct while a write is in flight and half the
  * panel's buttons are inert.
  */
-export const MODAL_FOCUSABLE_SELECTOR = [
+const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
   'input:not([disabled])',
@@ -53,12 +59,14 @@ export function useModalKeys<T extends HTMLElement>(onCancel: () => void): Modal
       if (event.key === 'Escape') {
         // Stopped here: the composer behind this panel also listens for Escape,
         // and cancelling a Quick Action must not also clear the user's draft.
+        // A nested editing context — the management form — stops Escape before
+        // it reaches this handler, so leaving the form does not close the panel.
         event.stopPropagation()
         onCancel()
         return
       }
       if (event.key !== 'Tab') return
-      const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(MODAL_FOCUSABLE_SELECTOR) ?? [])
+      const focusable = Array.from(panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [])
       const first = focusable[0]
       const last = focusable[focusable.length - 1]
       if (first === undefined || last === undefined) return

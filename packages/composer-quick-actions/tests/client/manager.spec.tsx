@@ -311,6 +311,20 @@ describe('the shared searchable action panel', () => {
     expect(screen.queryByRole('dialog', { name: zh['panel.title'] })).toBeNull()
   })
 
+  it('offers a close control a pointer user can actually see', () => {
+    // Escape, the backdrop and the entry itself all close the panel, and none of
+    // them is visible (spec 8.4 wants visible text labels on controls).
+    setup({ layout: 'launcher' })
+    mount()
+    const entry = screen.getByRole('button', { name: '快捷动作 3' })
+    fireEvent.click(entry)
+
+    fireEvent.click(screen.getByRole('button', { name: zh['panel.close'] }))
+
+    expect(screen.queryByRole('dialog', { name: zh['panel.title'] })).toBeNull()
+    expect(document.activeElement).toBe(entry)
+  })
+
   it('executes the picked action through the per-Session engine, with no second lock', () => {
     setup({ layout: 'launcher' })
     mount()
@@ -811,12 +825,18 @@ describe('a Command Send Action in the form', () => {
     )
   })
 
-  it('drops the centralized explanation when no marker is on screen', () => {
+  it('keeps the centralized explanation even before any command action exists', () => {
+    // Spec 8.3 lists the explanation unconditionally: it is what the marker
+    // *means*, and the user about to write their first command text needs it
+    // before any marker exists.
     setup({ presets: [{ id: 'p1', label: '继续', text: '继续' }] })
     mount()
     openManager()
 
-    expect(document.querySelector('[data-quick-actions-command-notice]')).toBeNull()
+    expect(document.querySelector('[data-quick-actions-command-notice]')?.textContent).toBe(
+      zh['manager.command.notice'],
+    )
+    expect(document.querySelector('[data-quick-actions-command-warning]')).toBeNull()
   })
 })
 
@@ -1027,5 +1047,89 @@ describe('when settings cannot be written', () => {
     // so this assertion is scoped to the panel's own copy.
     expect(within(panel()).getByText(zh['catalog.unavailable'])).toBeTruthy()
     expect(within(panel()).getByRole('button', { name: zh['catalog.retry'] })).toBeTruthy()
+    // Spec 10 keeps the two first-read failures apart: with no catalog there is
+    // nothing to be read-only *about*, so the storage notice must not appear
+    // beside the catalog error and blame the wrong layer.
+    expect(document.querySelector('[data-quick-actions-readonly]')).toBeNull()
+  })
+
+  it('offers an explicit retry that re-plans the failed write', async () => {
+    setup()
+    mount()
+    openManager()
+    harness.document.refuseWrites = 'rejected'
+    fireEvent.click(control('preset:p1', zh['manager.hide']))
+    await settle()
+    expect(document.querySelector('[data-quick-actions-write-failure]')).not.toBeNull()
+
+    harness.document.refuseWrites = undefined
+    fireEvent.click(screen.getByRole('button', { name: zh['write.retry'] }))
+    await settle()
+
+    expect(harness.stored?.presetStateById).toEqual({ p1: { hidden: true } })
+    expect(document.querySelector('[data-quick-actions-write-failure]')).toBeNull()
+  })
+
+  it('retries a form save with whatever the form holds now, not the failed draft', async () => {
+    setup()
+    mount()
+    openManager()
+    fireEvent.click(screen.getByRole('button', { name: zh['manager.new'] }))
+    fireEvent.change(screen.getByLabelText(zh['form.label']), { target: { value: '打错的名字' } })
+    fireEvent.change(screen.getByLabelText(zh['form.text']), { target: { value: '正文' } })
+    harness.document.refuseWrites = 'rejected'
+    fireEvent.click(screen.getByRole('button', { name: zh['form.save'] }))
+    await settle()
+
+    // The user fixes the label before pressing retry; the earlier draft must not
+    // be resubmitted behind their back.
+    harness.document.refuseWrites = undefined
+    fireEvent.change(screen.getByLabelText(zh['form.label']), { target: { value: '改好的名字' } })
+    fireEvent.click(screen.getByRole('button', { name: zh['write.retry'] }))
+    await settle()
+
+    expect(Object.values(storedActions()).map((action) => action.label)).toEqual(['改好的名字'])
+  })
+
+  it('lets an open form be backed out of while read-only', async () => {
+    setup()
+    mount()
+    openManager()
+    fireEvent.click(screen.getByRole('button', { name: zh['manager.new'] }))
+    fireEvent.change(screen.getByLabelText(zh['form.label']), { target: { value: '半成品' } })
+
+    act(() => {
+      harness.connection.set('disconnected')
+    })
+
+    // Save is inert, the fields are inert — but Cancel writes nothing, so a
+    // read-only panel must not leave the user holding a draft with no way out.
+    expect(screen.getByRole('button', { name: zh['form.save'] })).toHaveProperty('disabled', true)
+    expect(screen.getByLabelText(zh['form.label'])).toHaveProperty('disabled', true)
+
+    fireEvent.click(screen.getByRole('button', { name: zh['form.cancel'] }))
+    await settle()
+
+    expect(screen.queryByRole('group', { name: zh['form.title.new'] })).toBeNull()
+    expect(panel()).toBeTruthy()
+  })
+
+  it('leaves the form on Escape without closing the panel behind it', () => {
+    setup()
+    mount()
+    openManager()
+    fireEvent.click(screen.getByRole('button', { name: zh['manager.new'] }))
+    const text = screen.getByLabelText(zh['form.text'])
+    fireEvent.change(text, { target: { value: '半成品' } })
+
+    fireEvent.keyDown(text, { key: 'Escape' })
+
+    // The innermost editing context is what Escape means: the form goes, the
+    // panel stays.
+    expect(screen.queryByRole('group', { name: zh['form.title.new'] })).toBeNull()
+    expect(panel()).toBeTruthy()
+
+    fireEvent.keyDown(panel(), { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
   })
 })

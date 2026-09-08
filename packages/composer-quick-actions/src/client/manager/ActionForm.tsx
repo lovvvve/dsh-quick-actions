@@ -25,7 +25,9 @@
  * keeps the form content" (spec 10) structural rather than incidental.
  */
 import { useId } from 'react'
-import type { ReactElement } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react'
+import { pressProps } from './press.js'
+import type { ManagerWriteGate } from './press.js'
 import {
   QUICK_ACTION_ICON_MAX_CLUSTERS,
   QUICK_ACTION_LABEL_MAX_CODE_POINTS,
@@ -46,14 +48,7 @@ export interface ActionFormProps {
    * themselves after that, so a freshly opened form does not open shouting.
    */
   readonly attempted: boolean
-  /** Sustained, external unavailability: the fields themselves go inert. */
-  readonly readOnly: boolean
-  /**
-   * A write is in flight. The buttons report it with `aria-disabled` rather than
-   * `disabled`, so the Save the user just pressed keeps the keyboard caret; the
-   * fields stay live, because a momentary write must not eat a keystroke.
-   */
-  readonly busy: boolean
+  readonly gate: ManagerWriteGate
   readonly t: Translate
   readonly onChange: (draft: QuickActionDraft) => void
   readonly onSave: () => void
@@ -66,23 +61,24 @@ export interface ActionFormProps {
  * Every rule comes from the shared model; the only presentation decision is that
  * a blank field stays quiet until the user has tried to save it.
  */
-export function visibleQuickActionIssues(
-  draft: QuickActionDraft,
-  attempted: boolean,
-): readonly QuickActionFieldIssue[] {
+function visibleQuickActionIssues(draft: QuickActionDraft, attempted: boolean): readonly QuickActionFieldIssue[] {
   const validated = validateQuickActionDraft(draft)
   if (validated.ok) return []
   return attempted ? validated.issues : validated.issues.filter((issue) => issue.reason !== 'blank')
 }
 
-/** One labelled field, whose hint slot carries the field's issue when it has one. */
+/** One labelled field, with its hint and — when it has one — its issue. */
 function Field(props: {
   readonly field: QuickActionField
   readonly label: string
   readonly hint: string
   readonly issue: QuickActionFieldIssue | undefined
   readonly t: Translate
-  readonly children: (bound: { readonly id: string; readonly describedBy: string; readonly invalid: boolean }) => ReactElement
+  readonly children: (bound: {
+    readonly id: string
+    readonly describedBy: string
+    readonly invalid: boolean
+  }) => ReactElement
 }): ReactElement {
   const { field, label, hint, issue, t, children } = props
   const id = useId()
@@ -101,7 +97,11 @@ function Field(props: {
       <label className="dsh-cqa-field-label" htmlFor={id}>
         {label}
       </label>
-      {children({ id, describedBy: issue === undefined ? hintId : `${hintId} ${errorId}`, invalid: issue !== undefined })}
+      {children({
+        id,
+        describedBy: issue === undefined ? hintId : `${hintId} ${errorId}`,
+        invalid: issue !== undefined,
+      })}
       <span className="dsh-cqa-field-hint" id={hintId}>
         {hint}
       </span>
@@ -115,15 +115,34 @@ function Field(props: {
 }
 
 export function ActionForm(props: ActionFormProps): ReactElement {
-  const { mode, draft, attempted, readOnly, busy, t, onChange, onSave, onCancel } = props
+  const { mode, draft, attempted, gate, t, onChange, onSave, onCancel } = props
   const issues = visibleQuickActionIssues(draft, attempted)
   const issueFor = (field: QuickActionField): QuickActionFieldIssue | undefined =>
     issues.find((issue) => issue.field === field)
   const command = isCommandSendActionText(draft.text)
   const titleId = useId()
 
+  /**
+   * Escape leaves the form, not the panel behind it.
+   *
+   * Without stopping it here, Escape typed in a field would reach the management
+   * panel's own handler and close the whole panel — a far larger action than the
+   * user asked for. The innermost editing context is what Escape means.
+   */
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (event.key !== 'Escape') return
+    event.stopPropagation()
+    onCancel()
+  }
+
   return (
-    <div className="dsh-cqa-form" role="group" aria-labelledby={titleId} data-quick-actions-form={mode}>
+    <div
+      className="dsh-cqa-form"
+      role="group"
+      aria-labelledby={titleId}
+      data-quick-actions-form={mode}
+      onKeyDown={onKeyDown}
+    >
       <span className="dsh-cqa-section-title" id={titleId}>
         {t(mode === 'new' ? 'form.title.new' : 'form.title.edit')}
       </span>
@@ -141,7 +160,7 @@ export function ActionForm(props: ActionFormProps): ReactElement {
             id={id}
             aria-describedby={describedBy}
             aria-invalid={invalid}
-            disabled={readOnly}
+            disabled={gate.readOnly}
             value={draft.label}
             onChange={(event) => {
               onChange({ ...draft, label: event.target.value })
@@ -164,7 +183,7 @@ export function ActionForm(props: ActionFormProps): ReactElement {
             rows={4}
             aria-describedby={describedBy}
             aria-invalid={invalid}
-            disabled={readOnly}
+            disabled={gate.readOnly}
             value={draft.text}
             onChange={(event) => {
               onChange({ ...draft, text: event.target.value })
@@ -197,7 +216,7 @@ export function ActionForm(props: ActionFormProps): ReactElement {
             id={id}
             aria-describedby={describedBy}
             aria-invalid={invalid}
-            disabled={readOnly}
+            disabled={gate.readOnly}
             value={draft.icon}
             onChange={(event) => {
               onChange({ ...draft, icon: event.target.value })
@@ -209,7 +228,7 @@ export function ActionForm(props: ActionFormProps): ReactElement {
       <label className="dsh-cqa-switch">
         <input
           type="checkbox"
-          disabled={readOnly}
+          disabled={gate.readOnly}
           checked={draft.confirm}
           data-quick-actions-confirm-switch=""
           onChange={(event) => {
@@ -220,28 +239,15 @@ export function ActionForm(props: ActionFormProps): ReactElement {
       </label>
 
       <div className="dsh-cqa-form-actions">
-        <button
-          type="button"
-          className="dsh-cqa-entry"
-          disabled={readOnly}
-          aria-disabled={busy}
-          onClick={() => {
-            if (readOnly || busy) return
-            onCancel()
-          }}
-        >
+        {/*
+          Cancel is never gated. It writes nothing, and a read-only or
+          mid-write panel that could not be backed out of would leave the user
+          holding an open draft with no way out of it.
+        */}
+        <button type="button" className="dsh-cqa-entry" onClick={onCancel}>
           {t('form.cancel')}
         </button>
-        <button
-          type="button"
-          className="dsh-cqa-entry"
-          disabled={readOnly}
-          aria-disabled={busy}
-          onClick={() => {
-            if (readOnly || busy) return
-            onSave()
-          }}
-        >
+        <button type="button" className="dsh-cqa-entry" {...pressProps(gate, false, onSave)}>
           {t('form.save')}
         </button>
       </div>

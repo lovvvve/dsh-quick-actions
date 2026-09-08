@@ -13,7 +13,7 @@
  */
 import type { ReactElement } from 'react'
 import type { PendingQuickActionConfirmation } from './execution.js'
-import { useInitialFocus, useModalKeys } from '../manager/modal.js'
+import { useInitialFocus, useModalKeys } from '../modal.js'
 import type { Translate } from '../dsh.js'
 
 export interface ConfirmPanelProps {

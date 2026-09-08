@@ -16,7 +16,12 @@ import {
   quickActionsLocaleKey,
   zh,
 } from '../../src/locales/index.js'
-import { validateQuickActionDraft } from '../../src/model/index.js'
+import {
+  QUICK_ACTION_ICON_MAX_CLUSTERS,
+  QUICK_ACTION_LABEL_MAX_CODE_POINTS,
+  QUICK_ACTION_TEXT_MAX_CODE_POINTS,
+  validateQuickActionDraft,
+} from '../../src/model/index.js'
 import type { QuickActionDraft } from '../../src/model/index.js'
 
 /** The `{name}` placeholders one entry interpolates. */
@@ -61,12 +66,12 @@ describe('composed keys', () => {
     // sentence for each, not the general fallback (spec 4.3, 8.3).
     const drafts: readonly QuickActionDraft[] = [
       { label: '', text: 'ok', icon: '', confirm: true },
-      { label: 'x'.repeat(41), text: 'ok', icon: '', confirm: true },
+      { label: 'x'.repeat(QUICK_ACTION_LABEL_MAX_CODE_POINTS + 1), text: 'ok', icon: '', confirm: true },
       { label: 'ok', text: '   ', icon: '', confirm: true },
-      { label: 'ok', text: 'x'.repeat(4001), icon: '', confirm: true },
+      { label: 'ok', text: 'x'.repeat(QUICK_ACTION_TEXT_MAX_CODE_POINTS + 1), icon: '', confirm: true },
       { label: 'ok', text: 'holds ￼ a placeholder', icon: '', confirm: true },
       { label: 'ok', text: 'ok', icon: 'ab', confirm: true },
-      { label: 'ok', text: 'ok', icon: '🧹🧹🧹🧹🧹', confirm: true },
+      { label: 'ok', text: 'ok', icon: '🧹'.repeat(QUICK_ACTION_ICON_MAX_CLUSTERS + 1), confirm: true },
     ]
 
     const named = drafts.flatMap((draft) => {

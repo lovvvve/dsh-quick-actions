@@ -199,6 +199,15 @@ export const QUICK_ACTIONS_CSS = `
   background: var(--dsw-specific-tip);
   box-shadow: var(--dsw-elevation-soft);
 }
+.dsh-cqa-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dsh-cqa-panel-head .dsh-cqa-panel-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .dsh-cqa-panel-title {
   padding: 4px 8px;
   color: var(--dsw-alias-label-tertiary);

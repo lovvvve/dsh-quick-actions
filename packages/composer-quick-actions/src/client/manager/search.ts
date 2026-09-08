@@ -35,8 +35,8 @@
  */
 import type { ProjectedQuickAction } from '../../model/index.js'
 
-/** The fields a query is compared against, for documentation and tests. */
-export const QUICK_ACTION_SEARCH_FIELDS: readonly ['label', 'text'] = ['label', 'text']
+/** The fields a query is compared against. */
+const SEARCH_FIELDS: readonly ['label', 'text'] = ['label', 'text']
 
 /**
  * The one normalization both sides of a comparison go through. Applying it to
@@ -45,6 +45,15 @@ export const QUICK_ACTION_SEARCH_FIELDS: readonly ['label', 'text'] = ['label', 
  */
 export function normalizeQuickActionSearchText(value: string): string {
   return value.normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ').trim()
+}
+
+/**
+ * Whether a query asks for anything at all. A whitespace-only box is an empty
+ * one, and telling the two apart is what lets a panel say "nothing matched"
+ * rather than "nothing to run".
+ */
+export function hasQuickActionQuery(query: string): boolean {
+  return normalizeQuickActionSearchText(query) !== ''
 }
 
 /**
@@ -61,6 +70,6 @@ export function filterQuickActions(
   const needle = normalizeQuickActionSearchText(query)
   if (needle === '') return actions
   return actions.filter((action) =>
-    QUICK_ACTION_SEARCH_FIELDS.some((field) => normalizeQuickActionSearchText(action[field]).includes(needle)),
+    SEARCH_FIELDS.some((field) => normalizeQuickActionSearchText(action[field]).includes(needle)),
   )
 }

@@ -18,8 +18,9 @@
  */
 import { useState } from 'react'
 import type { ReactElement } from 'react'
-import { filterQuickActions } from './search.js'
-import { useInitialFocus, useModalKeys } from './modal.js'
+import { filterQuickActions, hasQuickActionQuery } from './search.js'
+import { useInitialFocus, useModalKeys } from '../modal.js'
+import { ActionFace } from '../surfaces/ActionFace.js'
 import { unavailableReasonFor } from '../session/availability.js'
 import type { QuickActionSessionState } from '../session/execution.js'
 import { quickActionRefKey } from '../../model/index.js'
@@ -46,8 +47,8 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
   const matches = filterQuickActions(actions, query)
   // "Nothing to run" and "nothing matched what you typed" are different answers,
   // and telling them apart is the difference between a broken panel and an empty
-  // search. `matches === actions` is exactly "the query filtered nothing".
-  const emptyKey = matches === actions ? 'empty' : 'panel.search.empty'
+  // search.
+  const emptyKey = hasQuickActionQuery(query) ? 'panel.search.empty' : 'empty'
 
   return (
     <>
@@ -62,8 +63,18 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
         data-quick-actions-panel=""
         onKeyDown={onKeyDown}
       >
-        <div className="dsh-cqa-panel-title" id={labelledBy}>
-          {t('panel.title')}
+        <div className="dsh-cqa-panel-head">
+          <span className="dsh-cqa-panel-title" id={labelledBy}>
+            {t('panel.title')}
+          </span>
+          {/*
+            Escape, the backdrop and the entry itself all close this panel, but
+            none of them is visible. A pointer user needs a control they can see
+            (spec 8.4).
+          */}
+          <button type="button" className="dsh-cqa-link" data-quick-actions-panel-close="" onClick={onClose}>
+            {t('panel.close')}
+          </button>
         </div>
 
         <label className="dsh-cqa-field">
@@ -96,13 +107,7 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
                 onClose()
               }}
             >
-              {action.icon === undefined ? null : (
-                <span className="dsh-cqa-icon" aria-hidden="true">
-                  {action.icon}
-                </span>
-              )}
-              <span className="dsh-cqa-label">{action.label}</span>
-              {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
+              <ActionFace action={action} t={t} />
             </button>
           )
         })}

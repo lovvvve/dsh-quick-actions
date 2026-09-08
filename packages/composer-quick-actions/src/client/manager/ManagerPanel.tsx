@@ -13,21 +13,20 @@
  * persisted it (spec 10) — including the order, which is why a failed reorder
  * needs no "restore the old order" path: the old order was never left.
  *
- * Each failure the controller reports is shown by name, because spec 10 asks for
- * different handling per kind:
+ * ## Failure, and the one retry
  *
- * - a **refusal** or a **transport failure** keeps the form content and the
- *   panel open, and the control that failed is the retry;
- * - a **revision conflict** means the controller has already re-read the
- *   authoritative state, so the notice asks the user to confirm the change again
- *   against what is now on screen — this feature keeps no second offline truth;
- * - **read-only** state — an unreadable namespace, or a connection that can no
- *   longer vouch for the snapshot — disables every write and says which it is.
+ * Every write goes through one funnel, which also remembers how to run it again.
+ * That is spec 10's 「提供明确重试」: the failure banner offers the retry, and
+ * pressing it *re-plans* rather than replaying — the controller builds each plan
+ * from the snapshot it holds at that moment, and a create mints a fresh Custom
+ * Action ID per attempt. Nothing ever retries on its own; a silent replay could
+ * submit a plan the user has already moved past.
  *
- * No retry replays a remembered operation. The controller deliberately never
- * retries a settled write by itself (a silent replay could submit a plan the
- * user has already moved past), and a panel that replayed one would reintroduce
- * exactly that.
+ * Each failure is named, because spec 10 asks for different handling per kind: a
+ * refusal or a transport failure keeps the form content and the panel open,
+ * while a revision conflict means the controller has already re-read the
+ * authoritative state, so the notice asks the user to confirm the change again
+ * against what is now on screen — this feature keeps no second offline truth.
  *
  * Nothing here reports success: the list is the feedback, and spec 9.5 forbids an
  * extra success toast.
@@ -35,8 +34,17 @@
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { ReactElement } from 'react'
 import { ActionForm } from './ActionForm.js'
-import { useFocusReturn, useInitialFocus, useModalKeys } from './modal.js'
-import { QUICK_ACTION_LAYOUTS, newQuickActionDraft, quickActionRefKey, validateQuickActionDraft } from '../../model/index.js'
+import { ManagedRow } from './ManagedRow.js'
+import { pressProps } from './press.js'
+import type { ManagerWriteGate } from './press.js'
+import { managerFailureMessage, managerReadOnlyReason } from './status.js'
+import { useFocusReturn, useInitialFocus, useModalKeys } from '../modal.js'
+import {
+  QUICK_ACTION_LAYOUTS,
+  newQuickActionDraft,
+  quickActionRefKey,
+  validateQuickActionDraft,
+} from '../../model/index.js'
 import type {
   CustomActionId,
   ProjectedQuickAction,
@@ -44,8 +52,7 @@ import type {
   QuickActionLayout,
   QuickActionRef,
 } from '../../model/index.js'
-import { quickActionsLocaleKey } from '../../locales/index.js'
-import type { QuickActionsClientState, QuickActionsController, QuickActionWriteFailure } from '../controller.js'
+import type { QuickActionsClientState, QuickActionsController, QuickActionWriteOutcome } from '../controller.js'
 import type { Translate } from '../dsh.js'
 
 export interface ManagerPanelProps {
@@ -64,54 +71,17 @@ interface FormState {
   readonly attempted: boolean
 }
 
-/** Why every write is refused right now, or `undefined` when none is (spec 10). */
-export type ManagerReadOnlyReason =
-  /** The connection cannot vouch for the held snapshot, so it must not be written over. */
-  | 'offline'
-  /** No writable namespace: an unreadable first read, or a process-local page. */
-  | 'storage'
-
-export function managerReadOnlyReason(client: QuickActionsClientState): ManagerReadOnlyReason | undefined {
-  if (!client.readOnly) return undefined
-  // Staleness is reported first: it is the one the user can act on, and it also
-  // explains why an otherwise writable namespace is refusing writes.
-  return client.stale ? 'offline' : 'storage'
-}
-
-/** One write failure as a sentence, with the recovery it implies (spec 10). */
-export function managerFailureMessage(failure: QuickActionWriteFailure, t: Translate): string {
-  if (failure.kind === 'failed') return t('write.failed', { message: failure.message })
-  const candidate = failure.kind === 'rejected' ? `write.${failure.rejection.reason}` : `write.${failure.kind}`
-  return t(quickActionsLocaleKey(candidate, 'write.refused'))
-}
+/** One controller write, as this panel runs it. */
+type ManagerWrite = () => Promise<QuickActionWriteOutcome>
 
 /**
- * How one mutating control reports that it cannot be pressed.
+ * How to run the last failed write again.
  *
- * Only sustained, externally-imposed unavailability — a read-only namespace or a
- * connection that cannot vouch for the snapshot — uses a real `disabled`, which
- * takes the control out of the tab order entirely. Everything else uses
- * `aria-disabled` and a guarded handler, because everything else can become true
- * *as a result of the press itself*: the write this control just started, the
- * row reaching an end of the list, the layout it just selected becoming current,
- * the clone that just filled the last slot. A real `disabled` there would drop
- * the keyboard caret to the document body mid-reorder, and focus handling is a
- * hard gate of spec 8.4.
+ * A form save is remembered as a *kind* rather than as a closure, so the retry
+ * saves whatever the form holds now: a user who fixed a field after the failure
+ * must not have their earlier draft resubmitted behind their back.
  */
-function pressProps(input: {
-  readonly readOnly: boolean
-  readonly blocked: boolean
-  readonly onPress: () => void
-}): { readonly disabled: boolean; readonly 'aria-disabled': boolean; readonly onClick: () => void } {
-  return {
-    disabled: input.readOnly,
-    'aria-disabled': input.blocked,
-    onClick: () => {
-      if (input.readOnly || input.blocked) return
-      input.onPress()
-    },
-  }
-}
+type PendingWrite = { readonly kind: 'form' } | { readonly kind: 'write'; readonly run: ManagerWrite }
 
 /** The form's starting draft for an existing Custom Quick Action. */
 function draftOf(action: ProjectedQuickAction): QuickActionDraft {
@@ -132,15 +102,17 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
 
   const [form, setForm] = useState<FormState | undefined>(undefined)
   const [pendingDelete, setPendingDelete] = useState<CustomActionId | undefined>(undefined)
+  const [pending, setPending] = useState<PendingWrite | undefined>(undefined)
 
   const projection = client.projection
   const managed = projection?.managed ?? []
   const counts = projection?.counts
   const readOnlyReason = managerReadOnlyReason(client)
-  /** Sustained and external: the panel is genuinely inert (see {@link pressProps}). */
-  const readOnly = readOnlyReason !== undefined
-  /** A write is in flight; transient, and usually started by the focused control. */
-  const busy = client.writing
+  const gate: ManagerWriteGate = {
+    readOnly: readOnlyReason !== undefined,
+    busy: client.writing,
+    canAdd: counts?.canAdd === true,
+  }
 
   // An action edited in one tab and deleted in another must not leave an editor
   // open over nothing: saving it would only ever answer `unknown-action`.
@@ -152,13 +124,33 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
     if (!editingLives) setForm(undefined)
   }, [editingLives])
 
-  const run = useCallback((write: () => Promise<unknown>): void => {
-    // Every controller write answers with an outcome rather than rejecting, and
-    // the failure it reports is already published on the snapshot this panel
-    // renders. The catch is the belt: an unhandled rejection must not reach the
-    // page from a click handler.
-    void write().catch(() => undefined)
+  /**
+   * The one funnel every write goes through: remember it, run it, and answer
+   * whether it landed.
+   *
+   * The `catch` is the belt. A controller write answers with an outcome rather
+   * than rejecting, so this arm should be unreachable — but an unhandled
+   * rejection must never reach the page from a click handler, and the failure
+   * the user sees comes from the snapshot the controller publishes either way.
+   */
+  const write = useCallback(async (remember: PendingWrite, run: ManagerWrite): Promise<boolean> => {
+    setPending(remember)
+    try {
+      const outcome = await run()
+      if (outcome.ok) setPending(undefined)
+      return outcome.ok
+    } catch {
+      return false
+    }
   }, [])
+
+  /** Start a write from a click handler, with no outcome to react to. */
+  const fire = useCallback(
+    (run: ManagerWrite): void => {
+      void write({ kind: 'write', run }, run)
+    },
+    [write],
+  )
 
   const save = useCallback(async (): Promise<void> => {
     if (form === undefined) return
@@ -168,32 +160,36 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
       setForm({ ...form, attempted: true })
       return
     }
-    const outcome =
-      form.target.kind === 'new'
-        ? await controller.createCustomAction(form.draft)
-        : await controller.updateCustomAction(form.target.id, form.draft)
+    const { target, draft } = form
+    const landed = await write({ kind: 'form' }, () =>
+      target.kind === 'new'
+        ? controller.createCustomAction(draft)
+        : controller.updateCustomAction(target.id, draft),
+    )
     // A failed write keeps the draft exactly as typed (spec 10); only a
     // persisted one closes the form.
-    if (outcome.ok) setForm(undefined)
+    if (landed) setForm(undefined)
     else setForm({ ...form, attempted: true })
-  }, [controller, form])
+  }, [controller, form, write])
+
+  const retry = useCallback((): void => {
+    if (pending === undefined) return
+    if (pending.kind === 'form') {
+      void save()
+      return
+    }
+    void write(pending, pending.run)
+  }, [pending, save, write])
 
   const remove = useCallback(
-    async (id: CustomActionId): Promise<void> => {
-      const outcome = await controller.deleteCustomAction(id)
-      if (outcome.ok) setPendingDelete(undefined)
+    (id: CustomActionId): void => {
+      const run: ManagerWrite = () => controller.deleteCustomAction(id)
+      void write({ kind: 'write', run }, run).then((landed) => {
+        if (landed) setPendingDelete(undefined)
+      })
     },
-    [controller],
+    [controller, write],
   )
-
-  const move = useCallback(
-    (ref: QuickActionRef, toIndex: number): void => {
-      run(() => controller.moveAction(ref, toIndex))
-    },
-    [controller, run],
-  )
-
-  const anyCommand = managed.some((action) => action.command)
 
   return (
     <>
@@ -239,7 +235,11 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
               type="button"
               className="dsh-cqa-link"
               onClick={() => {
-                run(() => controller.refresh())
+                // The controller reports a failed re-read through the catalog
+                // state it publishes, and deliberately lets the promise reject;
+                // swallowing it here is what keeps a retry from raising an
+                // unhandled rejection on the page.
+                controller.refresh().catch(() => undefined)
               }}
             >
               {t('catalog.retry')}
@@ -256,6 +256,11 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
         {client.failure === undefined ? null : (
           <div className="dsh-cqa-note" role="alert" data-quick-actions-write-failure={client.failure.kind}>
             <span className="dsh-cqa-note-text">{managerFailureMessage(client.failure, t)}</span>
+            {pending === undefined ? null : (
+              <button type="button" className="dsh-cqa-link" data-quick-actions-write-retry="" onClick={retry}>
+                {t('write.retry')}
+              </button>
+            )}
             <button
               type="button"
               className="dsh-cqa-link"
@@ -294,12 +299,8 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                     className="dsh-cqa-entry"
                     data-quick-actions-layout-choice={layout}
                     aria-pressed={projection.layout === layout}
-                    {...pressProps({
-                      readOnly,
-                      blocked: busy || projection.layout === layout,
-                      onPress: () => {
-                        run(() => controller.setLayout(layout))
-                      },
+                    {...pressProps(gate, projection.layout === layout, () => {
+                      fire(() => controller.setLayout(layout))
                     })}
                   >
                     {t(`manager.layout.${layout}`)}
@@ -320,12 +321,8 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                   type="button"
                   className="dsh-cqa-entry"
                   data-quick-actions-new=""
-                  {...pressProps({
-                    readOnly,
-                    blocked: busy || counts?.canAdd !== true || form?.target.kind === 'new',
-                    onPress: () => {
-                      setForm({ target: { kind: 'new' }, draft: newQuickActionDraft(), attempted: false })
-                    },
+                  {...pressProps(gate, !gate.canAdd || form?.target.kind === 'new', () => {
+                    setForm({ target: { kind: 'new' }, draft: newQuickActionDraft(), attempted: false })
                   })}
                 >
                   {t('manager.new')}
@@ -333,16 +330,15 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
               </div>
 
               {/*
-                The centralized Command Send Action explanation of spec 8.3. It
-                is rendered exactly when a badge is on screen to explain, so the
-                marker never appears without its meaning; a text that becomes a
-                command inside the form gets the form's own live warning.
+                The centralized Command Send Action explanation spec 8.3 requires.
+                It stands whether or not a badge happens to be on screen: it is
+                what the marker *means*, and a user about to write their first
+                command text needs it before any marker exists. The form adds its
+                own live warning on top of it.
               */}
-              {anyCommand ? (
-                <p className="dsh-cqa-note" data-quick-actions-command-notice="">
-                  <span className="dsh-cqa-note-text">{t('manager.command.notice')}</span>
-                </p>
-              ) : null}
+              <p className="dsh-cqa-note" data-quick-actions-command-notice="">
+                <span className="dsh-cqa-note-text">{t('manager.command.notice')}</span>
+              </p>
 
               {managed.length === 0 ? (
                 <div className="dsh-cqa-field-hint">{t('manager.empty')}</div>
@@ -354,34 +350,38 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                       action={action}
                       index={index}
                       total={managed.length}
-                      readOnly={readOnly}
-                      busy={busy}
-                      canAdd={counts?.canAdd === true}
-                      deleting={
-                        action.ref.source === 'custom' && pendingDelete === action.ref.id
-                      }
+                      gate={gate}
+                      deleting={action.ref.source === 'custom' && pendingDelete === action.ref.id}
                       t={t}
-                      onMove={move}
-                      onEdit={() => {
-                        setForm({ target: { kind: 'edit', id: action.ref.id }, draft: draftOf(action), attempted: false })
-                      }}
-                      onClone={() => {
-                        run(() => controller.clonePreset(action.ref.id))
-                      }}
-                      onToggleHidden={() => {
-                        run(() => controller.setPresetHidden(action.ref.id, !action.hidden))
-                      }}
-                      onToggleEnabled={() => {
-                        run(() => controller.setCustomActionEnabled(action.ref.id, action.hidden))
-                      }}
-                      onAskDelete={() => {
-                        setPendingDelete(action.ref.id)
-                      }}
-                      onCancelDelete={() => {
-                        setPendingDelete(undefined)
-                      }}
-                      onConfirmDelete={() => {
-                        void remove(action.ref.id)
+                      on={{
+                        onMove: (ref: QuickActionRef, toIndex: number) => {
+                          fire(() => controller.moveAction(ref, toIndex))
+                        },
+                        onEdit: () => {
+                          setForm({
+                            target: { kind: 'edit', id: action.ref.id },
+                            draft: draftOf(action),
+                            attempted: false,
+                          })
+                        },
+                        onClone: () => {
+                          fire(() => controller.clonePreset(action.ref.id))
+                        },
+                        onToggleHidden: () => {
+                          fire(() => controller.setPresetHidden(action.ref.id, !action.hidden))
+                        },
+                        onToggleEnabled: () => {
+                          fire(() => controller.setCustomActionEnabled(action.ref.id, action.hidden))
+                        },
+                        onAskDelete: () => {
+                          setPendingDelete(action.ref.id)
+                        },
+                        onCancelDelete: () => {
+                          setPendingDelete(undefined)
+                        },
+                        onConfirmDelete: () => {
+                          remove(action.ref.id)
+                        },
                       }}
                     />
                   ))}
@@ -394,8 +394,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
                 mode={form.target.kind}
                 draft={form.draft}
                 attempted={form.attempted}
-                readOnly={readOnly}
-                busy={busy}
+                gate={gate}
                 t={t}
                 onChange={(draft) => {
                   setForm({ ...form, draft })
@@ -412,150 +411,5 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
         )}
       </div>
     </>
-  )
-}
-
-/** One row of the management list: what it is, and everything the user may do to it. */
-function ManagedRow(props: {
-  readonly action: ProjectedQuickAction
-  readonly index: number
-  readonly total: number
-  readonly readOnly: boolean
-  readonly busy: boolean
-  readonly canAdd: boolean
-  readonly deleting: boolean
-  readonly t: Translate
-  readonly onMove: (ref: QuickActionRef, toIndex: number) => void
-  readonly onEdit: () => void
-  readonly onClone: () => void
-  readonly onToggleHidden: () => void
-  readonly onToggleEnabled: () => void
-  readonly onAskDelete: () => void
-  readonly onCancelDelete: () => void
-  readonly onConfirmDelete: () => void
-}): ReactElement {
-  const { action, index, total, readOnly, busy, canAdd, deleting, t } = props
-  const key = quickActionRefKey(action.ref)
-
-  return (
-    <li className="dsh-cqa-list-item" data-quick-action={key} data-quick-action-hidden={action.hidden ? '' : undefined}>
-      <span className="dsh-cqa-list-head">
-        {action.icon === undefined ? null : (
-          <span className="dsh-cqa-icon" aria-hidden="true">
-            {action.icon}
-          </span>
-        )}
-        <span className="dsh-cqa-label">{action.label}</span>
-        {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
-        <span className="dsh-cqa-tag">{t(action.editable ? 'manager.custom' : 'manager.preset')}</span>
-        {action.hidden ? (
-          <span className="dsh-cqa-tag" data-quick-actions-state="hidden">
-            {t(action.editable ? 'manager.disabled' : 'manager.hidden')}
-          </span>
-        ) : null}
-        {action.clonedFromPresetId === undefined ? null : (
-          <span className="dsh-cqa-tag">{t('manager.clonedFrom')}</span>
-        )}
-      </span>
-
-      {/* A one-line preview; the whole text is in the form and in the confirmation. */}
-      <span className="dsh-cqa-list-text">{action.text}</span>
-
-      <span className="dsh-cqa-list-controls">
-        <button
-          type="button"
-          className="dsh-cqa-entry"
-          data-quick-actions-move="up"
-          {...pressProps({
-            readOnly,
-            blocked: busy || index === 0,
-            onPress: () => {
-              props.onMove(action.ref, index - 1)
-            },
-          })}
-        >
-          {t('manager.moveUp')}
-        </button>
-        <button
-          type="button"
-          className="dsh-cqa-entry"
-          data-quick-actions-move="down"
-          {...pressProps({
-            readOnly,
-            blocked: busy || index === total - 1,
-            onPress: () => {
-              props.onMove(action.ref, index + 1)
-            },
-          })}
-        >
-          {t('manager.moveDown')}
-        </button>
-
-        {action.editable ? (
-          <>
-            <button
-              type="button"
-              className="dsh-cqa-entry"
-              {...pressProps({ readOnly, blocked: busy, onPress: props.onEdit })}
-            >
-              {t('manager.edit')}
-            </button>
-            <button
-              type="button"
-              className="dsh-cqa-entry"
-              {...pressProps({ readOnly, blocked: busy, onPress: props.onToggleEnabled })}
-            >
-              {t(action.hidden ? 'manager.enable' : 'manager.disable')}
-            </button>
-            {/*
-              Deleting is the one control here that destroys user data, so it
-              asks once in place rather than behind a second modal.
-            */}
-            {deleting ? (
-              <>
-                <button
-                  type="button"
-                  className="dsh-cqa-entry"
-                  data-quick-actions-delete="confirm"
-                  {...pressProps({ readOnly, blocked: busy, onPress: props.onConfirmDelete })}
-                >
-                  {t('manager.delete.confirm')}
-                </button>
-                <button type="button" className="dsh-cqa-entry" onClick={props.onCancelDelete}>
-                  {t('manager.delete.cancel')}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                className="dsh-cqa-entry"
-                data-quick-actions-delete="ask"
-                {...pressProps({ readOnly, blocked: busy, onPress: props.onAskDelete })}
-              >
-                {t('manager.delete')}
-              </button>
-            )}
-          </>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="dsh-cqa-entry"
-              {...pressProps({ readOnly, blocked: busy, onPress: props.onToggleHidden })}
-            >
-              {t(action.hidden ? 'manager.restore' : 'manager.hide')}
-            </button>
-            <button
-              type="button"
-              className="dsh-cqa-entry"
-              data-quick-actions-clone=""
-              {...pressProps({ readOnly, blocked: busy || !canAdd, onPress: props.onClone })}
-            >
-              {t('manager.clone')}
-            </button>
-          </>
-        )}
-      </span>
-    </li>
   )
 }

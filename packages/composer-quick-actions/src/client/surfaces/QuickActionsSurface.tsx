@@ -19,6 +19,7 @@
  */
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject, ReactElement } from 'react'
+import { ActionFace } from './ActionFace.js'
 import { densityFor, fitActionCount } from './layout.js'
 import type { SurfaceDensity } from './layout.js'
 import { ActionPanel } from '../manager/ActionPanel.js'
@@ -75,13 +76,7 @@ function ActionControl(props: {
         onActivate(action)
       }}
     >
-      {action.icon === undefined ? null : (
-        <span className="dsh-cqa-icon" aria-hidden="true">
-          {action.icon}
-        </span>
-      )}
-      <span className="dsh-cqa-label">{action.label}</span>
-      {action.command ? <span className="dsh-cqa-badge">{t('command.badge')}</span> : null}
+      <ActionFace action={action} t={t} />
     </button>
   )
 }
@@ -189,7 +184,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
       data-quick-actions-manage=""
       // A tooltip, never a name: `aria-label` here would replace the visible
       // label as the accessible name, which spec 8.4 forbids.
-      title={t('manage.aria')}
+      title={t('manage.tooltip')}
       onClick={onManage}
     >
       <span className="dsh-cqa-label">{t('manage')}</span>

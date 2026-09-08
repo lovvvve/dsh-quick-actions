@@ -22,7 +22,7 @@ export const QUICK_ACTIONS_LOCALE_NAMESPACE = 'composer-quick-actions'
 export type QuickActionsLocaleKey =
   | 'title'
   | 'manage'
-  | 'manage.aria'
+  | 'manage.tooltip'
   | 'more'
   | 'launcher'
   | 'empty'
@@ -104,6 +104,7 @@ export type QuickActionsLocaleKey =
   | 'issue.icon.not-emoji'
   | 'issue.icon.too-long'
   | 'write.dismiss'
+  | 'write.retry'
   | 'write.not-ready'
   | 'write.read-only'
   | 'write.refused'
@@ -120,7 +121,7 @@ export type QuickActionsDictionary = Record<QuickActionsLocaleKey, string>
 export const zh: QuickActionsDictionary = {
   'title': '快捷动作',
   'manage': '管理',
-  'manage.aria': '管理快捷动作',
+  'manage.tooltip': '管理快捷动作',
   'more': '更多 {count}',
   'launcher': '快捷动作 {count}',
   'empty': '暂无可用快捷动作',
@@ -157,9 +158,9 @@ export const zh: QuickActionsDictionary = {
   'manager.layout.ribbon': '上方动作带',
   'manager.layout.bar': '下方操作栏',
   'manager.layout.launcher': '单入口面板',
-  'manager.actions': '动作',
+  'manager.actions': '快捷动作',
   'manager.count': '共 {total} / {limit} 项',
-  'manager.new': '新建动作',
+  'manager.new': '新建快捷动作',
   'manager.empty': '还没有任何快捷动作',
   'manager.overflow':
     '动作总数为 {total} 项，已超过 {limit} 项上限。现有动作全部保留，但在恢复到上限以内之前无法新增或克隆。',
@@ -209,6 +210,7 @@ export const zh: QuickActionsDictionary = {
   'issue.icon.too-long': '图标的 emoji 数量超出上限',
 
   'write.dismiss': '知道了',
+  'write.retry': '重试',
   'write.not-ready': '设置尚未就绪，改动没有保存。',
   'write.read-only': '当前无法写入设置，改动没有保存。',
   'write.refused': '保存被拒绝，没有写入任何内容；请重试。',
@@ -224,7 +226,7 @@ export const zh: QuickActionsDictionary = {
 export const en: QuickActionsDictionary = {
   'title': 'Quick Actions',
   'manage': 'Manage',
-  'manage.aria': 'Manage Quick Actions',
+  'manage.tooltip': 'Manage Quick Actions',
   'more': 'More {count}',
   'launcher': 'Quick Actions {count}',
   'empty': 'No Quick Actions available',
@@ -262,9 +264,9 @@ export const en: QuickActionsDictionary = {
   'manager.layout.ribbon': 'Action ribbon',
   'manager.layout.bar': 'Action bar',
   'manager.layout.launcher': 'Single launcher',
-  'manager.actions': 'Actions',
+  'manager.actions': 'Quick Actions',
   'manager.count': '{total} of {limit}',
-  'manager.new': 'New action',
+  'manager.new': 'New Quick Action',
   'manager.empty': 'No Quick Actions yet',
   'manager.overflow':
     'There are {total} actions, over the limit of {limit}. Everything you have is kept, but creating and cloning stay disabled until the total is back within the limit.',
@@ -314,6 +316,7 @@ export const en: QuickActionsDictionary = {
   'issue.icon.too-long': 'The icon has too many emoji',
 
   'write.dismiss': 'Dismiss',
+  'write.retry': 'Retry',
   'write.not-ready': 'Settings are not ready yet, so nothing was saved.',
   'write.read-only': 'Settings cannot be written right now, so nothing was saved.',
   'write.refused': 'The write was refused and nothing was saved; try again.',
