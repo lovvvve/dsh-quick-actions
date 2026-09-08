@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）与 Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）。Client `apply` 仍是空骨架——控制器、界面、动作执行都未实现。
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）与 Client 控制器 `src/client/controller.ts`（票据 14：两个命名空间绑定、投影、串行 revision-fenced 写入队列、连接状态）。Client 还没有任何界面——Slot 注册、三种布局、管理面板和动作执行都未实现。
 
-真正完成的有四件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`），以及 Host 侧装配（`src/host/`，未经真实 DSH 运行验证）。
+真正完成的有五件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`），以及 Client 控制器（`src/client/`）。**后两者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base` 的端到端行为归票据 18 在前台 GUI 会话实测。
 
 ## 命令
 
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [14 实现 Client 控制器](.scratch/dsh-composer-quick-actions/issues/14-implement-client-quick-actions-controller.md)（14–18、20 均未认领）。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [15 实现 Composer 布局与动作执行](.scratch/dsh-composer-quick-actions/issues/15-implement-composer-surfaces-and-action-execution.md)（15–18、20 均未认领）。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -89,6 +89,7 @@ pnpm vitest run -t 'rejects computed require calls'
 - **`/` 开头文本是合法的命令发送动作**，确认默认开启但用户可关闭。**规范化绝不能依据文本改写 `confirm`**——默认只在创建/克隆时初始化，放进规范化会毁掉用户选择并破坏幂等。表单警示不锁定，确认面板启用时须说明不会出现 DSH 原生候选菜单。**不要**恢复票据 06 的"斜杠命令一律配置无效"，也不要恢复强制确认。不得自制候选菜单或驱动 `inputTriggers`。
 - **不发布自有 Catalog Remote**。已发布的 typert 生成器要求 `@Remote` 符号来自 `<root>/packages/` 下已注册的 workspace 包，第三方包做不到；目录改由只读 Settings 命名空间 `composer-quick-actions-catalog` 的 composition `base` 层承载，Client 读 `base` 不读 `value`（spec 第 17 节，取证见 `research/catalog-remote-assembly.md`）。不要重新尝试生成式 Remote。
 - **GUI 验证只有一个通道**（现有 `http://127.0.0.1:3080`）。不要再创建隔离检出、应用核心补丁或起第二个服务器。
+- **`SettingsScope` 的结构化写入结果由插件自己判定，不改 DSH 核心**。spec 第 15 节决定 4 的「扩展 `SettingsScope`」已被第 16.4 节的「首版不新增任何 DSH 核心接口 / 没有剩余的核心契约依赖」取代；已发布的 `mutate` 返回 `void`，控制器改用写后权威快照区分成功 / `conflict` / `refused`（票据 14 `## Answer` 记有已知边界）。不要重新提出改 `@deepseek-ai/dsh-client-ui-settings`。
 - 官方上游合并已列为首版范围外，**不要**用"等待官方发布"重新阻塞产品。
 - **首版不新增任何 DSH 核心接口**。`insertText` 和 submit 凭据都不做。单飞窗口只能用公开 Input snapshot（`draft/imageIds/draftRev/phase/claim?/occurrences/queue`）判定，硬标准是不产生重复发送——注意官方 sink 乐观清空，`submit()` 后草稿一帧内就空了，"草稿已占用"不是互斥锁。
 

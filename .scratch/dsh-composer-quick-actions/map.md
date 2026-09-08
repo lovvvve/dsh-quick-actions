@@ -43,6 +43,7 @@ Label: `wayfinder:map`
 - [首版范围收缩与斜杠命令处置](./spec.md)（spec 第 16 节，无票据） — 移除插入动作、取消全部核心接口新增、`/` 开头文本改为合法的命令发送动作；该节优先级高于正文与第 15 节。
 - [实现快捷动作共享领域模型](./issues/12-implement-shared-quick-action-model.md) — 已交付纯 JSON 领域深模块：校验、预置目录合并与确定性 revision、Settings V1 解码与幂等规范化、`kind: 'send'` 恒写与非 `'send'` 数据的无损墓碑保留、`confirm` 透传、命令发送动作判定、投影与 50 项上限/被动超限、revision-fenced mutation 计划。Host/Client 装配仍属票据 13/14。
 - [实现 Host Settings 与预置目录 Remote](./issues/13-implement-host-settings-and-catalog-remote.md) — 已交付 Host 配置合并与响亮失败、`composer-quick-actions` namespace 与 revision-fenced 幂等规范重写、内置预置初稿；目录发布通道按用户决策由自有 Remote 改为只读 Settings 命名空间的 composition `base` 层（spec 第 17 节）。
+- [实现 Client 快捷动作控制器](./issues/14-implement-client-quick-actions-controller.md) — 已交付 Client 全局控制器：目录改读 Settings 命名空间的 `base` 层且目录 RPC 为 0，共享模型防御性解码；串行 revision-fenced 写入队列与插件内部判定的结构化写入结果（成功/拒绝/conflict/失败），不新增任何 DSH 核心接口；第 10 节的首次读取失败、只读、断线与重连语义；disposer 释放 mirror/scope 订阅与连接监听。真实 GUI 下读取 `base` 的实测归票据 18。
 - [Catalog Remote 改走 Settings base 层](./spec.md)（spec 第 17 节，无票据） — 已发布的 typert 生成器无法为单仓外的包生成 strict Remote 产物，用户据此修订第 6.2 节；该节优先级高于正文与第 15、16 节。
 
 ## Not yet specified（尚未明确）
