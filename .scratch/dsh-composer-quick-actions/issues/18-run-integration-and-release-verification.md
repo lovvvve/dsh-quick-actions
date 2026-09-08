@@ -38,3 +38,15 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 票据 23 的独立审查发现 `pnpm test` 会删掉并重建工作树里线上的 `lib/`（`prepack` → `build` → `rmSync('lib')`，而打包契约在真实包目录执行 `pnpm pack`）。本票据要一边 `pnpm watch:client` 对着 `127.0.0.1:3080` 实测 watcher 与页面加载的关系、一边跑验证，带着这个缺陷开工会浪费一轮，因此已加入 `Blocked by`，见[票据 24](./24-isolate-pack-from-the-working-tree.md)。
 
 **2026-09-08 补记**：票据 24 已 resolved——打包契约改为在仓库外的 workspace 副本里 `pnpm pack`，工作树 `lib/` 在 `pnpm test` 前后内容与 mtime 均不变；`pnpm watch:client` 与 `pnpm test` 并存已实测（watcher 存活、`lib` 指纹不变、`node --check lib/client.js` 通过），证据见 `verification/release-evidence.md` 的票据 24 节。本票据的 `Blocked by` 至此全部 resolved（`Blocked by` 行保留历史，不删项），可以直接开工；票据 22 仍须在收口前完成。
+
+### 2026-09-09 — 第一轮：非发送项已在真实 DSH 上通过
+
+按用户指示本轮不触发真实模型调用，只做非发送项。**票据仍为 `claimed`，未完成。**
+
+已交付：`@playwright/test` + `pnpm verify:gui`（`tests/gui/`，不在 vitest include 内），36 条 = 12 条 × 桌面 / 768 / 360。结果 35 条一次过、1 条导航偶发重试即过。安装形态按 README 离线流程在**用户实时 DSH**（`npx @deepseek-ai/dsh@latest`，运行时 0.1.2-rc.1）上执行并逐条核对，收尾按用户指示卸载并核对回滚。完整证据见 `verification/release-evidence.md` 的票据 18 一节。
+
+本轮关闭的两个历史挂起项：票据 14 的「Client 读 catalog `base` 端到端」（3 条预置真实渲染）与票据 23 的「primitives 在真实浏览器可用」（按钮同时带 primitives 哈希类与 `dsh-cqa-action`）。
+
+下一轮开工前必读证据里的两节：**「下一轮必须先修的 harness 卫生问题」**（本轮测试误建了 2 条克隆动作，管理面板用例须改为严格只读，否则规模矩阵会被污染）与**卸载一节的 GUI 混淆说明**。
+
+仍未覆盖：全部发送项、0/1/6/25/50 与 53 项超限降级、跨 DSH 重启持久化、重装恢复、生命周期 stop/update 清理、截图基线。
