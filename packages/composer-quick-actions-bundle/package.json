@@ -1,11 +1,12 @@
 {
   "name": "dsh-composer-quick-actions-bundle",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Installable DSH web-profile bundle for Composer Quick Actions",
-  "type": "module",
+  "license": "MIT",
   "files": [
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "README.en.md"
   ],
   "dsh": {
     "bundle": {
