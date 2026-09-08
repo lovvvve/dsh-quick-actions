@@ -251,21 +251,40 @@ export const QUICK_ACTIONS_CSS = `
 
 /**
  * Install the stylesheet once per document and return its disposer, so the
- * Client fiber owns it like every other registration (spec 7.3). A second
- * install finds the existing tag and only shares it: unloading the plugin
- * removes the tag, and re-loading it puts the tag back.
+ * Client fiber owns it like every other registration (spec 7.3).
+ *
+ * The holder count lives on the tag rather than in this module, because a hot
+ * reload runs two bundle instances at once: the new fiber installs before the
+ * old one unloads, and each has its own module scope. Counting in the DOM is
+ * what keeps the surviving instance's styles from being removed underneath it.
  */
 export function installQuickActionStyles(): () => void {
   if (typeof document === 'undefined') return () => {}
   const selector = `style[data-plugin-css=${JSON.stringify(TAG_ID)}]`
-  const existing = document.querySelector(selector)
-  if (existing !== null) return () => {}
-  const tag = document.createElement('style')
-  tag.dataset['plugin'] = 'dsh-composer-quick-actions'
-  tag.dataset['pluginCss'] = TAG_ID
-  tag.textContent = QUICK_ACTIONS_CSS
-  document.head.appendChild(tag)
+  const existing = document.querySelector<HTMLStyleElement>(selector)
+  const tag = existing ?? document.createElement('style')
+  if (existing === null) {
+    tag.dataset['plugin'] = 'dsh-composer-quick-actions'
+    tag.dataset['pluginCss'] = TAG_ID
+    tag.textContent = QUICK_ACTIONS_CSS
+    document.head.appendChild(tag)
+  }
+  tag.dataset['pluginCssHolders'] = String(holdersOf(tag) + 1)
+
+  let released = false
   return () => {
+    if (released) return
+    released = true
+    const left = holdersOf(tag) - 1
+    if (left > 0) {
+      tag.dataset['pluginCssHolders'] = String(left)
+      return
+    }
     tag.remove()
   }
+}
+
+function holdersOf(tag: HTMLStyleElement): number {
+  const held = Number(tag.dataset['pluginCssHolders'])
+  return Number.isFinite(held) && held > 0 ? held : 0
 }

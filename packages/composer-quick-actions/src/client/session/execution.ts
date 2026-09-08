@@ -34,22 +34,26 @@
  *   submission. The window stays open until the phase leaves those states; that
  *   is the latest reliable public boundary of the official stage, and past it
  *   every outcome belongs to DSH's own feedback (spec 9.5).
- * - **The machine committed an ordinary send** (`phase` back to `plain` with the
- *   loaded text gone from `draft`). The optimistic commit is the official
- *   stage's last publicly observable step: the default sink runs detached, and
- *   nothing about it reaches the public snapshot. So the commit is the latest
- *   boundary attributable to this submission, and the window closes there.
- * - **The machine refused the submission** (`phase` still `plain` with the
- *   loaded text still in `draft`). Nothing was sent; the text stays exactly as
- *   loaded and the window closes with "not sent, text retained".
+ * - **The machine committed an ordinary send** (`phase` back to `plain` and
+ *   `draft` empty). The optimistic commit is the official stage's last publicly
+ *   observable step: the default sink runs detached, and nothing about it
+ *   reaches the public snapshot. So the commit is the latest boundary
+ *   attributable to this submission, and the window closes there.
+ * - **The machine refused the submission** (`phase` still `plain` and `draft`
+ *   still holding content). Nothing was sent; the text stays exactly as loaded
+ *   and the window closes with "not sent, text retained".
  *
- * Every one of those decisions is gated on `draftRev` having moved past the
- * revision observed before the load, so a re-render that arrives before the
- * input store has published can never be mistaken for a verdict. The window
- * also never closes inside the activation that opened it: settlement is read
- * from {@link QuickActionSessionEngine.observe}, which the owning entry calls
- * once per commit, so two activations in one tick can only ever produce one
- * send however fast the official sink empties the draft.
+ * The ordinary-send test is emptiness, not equality with the text that was
+ * loaded: `draft` is the editor's clipboard-text projection rather than the
+ * string handed to `setDraft`, so comparing the two would make the verdict
+ * depend on that round trip. Emptiness needs no such assumption — the load only
+ * ever runs against a verified-unoccupied draft, so anything in `draft` after it
+ * is this feature's own text, and only the official commit clears it.
+ *
+ * The window also never closes inside the activation that opened it: settlement
+ * is read from {@link QuickActionSessionEngine.observe}, which the owning entry
+ * calls once per commit, so two activations in one tick can only ever produce
+ * one send however fast the official sink empties the draft.
  *
  * Nothing here reads the DOM, Lexical, a private event or a private state, and
  * no DSH object is retained beyond the Session it belongs to.
@@ -129,15 +133,11 @@ type Flight =
    */
   | { readonly stage: 'pending'; readonly ref: QuickActionRef }
   /**
-   * `setDraft` + `submit` have been called; the next published snapshot past
-   * `revBefore` carries the machine's verdict.
+   * `setDraft` + `submit` have been called; the next observed commit carries the
+   * machine's verdict, because both calls publish synchronously before the
+   * activation returns.
    */
-  | {
-      readonly stage: 'submitted'
-      readonly ref: QuickActionRef
-      readonly text: string
-      readonly revBefore: number
-    }
+  | { readonly stage: 'submitted'; readonly ref: QuickActionRef }
   /** The machine holds the frozen slot for this attempt; wait for it to release. */
   | { readonly stage: 'official'; readonly ref: QuickActionRef }
 
@@ -249,12 +249,10 @@ export function createQuickActionSessionEngine(sessionId: string): QuickActionSe
    */
   function run(action: ProjectedQuickAction): void {
     const face = actions
-    const input = observed?.input
-    if (face === undefined || input === undefined) {
+    if (face === undefined || observed === undefined) {
       settle({ kind: 'state-changed' })
       return
     }
-    const revBefore = input.draftRev
     running = true
     try {
       try {
@@ -265,7 +263,7 @@ export function createQuickActionSessionEngine(sessionId: string): QuickActionSe
         settle({ kind: 'failed', message: messageOf(error) })
         return
       }
-      flight = { stage: 'submitted', ref: action.ref, text: action.text, revBefore }
+      flight = { stage: 'submitted', ref: action.ref }
       confirming = undefined
       try {
         face.submit()
@@ -299,21 +297,16 @@ export function createQuickActionSessionEngine(sessionId: string): QuickActionSe
       if (running) return
 
       if (flight?.stage === 'submitted') {
-        // Ignore any commit that reaches here before the load itself was
-        // published: only a revision past the one read before `setDraft` can
-        // carry the machine's verdict.
-        if (input.draftRev > flight.revBefore) {
-          if (input.phase === 'adjudicating' || input.phase === 'submitting') {
-            flight = { stage: 'official', ref: flight.ref }
-            confirming = undefined
-            feedback = undefined
-          } else if (input.draft !== flight.text) {
-            // The official optimistic commit replaced the loaded text: accepted.
-            // The local message echo is the success feedback (spec 9.5).
-            settle(undefined)
-          } else {
-            settle({ kind: 'retained' })
-          }
+        if (input.phase === 'adjudicating' || input.phase === 'submitting') {
+          flight = { stage: 'official', ref: flight.ref }
+          confirming = undefined
+          feedback = undefined
+        } else if (input.draft === '') {
+          // The official optimistic commit cleared the load: accepted. The local
+          // message echo is the success feedback (spec 9.5).
+          settle(undefined)
+        } else {
+          settle({ kind: 'retained' })
         }
       } else if (flight?.stage === 'official' && input.phase !== 'adjudicating' && input.phase !== 'submitting') {
         // The frozen slot was released: the official stage this submission

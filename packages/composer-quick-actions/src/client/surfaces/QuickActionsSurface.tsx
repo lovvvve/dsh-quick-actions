@@ -248,11 +248,18 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
     },
     [onActivate],
   )
+  const manageRef = useRef<HTMLButtonElement | null>(null)
   useEffect(() => {
     if (confirming !== undefined) return
     const opener = confirmOpener.current
     confirmOpener.current = null
-    if (opener !== null && opener.isConnected) opener.focus()
+    if (opener === null) return
+    // The opener is often unusable by the time the panel closes: confirming a
+    // send disables it for the flight, and an action picked from the overflow
+    // list is unmounted with the list. The management entry is the one control
+    // every layout always has, so focus lands there rather than on the body.
+    const usable = opener.isConnected && !(opener as HTMLButtonElement).disabled
+    ;(usable ? opener : manageRef.current)?.focus()
   }, [confirming])
 
   // A layout switch, or an emptied overflow, must not leave a panel open over
@@ -262,7 +269,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   }, [overflow.length])
 
   const manage = (
-    <button type="button" className="dsh-cqa-entry" data-quick-actions-manage="" onClick={onManage}>
+    <button type="button" ref={manageRef} className="dsh-cqa-entry" data-quick-actions-manage="" onClick={onManage}>
       <span className="dsh-cqa-label">{t('manage')}</span>
     </button>
   )

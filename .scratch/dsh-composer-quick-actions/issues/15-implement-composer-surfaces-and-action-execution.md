@@ -59,11 +59,13 @@ hero 公式，不读 DOM、不读私有 Composer 状态。** 代价是 hero→�
 | 观察到 | 判定 | 处置 |
 |---|---|---|
 | `phase` 为 `adjudicating` / `submitting` | 机器为本次尝试占用了独占的 frozen slot（`onEnter` 在这两个 phase 下拒绝新 `enter`，`lib/client.js:10564-10566`） | 保持单飞，直到 phase 离开这两个状态——这是可归属于本次提交的**最迟可靠边界** |
-| `phase` 回到 `plain` 且 `draft` 不再是装载文本 | 官方乐观提交覆盖了装载（`commit-draft`，`lib/client.js:11993-12017`）；detached sink 之后完全不进入公开快照 | 关闭单飞，无成功提示（本地消息回显即反馈） |
-| `phase` 仍为 `plain` 且 `draft` 仍等于装载文本 | 机器拒绝了本次提交 | 关闭单飞，保留草稿，提示「未发送，文本已保留」 |
+| `phase` 回到 `plain` 且 `draft` 为空 | 官方乐观提交清空了装载（`commit-draft`，`lib/client.js:11993-12017`）；detached sink 之后完全不进入公开快照 | 关闭单飞，无成功提示（本地消息回显即反馈） |
+| `phase` 仍为 `plain` 且 `draft` 非空 | 机器拒绝了本次提交 | 关闭单飞，保留草稿，提示「未发送，文本已保留」 |
 
-每条判定都以 `draftRev` 已越过装载前记录的 revision 为前置，因此早于 input store 发布的
-重渲染不会被误当作裁决；`run()` 期间的观察一律忽略，所以窗口**不会在开启它的那一 tick 内关闭**。
+普通发送用**是否清空**而非「是否等于装载文本」判定：`draft` 是编辑器的 clipboard-text 投影而不是
+交给 `setDraft` 的原串，比较两者会把裁决绑在那次往返归一化上；而装载只在已核验未占用的草稿上执行，
+装载后草稿里的内容必然是本功能自己的文本，也只有官方提交会清空它。`run()` 期间的观察一律忽略，
+所以窗口**不会在开启它的那一 tick 内关闭**。
 硬验收（同一 tick 两次激活只产生一次发送）由 `execution.spec.ts`
 「never sends twice for two activations in the same tick」「is not fooled by the optimistic
 clear reopening the draft in the same tick」与 `surfaces.spec.tsx`
@@ -97,7 +99,15 @@ clear reopening the draft in the same tick」与 `surfaces.spec.tsx`
   `layout.spec.ts` 固定，1 CSS px 实测归票据 18。窄布局只隐藏区段标题并收紧间距，不改外边界，
   控件一律保留可见文本标签。
 - **空投影**：三种布局在没有任何可执行动作时仍渲染紧凑管理入口。
-- **错误隔离**：每个 Slot 入口自带错误边界，失败只替换快捷动作区域并提供重试。
+- **错误隔离**：每个 Slot 入口自带错误边界，失败只替换快捷动作区域并提供重试。未失败时边界只渲染
+  Fragment，不额外插入元素——两个 dock 都在带 `gap` 的 flex column 里，空 wrapper 会推动 hero 的
+  输入框位置。
+- **确认面板的模态语义**：面板就地渲染（非 portal），因此自带 Tab 焦点陷阱与遮罩，键盘用户无法在
+  等待确认时绕到背后的草稿；关闭后焦点回到触发控件，控件已被禁用或已卸载时回落到管理入口。
+- **样式标签引用计数记录在 tag 自身的 dataset 上**：热重载期间新旧两个 fiber 各有独立模块作用域，
+  计数放 DOM 里才能避免旧 fiber 卸载时删掉仍在使用的样式。
+- **`blocked` 每次读取都重新解析 `ctx.get('conversation')`**：该服务不在 `inject` 里，加载顺序无
+  保证；缓存首次解析会把「服务还没就绪」变成「这个会话永远不会被阻断」。
 - **生命周期**：控制器、会话执行注册表、词典、样式与两个 Slot 注册全部经 `ctx.effect` /
   `ctx.slots.inject` 安装，fiber 卸载后无残留（`plugin.spec.ts` 固定）。
 

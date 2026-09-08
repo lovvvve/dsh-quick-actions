@@ -9,7 +9,7 @@
  * DSH's own submission errors never reach here — they are reported by the
  * Composer, and this feature must not repeat them (spec 9.5).
  */
-import { Component } from 'react'
+import { Component, Fragment } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 import type { Translate } from '../dsh.js'
 
@@ -43,7 +43,11 @@ export class SurfaceErrorBoundary extends Component<SurfaceErrorBoundaryProps, S
 
   override render(): ReactNode {
     const { t, children } = this.props
-    if (!this.state.failed) return <div key={this.state.attempt}>{children}</div>
+    // A Fragment, never an element: both docks lay their entries out in a flex
+    // column with a gap, so an empty wrapper would shift the Composer every time
+    // the surfaces render nothing — on the hero, and on the dock that does not
+    // own the current layout.
+    if (!this.state.failed) return <Fragment key={this.state.attempt}>{children}</Fragment>
     return (
       <div className="dsh-cqa-note" role="status">
         <span className="dsh-cqa-note-text">{t('crash.title')}</span>

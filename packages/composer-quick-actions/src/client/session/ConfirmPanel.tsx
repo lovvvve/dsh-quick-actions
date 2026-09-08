@@ -24,17 +24,35 @@ export interface ConfirmPanelProps {
 }
 
 export function ConfirmPanel({ pending, t, onConfirm, onCancel }: ConfirmPanelProps): ReactElement {
+  const panelRef = useRef<HTMLDivElement | null>(null)
   const confirmRef = useRef<HTMLButtonElement | null>(null)
 
   useEffect(() => {
     confirmRef.current?.focus()
   }, [])
 
+  /**
+   * Escape cancels, and Tab stays inside: the panel renders in place rather than
+   * through a portal, so without this a keyboard user would tab straight past
+   * the backdrop into the draft the confirmation is guarding — and every route
+   * back out of the panel would take the Escape handler with it.
+   */
   const onKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
-      if (event.key !== 'Escape') return
-      event.stopPropagation()
-      onCancel()
+      if (event.key === 'Escape') {
+        event.stopPropagation()
+        onCancel()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = Array.from(panelRef.current?.querySelectorAll('button') ?? [])
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (first === undefined || last === undefined) return
+      const edge = event.shiftKey ? first : last
+      if (event.target !== edge) return
+      event.preventDefault()
+      ;(event.shiftKey ? last : first).focus()
     },
     [onCancel],
   )
@@ -50,6 +68,7 @@ export function ConfirmPanel({ pending, t, onConfirm, onCancel }: ConfirmPanelPr
       />
       <div
         className="dsh-cqa-panel"
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={t('confirm.title')}

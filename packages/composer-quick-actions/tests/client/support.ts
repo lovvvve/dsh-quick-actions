@@ -51,6 +51,8 @@ export class FakeSettingsDocument {
   readError: string | null = null
   /** Set to make the next document read fail rather than answer. */
   failReads = false
+  /** Set to make an explicit `load()` reject, the way a failed read does. */
+  loadRejects = false
   /** Reads that crossed the wire, so a test can pin the catalog's zero-RPC budget. */
   describeReads = 0
   /** Writes that crossed the wire, so a test can pin that an unchanged plan writes nothing. */
@@ -200,6 +202,7 @@ export function fakeSettingsScope(document: FakeSettingsDocument): SettingsScope
       subscribe: (listener) => document.subscribe(listener),
       load: async () => {
         document.answer()
+        if (document.loadRejects) throw new Error('fake settings document read failed')
       },
     }),
   }

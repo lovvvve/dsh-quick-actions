@@ -11,6 +11,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useSyncExternalStore } from 'react'
+import type { ReactElement } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createQuickActionDockEntries } from '../../src/client/surfaces/entries.js'
 import { SurfaceErrorBoundary } from '../../src/client/surfaces/ErrorBoundary.js'
@@ -149,15 +150,21 @@ const PRESETS = [
 
 let harness: SurfaceHarness
 
-function mount(options: { readonly resident?: boolean } = {}): void {
+function mount(): void {
   const { InputDock, ComposerDock } = harness.entries
   const props = harness.slotProps
   render(
     <>
       <InputDock {...props} session={fakeSession()} input={harness.input.snapshot} />
-      {options.resident === false ? null : <ComposerDock {...props} />}
+      <ComposerDock {...props} />
     </>,
   )
+}
+
+/** The hero's shape: the input dock alone, with no composer dock beside it. */
+function InputDockOnly(): ReactElement {
+  const { InputDock } = harness.entries
+  return <InputDock {...harness.slotProps} session={fakeSession()} input={harness.input.snapshot} />
 }
 
 function setup(layout: QuickActionLayout, presets: readonly Record<string, unknown>[] = PRESETS): void {
@@ -177,10 +184,30 @@ describe('the Resident Composer predicate', () => {
   it('renders nothing above a composer that publishes no composer dock', () => {
     // The blank-session hero renders the input dock but no composer dock, so
     // its beacon never marks the Session and the ribbon must stay away.
-    mount({ resident: false })
+    const { container } = render(<InputDockOnly />)
 
     expect(screen.queryByRole('button', { name: '管理' })).toBeNull()
     expect(document.querySelector('[data-quick-actions-layout]')).toBeNull()
+    // Not one element either: the composer stack is a flex column with a gap,
+    // so an empty wrapper would still shift the hero's input box.
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('adds no element to the dock that does not own the current layout', () => {
+    setup('bar')
+    const { InputDock, ComposerDock } = harness.entries
+    const props = harness.slotProps
+    const { container } = render(
+      <>
+        <span data-input-dock="">
+          <InputDock {...props} session={fakeSession()} input={harness.input.snapshot} />
+        </span>
+        <ComposerDock {...props} />
+      </>,
+    )
+
+    expect(container.querySelector('[data-input-dock]')?.innerHTML).toBe('')
+    expect(document.querySelector('[data-quick-actions-layout="bar"]')).not.toBeNull()
   })
 
   it('renders the ribbon once the composer dock marks the Session resident', () => {
@@ -366,6 +393,36 @@ describe('executing from a surface', () => {
     expect(harness.input.sends).toEqual([])
   })
 
+  it('traps Tab inside the confirmation panel', () => {
+    setup('ribbon')
+    mount()
+    fireEvent.click(screen.getByRole('button', { name: /压缩/ }))
+    const cancel = screen.getByRole('button', { name: '取消' })
+    const send = screen.getByRole('button', { name: '发送' })
+
+    // Tab off the last control wraps to the first rather than reaching the draft.
+    fireEvent.keyDown(send, { key: 'Tab' })
+    expect(document.activeElement).toBe(cancel)
+
+    fireEvent.keyDown(cancel, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(send)
+  })
+
+  it('falls back to the management entry when the opener cannot take focus back', () => {
+    setup('ribbon')
+    mount()
+    const control = screen.getByRole('button', { name: /压缩/ })
+    act(() => {
+      control.focus()
+    })
+    fireEvent.click(control)
+
+    // Confirming disables the opener for the flight, so focus must not be lost.
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '管理' }))
+  })
+
   it('returns focus to the control that opened the confirmation', () => {
     setup('ribbon')
     mount()
@@ -436,6 +493,35 @@ describe('executing from a surface', () => {
     fireEvent.click(screen.getByRole('button', { name: '管理' }))
 
     expect(harness.controller.getSnapshot().manager.open).toBe(true)
+  })
+})
+
+describe('the catalog error state', () => {
+  it('offers a retry where the layout would be, and does not reject into the page', async () => {
+    setup('ribbon')
+    // The Host serves no catalog layer: no action may render, and the entry
+    // becomes the retryable catalog error of spec 10.
+    harness.document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {})
+    mount()
+
+    const notice = document.querySelector('[data-quick-actions-catalog-error="unavailable"]')
+    expect(notice).not.toBeNull()
+    expect(screen.queryByRole('button', { name: /继续/ })).toBeNull()
+
+    const rejections: unknown[] = []
+    const onRejection = (event: PromiseRejectionEvent): void => {
+      rejections.push(event.reason)
+    }
+    window.addEventListener('unhandledrejection', onRejection)
+    harness.document.loadRejects = true
+
+    fireEvent.click(screen.getByRole('button', { name: '重试' }))
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    window.removeEventListener('unhandledrejection', onRejection)
+    expect(rejections).toEqual([])
   })
 })
 

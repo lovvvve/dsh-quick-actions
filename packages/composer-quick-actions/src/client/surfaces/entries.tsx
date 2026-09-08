@@ -62,11 +62,23 @@ function useResident(residency: ResidentComposerRegistry, sessionId: string): bo
   )
 }
 
+/**
+ * The Composer block for one Session, resolved on every read rather than cached.
+ *
+ * `conversation` is reached through `ctx.get` rather than `inject`, so nothing
+ * orders it before this component's first render. Caching the resolution would
+ * turn "the service was not there yet" into "this Session can never be blocked",
+ * and a Quick Action would then send into a Composer another feature has made
+ * inert. `storeFor` answers an identity-stable store, so re-resolving costs a
+ * map lookup and keeps `getSnapshot` referentially stable.
+ */
 function useComposerBlock(blocks: () => ComposerBlocks | undefined, sessionId: string): ComposerBlock | undefined {
-  const store = useMemo(() => blocks()?.storeFor(sessionId), [blocks, sessionId])
   return useSyncExternalStore(
-    useCallback((listener: () => void) => store?.subscribe(listener) ?? (() => {}), [store]),
-    () => store?.getSnapshot(),
+    useCallback(
+      (listener: () => void) => blocks()?.storeFor(sessionId)?.subscribe(listener) ?? (() => {}),
+      [blocks, sessionId],
+    ),
+    () => blocks()?.storeFor(sessionId)?.getSnapshot(),
   )
 }
 
@@ -165,7 +177,10 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
     const client = useControllerState(deps.controller)
     const projection = client.projection
     const onRetry = useCallback(() => {
-      void deps.controller.refresh()
+      // The controller reports a failed re-read through the catalog state it
+      // publishes, and deliberately lets the promise reject; swallowing it here
+      // is what keeps a retry from raising an unhandled rejection on the page.
+      deps.controller.refresh().catch(() => undefined)
     }, [])
 
     if (projection === undefined) {
