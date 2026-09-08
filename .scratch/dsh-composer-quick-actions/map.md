@@ -21,7 +21,7 @@ Label: `wayfinder:map`
 - GUI 验证只有一个通道：现有 `http://127.0.0.1:3080` 官方 DSH GUI。首版不依赖 `insertText`，因此不再需要隔离源码检出、补丁应用或第二个受管服务器。不得修改已安装 `node_modules`。
 - 视觉交互工作请查阅 `prototype` 和 `frontend-design`，词汇发生变化时请查阅 `domain-modeling`，实施期间请查阅 `test-driven-development`，宣布交付完成之前请查阅 `verification-before-completion`。
 - 工作区是位于 `main` 分支的 Git 仓库，`origin` 已配置为 GitHub 的 `dsh-quick-actions`（精确地址用 `git remote -v` 获取）。本目录下的本地 Markdown 是议题跟踪器，研究证据则隔离在 `research/<topic>` 分支上。
-- 统一规格已汇总于 [`spec.md`](./spec.md)（baseline）；实现与验证工作以 spec 为准，正文与决策票据冲突时由 spec 第 1、15、16 节评估，其中**第 16 节优先级最高**，不再重开已关闭决策。
+- 统一规格已汇总于 [`spec.md`](./spec.md)（baseline）；实现与验证工作以 spec 为准，正文与决策票据冲突时由 spec 第 1、15、16、17 节评估，其中**第 17 节优先级最高**，不再重开已关闭决策。
 
 ## Decisions so far（已有决策）
 
@@ -42,6 +42,8 @@ Label: `wayfinder:map`
 - [汇总统一规格](./spec.md)（spec 第 15 节，无票据） — 各项存留边界收敛为 baseline 并落入实施票据。
 - [首版范围收缩与斜杠命令处置](./spec.md)（spec 第 16 节，无票据） — 移除插入动作、取消全部核心接口新增、`/` 开头文本改为合法的命令发送动作；该节优先级高于正文与第 15 节。
 - [实现快捷动作共享领域模型](./issues/12-implement-shared-quick-action-model.md) — 已交付纯 JSON 领域深模块：校验、预置目录合并与确定性 revision、Settings V1 解码与幂等规范化、`kind: 'send'` 恒写与非 `'send'` 数据的无损墓碑保留、`confirm` 透传、命令发送动作判定、投影与 50 项上限/被动超限、revision-fenced mutation 计划。Host/Client 装配仍属票据 13/14。
+- [实现 Host Settings 与预置目录 Remote](./issues/13-implement-host-settings-and-catalog-remote.md) — 已交付 Host 配置合并与响亮失败、`composer-quick-actions` namespace 与 revision-fenced 幂等规范重写、内置预置初稿；目录发布通道按用户决策由自有 Remote 改为只读 Settings 命名空间的 composition `base` 层（spec 第 17 节）。
+- [Catalog Remote 改走 Settings base 层](./spec.md)（spec 第 17 节，无票据） — 已发布的 typert 生成器无法为单仓外的包生成 strict Remote 产物，用户据此修订第 6.2 节；该节优先级高于正文与第 15、16 节。
 
 ## Not yet specified（尚未明确）
 

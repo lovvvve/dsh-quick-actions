@@ -9,7 +9,7 @@
 
 本规格定义首版 Composer Quick Actions（消息编辑器快捷动作）的产品行为、数据契约、Host/Client 边界、兼容策略、打包方式与发布门槛。实现、测试、安装包和中英文文档必须共同满足本规格。
 
-文中的“必须”“不得”是发布硬要求。决策票据保留研究和取舍过程；本文件汇总其当前有效结论。较早票据中的“旧版插入动作显示为禁用”“首版等待正式上游版本”“能力自适应的兼容性抑制插入动作”“斜杠命令型发送动作一律无效”等内容均已被取代。第 15 节记录规格首轮收尾时的决定与票据映射；**第 16 节记录首版范围收缩（移除插入动作）与斜杠命令处置，它优先于正文其余部分及第 15 节中与之冲突的表述**。正文其余部分不得重新打开已关闭决策。
+文中的“必须”“不得”是发布硬要求。决策票据保留研究和取舍过程；本文件汇总其当前有效结论。较早票据中的“旧版插入动作显示为禁用”“首版等待正式上游版本”“能力自适应的兼容性抑制插入动作”“斜杠命令型发送动作一律无效”等内容均已被取代。第 15 节记录规格首轮收尾时的决定与票据映射；**第 16 节记录首版范围收缩（移除插入动作）与斜杠命令处置，它优先于正文其余部分及第 15 节中与之冲突的表述；第 17 节记录 Catalog Remote 改走 Settings base 层，它优先于正文其余部分及第 15、16 节中与之冲突的表述**。正文其余部分不得重新打开已关闭决策。
 
 ## 2. 目标与范围
 
@@ -600,3 +600,55 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 第 15 节决定 5 原本要求「新增最小公共提交凭据」。**首版不新增任何 DSH 核心接口**，该要求随之取消：`inputActions` 的改动整体不在首版范围内，插入与提交两侧都是如此。
 
 因此单飞窗口改为完全基于既有公开状态实现，判据由票据 15 在实现时查证并用测试固定，验收以第 9.5 节的「不产生重复发送」为准。这是实现工作，不是待决策项；首版**没有剩余的核心契约依赖**。
+
+## 17. Catalog Remote 的替代：目录改走 Settings base 层
+
+目标 DSH 的生成式 Remote 管线对单仓外的软件包不可用（核实证据见 [`research/catalog-remote-assembly.md`](./research/catalog-remote-assembly.md)）。用户据此决定修订第 6.2 节。**本节优先于正文其余部分以及第 15、16 节中与之冲突的表述。**
+
+### 17.1 受阻事实
+
+已发布的 `@deepseek-ai/dsh-typert-generator@0.1.2-rc.1` 只在 `@Remote` / `TypertRemoteService` 符号的声明文件属于 `<root>/packages/` 下已注册的 workspace 包时才识别它们；第三方包只能从 `node_modules` 消费 `@deepseek-ai/dsh-typert-protocol`，两条判定均不成立，生成器因而拒绝发射 Remote 产物。而 Client `ctx.remote.$mount()` 硬性要求 strict generated codec。因此首版**不发布自有 Remote**。
+
+存在一条未被阻断的运行时替代（手写 descriptor 经 `ctx.typert.register` / `ctx.remote.$mount` 注册），已知可通过两侧校验，但它使 wire 契约脱离 TypeScript 类型派生、漂移无编译期防护。用户选择不采用。
+
+### 17.2 决定
+
+**Preset Catalog（预置目录）改由 Host 发布为一个只读 Settings 命名空间的 composition `base` 层，Client 通过 `ctx.settingsScope.bind()` 读取该层。**
+
+- Host 注册第二个命名空间 `composer-quick-actions-catalog`，`applies: 'restart'`（与第 5.1 节「Host 配置变化在 DSH 重启后生效」一致），其 `base` 为规范化目录快照：
+
+  ```ts
+  interface CatalogSnapshot {
+    schemaVersion: 1
+    revision: string
+    presets: PresetQuickAction[]
+  }
+  ```
+
+  快照形状、`revision` 的确定性与稳定性要求全部沿用第 6.2 节，不变。
+
+- **该命名空间只读**：插件从不写它的用户层，因此它不产生持久化 section。第 4.2 节「唯一持久化命名空间为 `composer-quick-actions`」**仍然成立**——目录命名空间没有持久化用户数据。
+
+- **Client 只读 `base`，不读 `value`**。`base` 是 composition 层，即作者定义本身；用户即便手工编辑 `settings.yaml` 写出同名 section 也不会改变 Client 看到的目录。这保持了第 5.1 节「Host 是目录的权威所有者，用户不得编辑或删除其作者定义」。
+
+- Client 必须用共享领域模型防御性解码该快照，与第 6.3 节对已确认快照的要求一致。
+
+### 17.3 相对 Remote 的取舍
+
+**更好**：`ctx.settingsScope.bind()` 从浏览器端共享的 settings mirror 派生，绑定不产生任何额外 wire 读取。因此目录的 RPC 次数为 **0**，严格优于第 7.1 节「每个连接 generation 至多调用一次 `describeCatalog()`」；该条约束改为「不得为目录发起任何专用 RPC」。目录随 mirror 在 `connection/reset` 后自动刷新，第 10 节「连接恢复：每个新 connection generation 重新读取一次目录」由 mirror 刷新承担。
+
+**代价**：目录命名空间会出现在 Settings 的命名空间目录里；它没有注册配置卡片，因此不会渲染表单，但对查看命名空间清单的界面可见。这是已知并接受的取舍。
+
+**不变**：不提供第三方运行时预置注册 API；不使用 `storageDomain`；不引入只有一个实现的通用 Repository。
+
+### 17.4 票据映射
+
+| 变更 | 票据 |
+|---|---|
+| Host 注册只读目录命名空间并发布 `base` 快照；不再发布 Remote | 13 |
+| Client 改由 `settingsScope` 读取目录 `base`，去掉 `remote.composerQuickActions` 与每 generation 一次的目录 RPC | 14 |
+| 功能包不再输出 `./typert` / `./remote` 生成产物；README 与兼容矩阵相应描述 | 17 |
+| 去掉 Remote 契约与生成产物的验证项，改为目录命名空间与 `base` 通道的验证 | 18 |
+| 不受影响 | 11、12、15、16、19、20、21 |
+
+第 6.2 节的 `ComposerQuickActionsRemote` 接口与 `remote.composerQuickActions` 名称**作废**；`CatalogSnapshot` 的形状与 revision 要求保留。第 13.2 节中「自有 Catalog Remote 契约、生成产物和卸载清理」一项相应改为「目录命名空间注册、`base` 快照契约与卸载清理」。
