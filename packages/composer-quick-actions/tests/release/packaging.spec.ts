@@ -10,20 +10,33 @@
  *
  * `pnpm pack` runs here for real, because the published file list is a product
  * of `files`, the build and pnpm's own always-include rules together — none of
- * which can be checked by reading `package.json` alone. Packing the real package
- * directory is deliberate: only the real directory reflects the real `files`
- * globs. The cost is that the feature package's `prepack` rebuilds the working
- * tree's `lib/`, so this spec and a running `pnpm watch:client` write the same
- * output directory — run one at a time.
+ * which can be checked by reading `package.json` alone. It packs a staged copy
+ * of the workspace rather than the working tree: packing runs `prepack`, which
+ * deletes and rebuilds `lib/`, and the working tree's `lib/` is the bundle a
+ * running DSH GUI loads and the one `pnpm watch:client` republishes. Packing in
+ * place would take an installed plugin offline on every failed run and race the
+ * watcher on every concurrent one. The copy keeps the workspace layout verbatim,
+ * so the contract loses no coverage; `packing isolation` below pins that the
+ * working tree is untouched and that the copy really built what was packed.
  */
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative } from 'node:path'
 import { parse as parseYaml } from 'yaml'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { inject as clientInject } from '../../src/client/index.js'
-import { bundleDir, featureDir, manifest, sourceModules, type Manifest } from './support.js'
+import {
+  bundleDir,
+  featureDir,
+  manifest,
+  outputFingerprint,
+  repoRoot,
+  sourceModules,
+  stageWorkspace,
+  type Manifest,
+  type StagedWorkspace,
+} from './support.js'
 
 const feature = manifest(featureDir)
 const bundle = manifest(bundleDir)
@@ -106,18 +119,59 @@ function pack(packageDir: string, into: string): Packed {
   return { entries, manifest: manifest(join(root, 'package')), root: join(root, 'package') }
 }
 
-let workspace: string
+/**
+ * The working tree's build output, fingerprinted before this spec stages or
+ * packs anything, so `packing isolation` can compare against it.
+ */
+const libBefore = outputFingerprint(join(featureDir, 'lib'))
+
+let scratch: string
+let staged: StagedWorkspace
+let stagedLibAtCopy: Readonly<Record<string, string>> | null
 let packedFeature: Packed
 let packedBundle: Packed
 
 beforeAll(() => {
-  workspace = mkdtempSync(join(tmpdir(), 'quick-actions-pack-'))
-  packedFeature = pack(featureDir, workspace)
-  packedBundle = pack(bundleDir, workspace)
+  scratch = mkdtempSync(join(tmpdir(), 'quick-actions-pack-'))
+  staged = stageWorkspace(scratch)
+  stagedLibAtCopy = outputFingerprint(join(staged.featureDir, 'lib'))
+  const tarballs = join(scratch, 'tarballs')
+  mkdirSync(tarballs)
+  packedFeature = pack(staged.featureDir, tarballs)
+  packedBundle = pack(staged.bundleDir, tarballs)
 }, 300_000)
 
 afterAll(() => {
-  if (workspace !== undefined) rmSync(workspace, { recursive: true, force: true })
+  if (scratch !== undefined) rmSync(scratch, { recursive: true, force: true })
+})
+
+describe('packing isolation', () => {
+  /**
+   * `prepack` runs `pnpm run build`, which deletes `lib/` before rebuilding it —
+   * right in a copy, destructive in the working tree: a run that fails between
+   * the two halves leaves no bundle for an installed plugin to load, and a
+   * concurrent `pnpm watch:client` publishes into the directory being deleted.
+   * The fingerprint covers timestamps as well as bytes, because a rebuild that
+   * lands identical content still went through that window.
+   */
+  it('leaves the working tree build output byte- and mtime-identical', () => {
+    expect(outputFingerprint(join(featureDir, 'lib'))).toStrictEqual(libBefore)
+  })
+
+  /** A copy is only isolation if it lives outside the repository. */
+  it('stages the copy outside the repository', () => {
+    expect(relative(repoRoot, staged.root).startsWith('..')).toBe(true)
+  })
+
+  /**
+   * And it only carries the release contract if `prepack` really built there.
+   * The copy is staged without build output, so every packed artifact below is
+   * output this run produced in the copy — not a stale one copied in.
+   */
+  it('packs artifacts the copy built, from a copy that was staged with none', () => {
+    expect(stagedLibAtCopy).toBeNull()
+    expect(existsSync(join(staged.featureDir, 'lib/client.js'))).toBe(true)
+  })
 })
 
 describe('release identity', () => {

@@ -21,7 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 pnpm install                 # 仓库默认未安装依赖
-pnpm test                    # vitest run，含真实 tsdown 构建，慢（watch 用例 35s 超时）
+pnpm test                    # vitest run，含真实 tsdown 构建（打包契约在工作树外的 workspace 副本里构建），慢（watch 用例 35s 超时）
 pnpm typecheck               # tsc -b（项目引用，产出 lib/types）+ tsc -p tsconfig.test.json（测试/配置，noEmit）
 pnpm lint                    # oxlint . --deny-warnings（无配置文件，用默认规则）
 pnpm build                   # 各包 tsc -b && tsdown
@@ -74,7 +74,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（22、24、18、21 未认领；16、17、20 与 23 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成；票据 24 让打包验证不再改写工作树的 `lib/`，**已进入票据 18 的 `Blocked by`**。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（22、18、21 未认领；16、17、20、23 与 24 已 resolved）。票据 22 是票据 17 拆出的 spec 第 11.2 节前置修复（watch 关闭遗留 staging），须在票据 18 收口前完成；票据 24 已解除票据 18 的最后一项阻塞。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -92,7 +92,7 @@ pnpm vitest run -t 'rejects computed require calls'
 - **`SettingsScope` 的结构化写入结果由插件自己判定，不改 DSH 核心**。spec 第 15 节决定 4 的「扩展 `SettingsScope`」已被第 16.4 节的「首版不新增任何 DSH 核心接口 / 没有剩余的核心契约依赖」取代；已发布的 `mutate` 返回 `void`，控制器改用写后权威快照区分成功 / `conflict` / `refused`（票据 14 `## Answer` 记有已知边界）。不要重新提出改 `@deepseek-ai/dsh-client-ui-settings`。
 - 官方上游合并已列为首版范围外，**不要**用"等待官方发布"重新阻塞产品。
 - **首版按作者格式接受 CSS Modules 偏离**（spec 第 18 节）。插件样式是带 `dsh-cqa-` 前缀的样式字符串，但**投递机制与第一方插件逐字相同**（运行时注入 `<style data-plugin-css>` + 内联字符串 + 幂等判断）；差距只有作者格式与类名生成方式，用户不可见。控件本身已由票据 23 改用官方 primitives，配色只用 `--dsw-alias-*` token。**不要**在其他票据里顺手改造成 CSS Modules——要做须先核实 `@tsdown/css` 能把 CSS 内联进单文件 `client.js`（ModuleLoader 只加载 `lib/client.js`），通过后另开票据。
-- **`pnpm test` 目前会删掉并重建工作树的 `lib/`**（`prepack` → `build` → `rmSync('lib')`，而打包契约在真实包目录 `pnpm pack`）。修复归[票据 24](.scratch/dsh-composer-quick-actions/issues/24-isolate-pack-from-the-working-tree.md)；在它落地之前，**不要**让 `pnpm watch:client` 与 `pnpm test` 同时跑，且一次失败的测试会让线上 bundle 消失。
+- **`pnpm test` 不再触碰工作树的 `lib/`**（[票据 24](.scratch/dsh-composer-quick-actions/issues/24-isolate-pack-from-the-working-tree.md)）：打包契约把 workspace 复制到 `tmpdir()` 下的副本再 `pnpm pack`，`prepack` 的 `rmSync('lib')` 与构建都发生在副本里；副本不复制 `node_modules`/`lib`，依赖用 symlink 指回已安装位置，因此**不需要 install**。`pnpm watch:client` 与 `pnpm test` 现在可以同时跑，失败的测试也不会让线上 bundle 消失。改 `tests/release/support.ts` 的 `stageWorkspace()` 时**不要**把 `lib/` 复制进副本——那会让打包契约测到陈旧产物；`packing isolation` 三条断言（工作树 lib 内容与 mtime 不变、副本在仓库外、packed 产物由副本本次构建）就是为此设的。
 - **首版不新增任何 DSH 核心接口**。`insertText` 和 submit 凭据都不做。单飞窗口只能用公开 Input snapshot（`draft/imageIds/draftRev/phase/claim?/occurrences/queue`）判定，硬标准是不产生重复发送——注意官方 sink 乐观清空，`submit()` 后草稿一帧内就空了，"草稿已占用"不是互斥锁。
 
 ## 环境与陷阱
