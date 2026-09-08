@@ -1,40 +1,41 @@
 import { expect, test } from '@playwright/test'
+import { composerInput, guiEntry, layoutCell, manageEntry, openGui, openResidentComposer } from './support.js'
 
 /**
  * Channel probe. Everything else in `tests/gui/` assumes these hold, so this spec
- * reports the two prerequisites of spec section 13.3 separately from the plugin's own
- * behaviour: the official GUI answers, and this plugin's dock cells reached the page.
+ * reports the prerequisites of spec section 13.3 separately from the plugin's own
+ * behaviour: the official GUI answers, its composer renders, the hero screen carries
+ * no quick actions, and a Resident Composer does.
  *
  * A failure here is an environment fact, not a plugin defect — read the message.
  */
 test.describe('DSH GUI channel', () => {
   test('the official GUI answers on the verification channel', async ({ page, baseURL }) => {
-    const response = await page.goto('/')
+    const response = await openGui(page)
 
     expect(response, `no response from ${baseURL}; start the web profile first`).not.toBeNull()
     expect(
       response!.status(),
-      `${baseURL} answered ${response!.status()}; 401/403 means the browser-trust fence rejected this fresh browser profile`,
+      guiEntry === '/'
+        ? `${baseURL} answered ${response!.status()}; pass the token URL printed by dsh web as DSH_GUI_ENTRY`
+        : `${baseURL} answered ${response!.status()} for the entry URL; the token may already be spent`,
     ).toBeLessThan(400)
   })
 
-  test('the conversation composer is present', async ({ page }) => {
-    await page.goto('/')
+  test('the hero screen carries no quick actions', async ({ page }) => {
+    await openGui(page)
+    await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
 
-    // The composer owns the only textbox DSH renders on a fresh conversation.
-    await expect(page.getByRole('textbox').first()).toBeVisible({ timeout: 20_000 })
+    // The hero deliberately does not mount `conversation.composer.dock`, and the plugin
+    // treats that dock as the public Resident Composer beacon — so nothing may render here.
+    await expect(layoutCell(page)).toHaveCount(0)
+    await expect(manageEntry(page)).toHaveCount(0)
   })
 
-  test('the plugin dock cells reached the page', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByRole('textbox').first()).toBeVisible({ timeout: 20_000 })
+  test('a Resident Composer carries the plugin surfaces', async ({ page }) => {
+    await openResidentComposer(page)
 
-    // `conversation.input.dock` carries the layout cell and the manager overlay cell;
-    // with an empty projection the layout collapses to the compact manager entry, so
-    // the manager trigger is the one marker present in every projection.
-    await expect(
-      page.locator('[data-quick-actions-manager]'),
-      'plugin surfaces absent: the bundle row is not installed, or the profile has not restarted since',
-    ).toHaveCount(1)
+    await expect(layoutCell(page)).toBeVisible()
+    await expect(manageEntry(page)).toHaveCount(1)
   })
 })

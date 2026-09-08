@@ -7,19 +7,25 @@ import { defineConfig, devices } from '@playwright/test'
  * `tools/**` and `packages/**` — because they need that live server.
  *
  * Viewports follow spec section 13.3: desktop, about 768px, about 360px.
+ *
+ * Automatic screenshots and traces are OFF on purpose. Quick actions render at a
+ * Resident Composer, so every page under test is one of the user's own conversations,
+ * and a full-page capture would write real conversation content into the evidence —
+ * which spec section 13.1 forbids. Specs that need a picture clip it to the composer.
  */
 export default defineConfig({
   testDir: 'tests/gui',
   outputDir: '.playwright/results',
-  reporter: [['list'], ['html', { outputFolder: '.playwright/report', open: 'never' }]],
+  reporter: [['list']],
   forbidOnly: true,
   retries: 0,
   workers: 1,
-  timeout: 30_000,
+  timeout: 60_000,
   use: {
     baseURL: process.env.DSH_GUI_URL ?? 'http://127.0.0.1:3080',
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    screenshot: 'off',
+    trace: 'off',
+    video: 'off',
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },

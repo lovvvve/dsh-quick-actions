@@ -13,6 +13,6 @@
     "packages/**/tests/**/*.tsx",
     "packages/**/tsdown.config.ts",
     "playwright.config.ts",
-    "tests/gui/**/*.spec.ts"
+    "tests/gui/**/*.ts"
   ]
 }
