@@ -20,12 +20,15 @@ channel_answers() {
   [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "$DSH_GUI_URL/")" != "000" ]
 }
 
-# `setsid` makes the launched process a group leader, which is what makes this reliable:
-# the launcher runs through npx and the process that holds the socket is a grandchild, so
-# signalling the recorded pid alone leaves the port bound.
+# The launcher runs through npx and the process that holds the socket is a grandchild, so
+# signalling one pid leaves the port bound: the profile is started in its own session and
+# stopped by process group. The group leader records its *own* pid, because `setsid` forks
+# when its caller is already a group leader and `$!` would then name a process that exits
+# immediately — which silently turned this into a no-op.
 stop_ours() {
   [ -f "$PIDFILE" ] || return 0
-  kill -TERM -"$(cat "$PIDFILE")" 2>/dev/null
+  group=$(cat "$PIDFILE")
+  kill -TERM -"$group" 2>/dev/null || kill -TERM "$group" 2>/dev/null || true
   for _ in $(seq 1 30); do
     channel_answers || break
     sleep 1
@@ -50,11 +53,10 @@ boot() {
   # `DSH_BOOT_PATCH` adds one overlay after every bundle layer, which is how a round can
   # stage a Host config change without editing the user's own `cordis.patch.yml`.
   if [ -n "${DSH_BOOT_PATCH:-}" ]; then
-    setsid nohup npx --yes @deepseek-ai/dsh@latest --profile web --patch "$DSH_BOOT_PATCH" --no-open >>"$LOG" 2>&1 &
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes @deepseek-ai/dsh@latest --profile web --patch '$DSH_BOOT_PATCH' --no-open" >>"$LOG" 2>&1 &
   else
-    setsid nohup npx --yes @deepseek-ai/dsh@latest web --no-open >>"$LOG" 2>&1 &
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes @deepseek-ai/dsh@latest web --no-open" >>"$LOG" 2>&1 &
   fi
-  echo $! > "$PIDFILE"
 
   for _ in $(seq 1 90); do
     if grep -q "dsh web: http" "$LOG" 2>/dev/null; then
