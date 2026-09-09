@@ -1,38 +1,67 @@
 import { expect, test } from '@playwright/test'
-import { manageEntry, managerPanel, openResidentComposer } from './support.js'
+import {
+  customActionKeys,
+  ensureLayout,
+  manageEntry,
+  managerPanel,
+  openResidentComposer,
+  removeCustomActionsAddedSince,
+} from './support.js'
 
 /**
  * Ticket 26: the management overlay must own its own pixels on the live shell.
+ * Why a z-index alone could not give it them is written once, at the portal in
+ * `manager/ManagerPanel.tsx`.
  *
- * A `z-index` only ranks an element against its siblings in the same stacking
- * context, so while the overlay rendered inside the input dock, any ancestor
- * there that opened one capped it — ticket 21's acceptance found the shell's
- * sidebar width handle (`position: absolute; z-index: 8`) painting over the
- * panel's left edge and swallowing clicks aimed at the confirmation switch.
+ * The check is deliberately mechanism-blind: rather than naming the overlay that
+ * caught it out, it hit-tests the centre of every control the panel renders and
+ * fails on any whose centre belongs to an element outside the panel. That catches
+ * the next one too, in whatever profile the round runs against.
  *
- * The check is deliberately mechanism-blind: rather than naming that handle, it
- * hit-tests the centre of every control the panel renders and fails on any whose
- * centre belongs to an element outside the panel. That catches the next overlay
- * as well as this one, in whatever profile the round runs against.
- *
- * Nothing here is written or sent. Run it inside an install window:
+ * Writes one Custom Quick Action and deletes it again; nothing is sent. Run it
+ * inside an install window:
  *   sh tests/gui/verify-round.sh stacking.spec.ts --project=desktop
  */
 test.describe('management overlay stacking', () => {
+  const PROBE = '层叠验证动作'
+  let baseline: string[] = []
+
+  test.afterEach(async ({ page }) => {
+    if (await managerPanel(page).count() > 0) {
+      await page.locator('[data-quick-actions-manager-close]').click()
+      await expect(managerPanel(page)).toHaveCount(0)
+    }
+    await removeCustomActionsAddedSince(page, baseline)
+  })
+
   // The overlay is centred on the viewport, so it lands on different neighbours
   // at different widths; the narrow projects are as much a part of this as desktop.
   test('every control in the panel owns the pixel at its centre', async ({ page }, testInfo) => {
     await openResidentComposer(page)
+    await ensureLayout(page, 'ribbon')
+    baseline = await customActionKeys(page)
     await manageEntry(page).click()
     await expect(managerPanel(page)).toBeVisible()
 
-    // Open the edit form too: its 13 px confirmation checkbox is the smallest
-    // target the panel has, and the one ticket 21 actually lost.
-    const editable = managerPanel(page).locator('[data-quick-action^="custom:"]').first()
-    if (await editable.count() > 0) {
-      await editable.getByRole('button', { name: '编辑' }).click()
-      await expect(page.locator('[data-quick-actions-form="edit"]')).toBeVisible()
-    }
+    // The edit form has to be open: its 13 px confirmation checkbox is the smallest
+    // target the panel has, and the one ticket 21 actually lost. The action it edits
+    // is made here rather than discovered — the documented entry point seeds three
+    // presets and no custom action, so a spec that looked for one would find none,
+    // skip the form, and pass without testing the thing it exists for.
+    await managerPanel(page).locator('[data-quick-actions-new]').click()
+    const form = page.locator('[data-quick-actions-form="new"]')
+    await expect(form).toBeVisible()
+    await form.getByLabel('标签', { exact: true }).fill(PROBE)
+    await form.getByLabel('发送文本', { exact: true }).fill('这条动作只为把编辑表单打开。')
+    await form.getByRole('button', { name: '保存' }).click()
+    await expect(form).toHaveCount(0)
+
+    const editable = managerPanel(page).locator('[data-quick-action^="custom:"]', { hasText: PROBE })
+    await expect(editable).toHaveCount(1)
+    await editable.getByRole('button', { name: '编辑' }).click()
+    await expect(page.locator('[data-quick-actions-form="edit"]')).toBeVisible()
+    // The box itself, not just the form around it: this is the assertion's whole point.
+    await expect(page.locator('[data-quick-actions-confirm-switch]')).toHaveCount(1)
 
     const covered = await page.evaluate(() => {
       const panel = document.querySelector<HTMLElement>('[data-quick-actions-manager]')
