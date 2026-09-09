@@ -2,6 +2,7 @@
 
 Type: task
 Mode: HITL
+Status: claimed
 Blocked by: 18
 
 ## Question（问题）
@@ -43,3 +44,16 @@ spec 第 13.4 节要求「除非用户另行明确同意，不得在该流程中
 上一条评论第 2 点里「用户在步骤 2/8 可能撞上表单 Escape 关掉整个管理面板」的预告**已失效**：[票据 25](./25-close-two-edge-state-ux-gaps.md) 让表单接管开场焦点并归还焦点，第一下 Escape 只退出表单、第二下才关面板。断线发送那一处经源码取证确认是 DSH 自己恢复草稿并给出 DSH 的错误提示，插件按 spec 9.5 不加第二条说明；步骤 8 检查错误信息时若看到的是 DSH 的 toast 而非插件的 note，这是预期。
 
 本票据开安装窗口时顺带执行票据 25 新增却尚未在真实 GUI 跑过的断言：`sh tests/gui/verify-round.sh validation.spec.ts`（编辑表单聚焦 → Escape → 面板仍在）与 `sh tests/gui/lifecycle-round.sh`（断线时 DSH 自己的 toast 出现、插件无 feedback note；`down` 半程会停掉 profile）。两者都不触发模型调用。若 `lifecycle` 的 toast 断言失败，按票据 25 的结论那是 DSH 侧缺口（rejection message 为空），记录即可，不回插件补反馈。
+
+### 2026-09-09 — 已认领；安装窗口已打开，等待用户执行步骤 1–8
+
+Agent 侧的准备工作已完成，证据在 `verification/release-evidence.md` 的「票据 21」一节：
+
+1. 最终候选提交 `b5959d2` 上 `pnpm typecheck` / `pnpm lint` / `pnpm test`（22 文件 / 496 通过）全部新鲜通过。
+2. 用 `reinstall-round.sh` 打包最终 tarball（功能包 `0.1.0` 167 KB、bundle 3 KB）并装进 web profile，重装恢复三段通过。
+3. 窗口内重跑了**全部无模型调用的 GUI round**（常规套件三视口 40 通过 / 83 跳过、restart、scale 六行、presets 四段、host-config、screenshots 九张、lifecycle `down` 半程），13 次 profile 启动无一失败无一重试。票据 25 留下的两条断言都在真实 GUI 首次成立；toast 断言通过，DSH 侧缺口分支未触发。
+4. profile 已再次启动并保持运行，命名空间为全新安装状态，供用户在浏览器中执行第 13.4 节步骤 1–8。
+
+**上一条评论的一处更正**：`lifecycle-round.sh` 的 `up` 半程末尾会真实发送「回复 ok」一次，「两者都不触发模型调用」只对 `down` 半程成立。本票据未取得模型调用许可，故 `send-round.sh`（6 条）与 `up` 半程均未执行；若用户许可，可在同一窗口内补跑。
+
+第 9 步仍待用户本人答复。关窗命令 `sh tests/gui/close-window.sh` 须在 worktree `ticket-21-final-acceptance` 根目录执行，且关窗前不得删除该 worktree（profile 的 `file:` 引用指向其中的 tarball）。

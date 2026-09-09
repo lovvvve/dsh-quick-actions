@@ -626,3 +626,100 @@ Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非�
 - `tests/gui/lifecycle.spec.ts`（`down` 半程）新增两条：DSH 自己的 toast 出现（`body > [role="alert"]`，primitives `Toast` 的 portal，3s 保持后淡出，故先于草稿断言）；断线激活后插件 `[data-quick-actions-feedback]` 计数为 0。toast 断言若失败，说明 rejection message 为空、`onSinkSettled` 返回 `[]`——属 DSH 侧缺口。
 - `tests/gui/validation.spec.ts` 编辑段改为：标签框已聚焦 → Escape → 表单消失、面板仍在、焦点回到「编辑」。
 - 两者均不触发模型调用；`lifecycle-round.sh` 会停掉 profile，需在窗口内按其驱动执行。
+
+---
+
+## 票据 21 — 最终人工验收（2026-09-09，进行中）
+
+本票据是 HITL：Agent 只负责准备一次性 profile 与最终 tarball、按用户指示驱动步骤并记录结果；第 13.4 节第 9 步「生产验收通过」只能由用户本人说出，本节在得到该答复前不得宣告通过。本票据**没有**取得真实模型调用的许可（票据 18 第三轮的许可不延续），因此 `send-round.sh` 与 `lifecycle.spec.ts` 的 `up` 半程（其最后一条断言会真实发送「回复 ok」）均未执行，见文末。
+
+### 环境
+
+| 项 | 值 |
+|---|---|
+| 最终候选提交 | `b5959d2`（`main`，票据 25 收尾之后；worktree 分支 `ticket-21-final-acceptance` 自该提交建出，`pnpm install --offline` 4.6s） |
+| Node / pnpm | v24.18.0 / 11.7.0 |
+| DSH 运行时 | `npx --yes @deepseek-ai/dsh@latest` → **0.1.2-rc.1**（与功能包 devDependency 同版；全局 `~/.local/bin/dsh` 是陈旧的 0.1.1-rc.2，脚本不使用它） |
+| Playwright | `@playwright/test` 1.63.0，chromium-1243 |
+| GUI 通道 | `http://127.0.0.1:3080`，开窗前探测为未占用（`000`），安装窗口关闭状态：`profiles/web/cordis.patch.yml` 与 `<DSH_HOME>/settings.yaml` 中 `composer-quick-actions` 均 0 次出现 |
+| 并行会话 | 主检出里另一会话的 `pnpm watch:client` 持续运行；本票据的打包与构建全部发生在 worktree，互不触碰 |
+
+### 质量门（最终候选提交上新鲜执行，15:13–15:14）
+
+| 门 | 命令 | 结果 | 退出码 |
+|---|---|---|---|
+| 类型检查 | `pnpm typecheck` | 两遍均通过 | 0 |
+| lint | `pnpm lint` | 通过 | 0 |
+| 单元 / 契约测试 | `pnpm test` | **22 文件 / 496 通过**，23.54s | 0 |
+
+`pnpm test` 日志里两段 vite「Failed to load source map … dsh-client-ui-primitives/lib/index.js.map」是第三方包声明了 `sourceMappingURL` 却未随包发布 map，属上游打包瑕疵，不影响用例；「surface exploded」是错误边界用例的预期抛错。
+
+### 安装窗口的打开：`sh tests/gui/reinstall-round.sh`（15:15–15:19，退出码 0）
+
+按票据评论的要求复用票据 18 第四轮脚本化的窗口，而不是手工执行 README 步骤。本轮先给 `profiles/web/package.json` 与 `pnpm-workspace.yaml` 取 sha256 指纹（`.playwright/profile-fingerprint.txt`，关窗时校验），再走 README 离线流程：
+
+| 步骤 | 结果 |
+|---|---|
+| 打包（`prepack` 在 worktree 里从当前源码重建） | `dsh-composer-quick-actions-0.1.0.tgz` 167,139 B；`dsh-composer-quick-actions-bundle-0.1.0.tgz` 3,216 B |
+| profile `overrides` 指向功能包 tarball（绝对路径，yaml 文档 API 写入） | 写入成功，原 `pnpm-workspace.yaml` 备份在 `.playwright/` |
+| `dsh plugin --profile web add <bundle tarball>` | `Done in 2.4s`，`Packages: +2 -2`；pnpm 提示 peer 依赖问题为 profile 既有的第三方插件所致，与本插件无关 |
+| `--dump-config` | 出现 `id: composer-quick-actions` / `name: dsh-composer-quick-actions` row |
+| 用户命名空间 | 开窗前 **不存在**（harness 记为「absent」，收尾时按此还原） |
+
+重装恢复三段（`reinstall.spec.ts`，desktop，各一次 profile 启动）：
+
+| 阶段 | 结果 |
+|---|---|
+| `mark` | 通过（54.2s）：经 GUI 设布局 `launcher` 并新建自定义动作，命名空间落盘 |
+| `gone`（`plugin remove` 后重启） | 通过（52.2s）：进入有历史的会话后 layout / manage / `dsh-cqa-` 样式计数均为 0，命名空间原样保留 |
+| `back`（再次 `add` 后重启） | 通过（52.2s）：布局回到 `launcher`，标记动作标签与文本原样回来 |
+
+本轮结束时插件保持已安装、profile 处于停止态、用户命名空间已还原（删除，因原本不存在）。这一段等价于第 13.4 节步骤 7 的机械部分，但**步骤 7 本身仍须用户在人工会话里亲眼确认**。
+
+### 窗口内的 GUI 回归（最终候选提交上新鲜执行，全部不触发模型调用）
+
+票据 18 的四轮 GUI 证据取自票据 25 改动 Client 焦点行为**之前**的提交，第 13.1 节要求集成测试在最终候选提交上新鲜通过，因此本窗口把所有无模型调用的 round 重跑一遍，而不只补票据 25 留下的两条断言。每个 round 自带种子命名空间 → 启动 → 断言 → 还原 → 停机。
+
+| round | 时间 | 结果 | 退出码 |
+|---|---|---|---|
+| `sh tests/gui/verify-round.sh`（常规套件，desktop / tablet-768 / narrow-360） | 15:20–15:25 | **40 通过 / 83 跳过 / 0 失败**，4.8 分钟，无重试；与票据 18 第四轮数字一致 | 0 |
+| `sh tests/gui/restart-round.sh`（`store` → 重启 → `restore`） | 15:25–15:27 | 两半各 1 通过 | 0 |
+| `sh tests/gui/scale-round.sh`（0 / 1 / 6 / 25 / 50 / 53 被动超限，六次启动） | 15:28–15:35 | 六行各 3 通过，无重试 | 0 |
+| `sh tests/gui/presets-round.sh`（`stage` → `tombstone` → `restore` → `signature`，四次 `--patch` 启动） | 15:35–15:40 | 四段各 1 通过 | 0 |
+| `sh tests/gui/host-config-round.sh`（Host `Config.presets` overlay 到达 Client） | 15:40–15:41 | 2 通过 | 0 |
+| `sh tests/gui/screenshots-round.sh`（三布局 × 三视口，对比已提交基线） | 15:41–15:45 | 9 通过，3.0 分钟 | 0 |
+| `lifecycle.spec.ts` **仅 `down` 半程**（种入发送 fixture → 启动 → 页面加载后停掉 profile） | 15:45–15:46 | 1 通过（52.5s） | 0 |
+
+`lifecycle` 没有用 `tests/gui/lifecycle-round.sh` 驱动：该脚本的 `up` 半程最后一条断言会激活「验证发送」fixture 真实发送「回复 ok」（spec 内注明「the one real model turn this round spends」），票据 21 评论里「两者都不触发模型调用」对 `up` 半程不成立。本票据没有模型调用许可，故只以等价的 `down` 驱动（种子 → 启动 → `DSH_QA_LIFECYCLE=down` → 还原 → 停机）执行。
+
+**票据 25 的另一条断言在真实 GUI 首次成立**：断线后激活发送动作，DSH 自己的 toast（`body > [role="alert"]`）出现、草稿「回复 ok」由 DSH 放回、插件 `[data-quick-actions-feedback]` 计数为 0。toast 断言通过，意味着票据 25 预留的「rejection message 为空则为 DSH 侧缺口」分支**没有触发**，无需记录 DSH 侧缺口。
+
+小结：本窗口内 8 个 round、**13 次 profile 启动**，无一失败、无一重试；所有 round 退出时用户命名空间均按「原本不存在」还原。
+
+### 本票据未执行的自动化（需用户明确许可）
+
+| 项 | 原因 | 触发它会发生什么 |
+|---|---|---|
+| `sh tests/gui/send-round.sh`（6 条） | 每条真实提交到当前登录账号的模型 | 「回复 ok」最多发送 4 次、`/qa-probe-unknown-command` 交给 DSH 裁决 2 次；覆盖 13.4 步骤 4/5 的自动化侧 |
+| `lifecycle.spec.ts` `up` 半程 | 末尾一条真实发送「回复 ok」 | 重连后写入恢复、注册不重复、单飞窗口未被卡住 |
+
+这两项在票据 18 第三轮已在**当时的提交**上通过；对最终候选提交，相关逻辑（`session/`、`execution`）在票据 25 之后没有改动，票据 25 只改了 `manager/` 的焦点行为并新增单元用例。若用户在人工会话中亲自执行步骤 4/5（其本身就是真实发送），该缺口由人工验收覆盖。
+
+### 人工会话就位（15:46，等待用户）
+
+回归收尾后由 `tests/gui/boot.sh` 的 `boot` 再次启动 web profile 并**保持运行**，供用户执行第 13.4 节步骤 1–8：
+
+| 项 | 状态 |
+|---|---|
+| `http://127.0.0.1:3080` | 由本窗口启动的进程组提供（pid 记录在 worktree 的 `.playwright/dsh-web.pid`）；入口 URL 含 GUI token，只保存在 `.playwright/dsh-web.log`，不录入本文件 |
+| 插件 | 已安装：profile `package.json` 依赖 bundle tarball、`pnpm-workspace.yaml` override 指向功能包 tarball（两者都是 worktree 内 `.playwright/tarballs/` 的绝对路径），`cordis.patch.yml` 未改动（row 来自 bundle 层） |
+| 用户命名空间 | 各 round 退出时均按「原本不存在」还原；本次启动后 Host 首次规范化写入 `composer-quick-actions`（1 次出现），即**全新安装状态**——随包三条预置、默认 `ribbon`、无自定义动作 |
+| harness 备份 | `.playwright/` 下仅剩 `profile-fingerprint.txt`（供 `close-window.sh` 校验）与 `profile-pnpm-workspace-backup.yaml`（供卸载时还原 override）；命名空间备份已全部消费 |
+
+**关窗须在 worktree 根目录执行 `sh tests/gui/close-window.sh`**（它读取该目录下的 pid 与指纹），且在此之前不得删除 worktree——profile 的两处 `file:` 引用指向 worktree 内的 tarball。
+
+### 第 13.4 节第 9 步
+
+**尚未取得。** 步骤 1–8 待用户在上述会话中逐条执行并报告；步骤 6/7 里的「重启 DSH」「卸载并重启」「重新安装」由 Agent 按用户指示用 `boot.sh` / `install.sh` 驱动。没有用户本人的「生产验收通过」，本票据不得置为 `resolved`，地图目标不得宣告完成。
+
+**票据 25 的断言之一在真实 GUI 首次成立**：`validation.spec.ts` 的「applies trim() whitespace…」用例末尾——点「编辑」后标签框已聚焦 → 按 Escape → 编辑表单消失、管理面板仍可见、焦点回到该行的「编辑」按钮——通过（2.6s）。该 spec 三条桌面用例全部通过，在两个窄视口按设计跳过（表单不随宽度变化）。
