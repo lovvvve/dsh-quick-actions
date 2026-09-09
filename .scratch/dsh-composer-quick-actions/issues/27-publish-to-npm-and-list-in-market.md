@@ -39,7 +39,7 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 ### 待办
 
-1. **（HITL）** 用户本机 `npm login`，含 2FA。只有用户能做。
+1. **（HITL）** 发布本身要用户来跑。已实测：`npm login` 不够——该账号对 publish 开了 2FA，pnpm 在非交互终端下以 `ERR_PNPM_OTP_NON_INTERACTIVE` 拒绝，两个包均未发出、registry 无残留。Agent 无法代跑，也不应经对话传递一次性密码。用户在交互终端执行，或自行附 `--otp=<code>`。
 2. `pnpm --filter dsh-quick-actions publish --dry-run` 核对将要上传的内容，再正式发布。**功能包必须先发**——bundle 依赖它。
 3. 发布 bundle 包。
 4. **在全新 `DSH_HOME` 里实测陌生人的安装路径**：只用那条官方命令，不加 profile `overrides`、不指 tarball。本地流程当初需要 override 加两个 tarball（票据 17），从 registry 装能否收敛成一条命令**尚无人验证**，这是本票据唯一的实质未知。
