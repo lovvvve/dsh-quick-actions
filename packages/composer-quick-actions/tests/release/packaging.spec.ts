@@ -175,16 +175,28 @@ describe('packing isolation', () => {
 })
 
 describe('release identity', () => {
-  it('publishes the names, version and license ticket 20 settled on', () => {
+  it('publishes the names and license the release decisions settled on', () => {
+    // Names: ticket 20 chose the shape, ticket 27 shortened them before the first
+    // publish (spec 19). Both packages always move in lockstep — the bundle's
+    // dependency on the feature package is `workspace:*`, which resolves to the
+    // feature version at pack time, so a drift here would ship a bundle asking for
+    // a version that does not exist.
     expect(feature.name).toBe('dsh-quick-actions')
     expect(bundle.name).toBe('dsh-quick-actions-bundle')
-    expect(feature.version).toBe('0.1.0')
     expect(bundle.version).toBe(feature.version)
     expect(feature.license).toBe('MIT')
     expect(bundle.license).toBe('MIT')
   })
 
-  it('declares no publishConfig, because the decision was to hold the packages back', () => {
+  it('carries a version this release line can publish', () => {
+    // Ticket 20 fixed `0.1.0` as the initial version and ticket 27 publishes a
+    // `0.1.0-rc.N` ahead of it, to prove the one-command install from the registry
+    // before the number that README documents is spent — an npm version can never be
+    // republished with different content. Anything outside that line is a mistake.
+    expect(feature.version).toMatch(/^0\.1\.0(-rc\.\d+)?$/)
+  })
+
+  it('declares no publishConfig, because unscoped packages are public by default', () => {
     expect(feature.publishConfig).toBeUndefined()
     expect(bundle.publishConfig).toBeUndefined()
   })

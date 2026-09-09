@@ -63,20 +63,20 @@ The install bundle only **declares** a dependency on the feature package — it 
    pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   That gives you `dsh-quick-actions-0.1.0.tgz` and `dsh-quick-actions-bundle-0.1.0.tgz`.
+   That gives you `dsh-quick-actions-0.1.0-rc.1.tgz` and `dsh-quick-actions-bundle-0.1.0-rc.1.tgz`.
 
 2. Add one pnpm override to the profile, pointing the feature package at the **absolute path** of its tarball:
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0-rc.1.tgz
    ```
 
 3. Install the bundle tarball:
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0-rc.1.tgz
    ```
 
 4. Restart the web profile.

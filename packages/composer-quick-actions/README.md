@@ -63,20 +63,20 @@ dsh plugin --profile web add dsh-quick-actions-bundle
    pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   得到 `dsh-quick-actions-0.1.0.tgz` 与 `dsh-quick-actions-bundle-0.1.0.tgz`。
+   得到 `dsh-quick-actions-0.1.0-rc.1.tgz` 与 `dsh-quick-actions-bundle-0.1.0-rc.1.tgz`。
 
 2. 在 profile 的 pnpm 配置里为功能包加一条 override，指向功能包 tarball 的**绝对路径**：
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0-rc.1.tgz
    ```
 
 3. 安装 bundle tarball：
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0-rc.1.tgz
    ```
 
 4. 重启 web profile。

@@ -20,8 +20,8 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 因为本包只依赖、不内嵌功能包，离线安装必须让**两个 tarball 都能被解析**：
 
-- `dsh-quick-actions-0.1.0.tgz`（功能包，经 profile 的 pnpm `overrides` 解析）
-- `dsh-quick-actions-bundle-0.1.0.tgz`（本包，`dsh plugin add` 的参数）
+- `dsh-quick-actions-0.1.0-rc.1.tgz`（功能包，经 profile 的 pnpm `overrides` 解析）
+- `dsh-quick-actions-bundle-0.1.0-rc.1.tgz`（本包，`dsh plugin add` 的参数）
 
 只 `add` 本包的 tarball 会失败（pnpm 会去 registry 找未发布的功能包），把两个 tarball 一起 `add` 也一样失败。完整的、逐步可复现的流程见功能包 README 的[本地 / 离线安装](../composer-quick-actions/README.md#本地--离线安装)一节。
 

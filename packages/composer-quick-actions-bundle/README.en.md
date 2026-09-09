@@ -20,8 +20,8 @@ Then restart the web profile.
 
 Because this package depends on the feature package rather than embedding it, an offline install has to make **both tarballs resolvable**:
 
-- `dsh-quick-actions-0.1.0.tgz` — the feature package, resolved through a pnpm `overrides` entry in the profile.
-- `dsh-quick-actions-bundle-0.1.0.tgz` — this package, the argument to `dsh plugin add`.
+- `dsh-quick-actions-0.1.0-rc.1.tgz` — the feature package, resolved through a pnpm `overrides` entry in the profile.
+- `dsh-quick-actions-bundle-0.1.0-rc.1.tgz` — this package, the argument to `dsh plugin add`.
 
 Adding only this package's tarball fails (pnpm looks for the unpublished feature package in the registry), and adding both tarballs in one command fails the same way. The full, reproducible procedure is in the feature package's [Local / offline install](../composer-quick-actions/README.en.md#local--offline-install) section.
 
