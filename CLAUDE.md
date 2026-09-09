@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。自动化与发布验证已完成（票据 18：四轮真实 GUI，`tests/gui/` 下 13 个 spec + 7 个 round 驱动 + 脚本化的安装窗口，证据在 `verification/release-evidence.md`）。**剩下的是最终人工验收（票据 21，需用户本人回复「生产验收通过」），以及两处非阻塞的边缘状态 UX 缺口（票据 25）。**
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。自动化与发布验证已完成（票据 18：四轮真实 GUI，`tests/gui/` 下 13 个 spec + 7 个 round 驱动 + 脚本化的安装窗口，证据在 `verification/release-evidence.md`）。票据 18 发现的两处边缘状态 UX 缺口已由票据 25 定案：管理表单现在接管开场焦点并归还焦点（Escape 两级退出）；断线发送经源码取证确认由 DSH 自己恢复草稿并给出提示，插件按 spec 9.5 不加第二条说明。**剩下的是最终人工验收（票据 21，需用户本人回复「生产验收通过」）。**
 
 真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者已由票据 18 在用户自己的实时 DSH 上实测**（四轮临时安装窗口，每轮收尾卸载并把 profile 与 Settings 逐字还原）：Client 读取目录 `base`、常驻判定、等宽（误差 0.0 px）、端到端发送与确认、重装恢复、预置往返、revision 冲突分支均已确证，取证见 `.scratch/dsh-composer-quick-actions/verification/release-evidence.md`。
 
@@ -86,7 +86,7 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [21 最终人工验收](.scratch/dsh-composer-quick-actions/issues/21-run-final-human-acceptance.md)（21、25 未认领；16、17、18、20、22、23 与 24 已 resolved）。票据 18 已 resolved 并解除票据 21 的阻塞；票据 25（两处边缘状态的用户可见反馈缺口）由票据 18 的 GUI 验证发现，不阻塞 21。**票据 21 是 HITL：第 9 步要求用户本人说出「生产验收通过」，Agent 不得代为判定。**
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [21 最终人工验收](.scratch/dsh-composer-quick-actions/issues/21-run-final-human-acceptance.md)（21 未认领；16、17、18、20、22、23、24 与 25 已 resolved）。票据 18 已 resolved 并解除票据 21 的阻塞；票据 25（两处边缘状态的用户可见反馈缺口）已 resolved，它新增的两条 GUI 断言（`lifecycle.spec.ts`、`validation.spec.ts`）尚未在真实 GUI 执行，随票据 21 的安装窗口跑。**票据 21 是 HITL：第 9 步要求用户本人说出「生产验收通过」，Agent 不得代为判定。**
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -106,6 +106,7 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 - **首版按作者格式接受 CSS Modules 偏离**（spec 第 18 节）。插件样式是带 `dsh-cqa-` 前缀的样式字符串，但**投递机制与第一方插件逐字相同**（运行时注入 `<style data-plugin-css>` + 内联字符串 + 幂等判断）；差距只有作者格式与类名生成方式，用户不可见。控件本身已由票据 23 改用官方 primitives，配色只用 `--dsw-alias-*` token。**不要**在其他票据里顺手改造成 CSS Modules——要做须先核实 `@tsdown/css` 能把 CSS 内联进单文件 `client.js`（ModuleLoader 只加载 `lib/client.js`），通过后另开票据。
 - **`pnpm test` 不再触碰工作树的 `lib/`**（[票据 24](.scratch/dsh-composer-quick-actions/issues/24-isolate-pack-from-the-working-tree.md)）：打包契约把 workspace 复制到 `tmpdir()` 下的副本再 `pnpm pack`，`prepack` 的 `rmSync('lib')` 与构建都发生在副本里；副本不复制 `node_modules`/`lib`，依赖用 symlink 指回已安装位置，因此**不需要 install**。`pnpm watch:client` 与 `pnpm test` 现在可以同时跑，失败的测试也不会让线上 bundle 消失。改 `tests/release/support.ts` 的 `stageWorkspace()` 时**不要**把 `lib/` 复制进副本——那会让打包契约测到陈旧产物；`packing isolation` 三条断言（工作树 lib 内容与 mtime 不变、副本在仓库外、packed 产物由副本本次构建）就是为此设的。
 - **首版不新增任何 DSH 核心接口**。`insertText` 和 submit 凭据都不做。单飞窗口只能用公开 Input snapshot（`draft/imageIds/draftRev/phase/claim?/occurrences/queue`）判定，硬标准是不产生重复发送——注意官方 sink 乐观清空，`submit()` 后草稿一帧内就空了，"草稿已占用"不是互斥锁。
+- **断线发送不加插件侧反馈，也不加连接态门禁**（[票据 25](.scratch/dsh-composer-quick-actions/issues/25-close-two-edge-state-ux-gaps.md)）。官方 `submit()` 没有连接态检查：普通文本一律同步 `default-sink` + `commit-draft`，草稿在 sink 失败之前就被乐观清空；引擎读到空草稿即按 spec 9.5 关闭单飞，文本随后由 DSH 自己的 `restoreFailedDrafts` 放回并伴随 DSH 的 error toast。给引擎加超时判定「没落地」既不可达也违反 9.5（不得显示重复错误）；按 `ctx.connection` 状态拒绝激活违反 spec 10「断线期间允许执行」，且比原生发送按钮（其 `disabled` 不含连接态）更严。`surfaces.spec.tsx` 的「断线时动作仍可执行」与 `execution.spec.ts` 的 `a send the connection cannot carry` 固定了这两点。
 
 ## 环境与陷阱
 

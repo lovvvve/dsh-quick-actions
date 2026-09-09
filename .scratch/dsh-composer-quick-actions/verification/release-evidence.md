@@ -582,3 +582,47 @@ Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非�
 #### 第 13.2 节的剩余缺口
 
 **没有需要真实 GUI 或模型调用的剩余项。** 唯一未逐字执行的是 README 升级/降级步骤里的「override 与 `add` 指向**另一个版本**的两个 tarball」——它需要第二个版本，而两个包按票据 20 的决定**暂不发布**，本地也只有 `0.1.0`。该步骤的机械部分（override 改指向 + 重复 `add` 幂等 + 重启）本轮已执行，其**数据侧后果**（目录增删、墓碑、往返无损）正是上面第 2 项四段覆盖的内容。
+
+---
+
+## 票据 25 — 两处边缘状态的用户可见反馈（2026-09-09）
+
+本节没有开安装窗口：缺口 2 是纯 Client 侧焦点行为，在 jsdom 里可完整固定；缺口 1 的定案依据是对已安装 DSH 源码的取证，而不是新的 GUI 观察。两条为真实 GUI 新增的断言**尚未执行**，见文末。
+
+### 环境
+
+| 项 | 值 |
+|---|---|
+| 工作方式 | `git worktree`（分支 `ticket-25-edge-state-ux`，自 `fab3b29`），`pnpm install --offline` |
+| 取证对象 | `node_modules/.pnpm/@deepseek-ai+dsh-client-ui-conversation@0.1.2-rc.1_*/…/lib/client.js`（与功能包 devDependency 同版本） |
+
+### 缺口 1 的源码取证（第三轮「行为发现」第 1 条的成因更正）
+
+| 环节 | 源码位置（`lib/client.js`） | 事实 |
+|---|---|---|
+| 提交入口 | `SessionInputShell.submit()` | 直接 `dispatchRun({ type: 'enter', … })`，前后**没有任何连接态判断** |
+| 状态机 | `SubmitMachine.onEnter()` | 非空白普通文本 → `beginDetached()` → 返回 `[default-sink, commit-draft]`；命令文本 → `adjudicating` |
+| 执行 | `run(effects)` → `execute()` | 先 `sinkSerialized()`（调用 `defaultSink`，返回 Promise），**再同步 `commitDraft()` 清空编辑器**，最后 `publish()` |
+| sink | `sink()` → `conversation.sendSession()` → `session.prompt()` | `async`，底层是 `createWebConnectionRpc` 的 fetch；断线时以 rejection 结束 |
+| 失败恢复 | `settleSink()` → `settleDetachedFailure()` → `restoreFailedDrafts()` | 把失败文本按提交顺序放回草稿（空一行分隔），并 `dispatchRun({ type: 'sink-settled', ok: false, message })` → `notice(error)` → InputBar 的 `showToast` |
+| 原生按钮门禁 | InputBar：`disabled = removed \|\| inert \|\| !live \|\| blocked \|\| parentOffline`，`live = input && keyboard && inputActions` | **不含连接态**；原生发送按钮断线时同样可按 |
+
+推论：插件引擎在紧随激活的那次提交里读到 `draft === ''`、`phase === 'plain'`，按 spec 9.5 判定官方状态机已接收并关闭单飞——它没有「停在 `submitted` 观察阶段」；文本回到草稿与错误提示都来自 DSH。第三轮 harness 只断言了草稿文本，未检查 DSH 的 toast，因此「用户得不到解释」对 DSH 侧并未取证。**插件行为符合 spec 9.5，不加任何补充反馈**；两个候选修复（超时判定、连接态门禁）分别被 spec 9.5 与 spec 10 / 9.2 排除，详见票据 25 的 `## Answer`。
+
+### 缺口 2 的修复与固定
+
+`ActionForm` 接管开场焦点（标签输入框）并在关闭时归还焦点；`useFocusReturn` 为嵌套面板加「焦点已离开本面板则不抢回」规则；`ManagerPanel` 按目标 `key` 重挂载表单。`manager.spec.tsx` 新增 7 条用例，覆盖新建 / 编辑的开场焦点、表单刚打开时 Escape 只退出表单且第二下关面板、取消与保存后焦点回到打开控件、切换编辑目标重新聚焦、面板在表单打开时关闭仍把焦点还给管理入口。修复过程中的一次红灯有取证价值：最后一条用例在只加 `useFocusReturn()` 时失败——React 卸载顺序为外层清理 → 内层清理 → 摘 DOM，表单的归还把焦点拉回即将被移除的按钮，最终落到 body；`panel` 参数正是为此加的。
+
+### 质量门
+
+| 门 | 结果 |
+|---|---|
+| `pnpm test` | 22 文件 / **496 通过**（票据 18 收口时 485；新增 manager 7 + execution 3 + surfaces 1） |
+| `pnpm typecheck` | 两遍均通过（第二遍含 `tests/gui/`） |
+| `pnpm lint` | 通过 |
+
+### 本节未覆盖（留给票据 21 的安装窗口）
+
+- `tests/gui/lifecycle.spec.ts`（`down` 半程）新增：断线激活后 `[data-quick-actions-feedback]` 计数为 0。
+- `tests/gui/validation.spec.ts` 编辑段改为：标签框已聚焦 → Escape → 表单消失、面板仍在、焦点回到「编辑」。
+- 两者均不触发模型调用；`lifecycle-round.sh` 会停掉 profile，需在窗口内按其驱动执行。

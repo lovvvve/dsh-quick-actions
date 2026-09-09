@@ -80,6 +80,10 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 
 第三轮列出的四项全部完成，均未触发模型调用，共开一次安装窗口：**重装恢复**（三段各一次启动）、**预置升级/降级的完整往返**（四段各一次启动）、**结构化 mutation outcome 的 conflict 分支**、**占位符拒绝与 Unicode code point / `trim()` 口径**。安装窗口本身已脚本化。详见 `verification/release-evidence.md` 的第四轮一节；结论见下面的 `## Answer`。
 
+### 2026-09-09 — 票据 25 更正缺口 1 的成因
+
+下面 `## Answer` 第 1 项行为发现（「执行机停在观察阶段，两个 `retained` 发布点都不触发」）经[票据 25](./25-close-two-edge-state-ux-gaps.md)对 `dsh-client-ui-conversation@0.1.2-rc.1` 的源码取证**不成立**：`submit()` 没有连接态检查，对普通文本一律同步执行 `default-sink` + `commit-draft`，草稿在 sink 失败之前就被乐观清空；引擎读到空草稿后按 spec 9.5 正常关闭单飞，文本随后由 DSH 自己的 `restoreFailedDrafts` 放回并伴随 DSH 的 error notice。结论也随之改变：插件行为正确，不加任何补充反馈。正文保留原记录不改，以票据 25 的 `## Answer` 为准。
+
 ## Answer（答案）
 
 **自动化证据完整，本票据到此为止。** 第 13.2 节的行为矩阵已在模型 / Host / Client 三层加真实 GUI 四层全部有归属，没有需要真实 GUI 或模型调用的剩余项。最终人工验收仍归[票据 21](./21-run-final-human-acceptance.md)，它需要用户在一次性会话里亲自确认。

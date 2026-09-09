@@ -37,3 +37,9 @@ Agent 在本票据中的职责限于：准备一次性 profile 与最终 tarball
 3. **`tests/gui/` 的驱动**：一次性 profile 的安装与卸载已脚本化（`install.sh`、`reinstall-round.sh`、`close-window.sh`），profile 的两份文件在开窗前取 sha256、关窗后校验。本票据准备环境时应复用它们，而不是手工执行 README 步骤——手工路径已在票据 18 第一至三轮执行过，脚本路径在第四轮执行过，两者都有证据。
 
 spec 第 13.4 节要求「除非用户另行明确同意，不得在该流程中触发真实模型调用」。票据 18 第三轮已获得用户对真实模型调用的明确许可，但**那次许可属于票据 18**，不自动延续到本票据。
+
+### 2026-09-09 — 票据 25 已 resolved，两条 GUI 断言待本票据的窗口执行
+
+上一条评论第 2 点里「用户在步骤 2/8 可能撞上表单 Escape 关掉整个管理面板」的预告**已失效**：[票据 25](./25-close-two-edge-state-ux-gaps.md) 让表单接管开场焦点并归还焦点，第一下 Escape 只退出表单、第二下才关面板。断线发送那一处经源码取证确认是 DSH 自己恢复草稿并给出 DSH 的错误提示，插件按 spec 9.5 不加第二条说明；步骤 8 检查错误信息时若看到的是 DSH 的 toast 而非插件的 note，这是预期。
+
+本票据开安装窗口时顺带执行票据 25 新增却尚未在真实 GUI 跑过的两条断言：`sh tests/gui/verify-round.sh validation.spec.ts`（编辑表单聚焦 → Escape → 面板仍在）与 `sh tests/gui/lifecycle-round.sh`（断线时插件无 feedback note，`down` 半程会停掉 profile）。两者都不触发模型调用。
