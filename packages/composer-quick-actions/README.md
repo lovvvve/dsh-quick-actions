@@ -24,7 +24,7 @@
 | DSH peer 下界 | `>=0.1.2-rc.1`，不设上界 |
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
-| React（浏览器侧） | `^18.3.1`，由 web shell 的模块表提供，不从 profile 安装 |
+| React 与 React DOM（浏览器侧） | `^18.3.1`，由 web shell 的模块表提供，不从 profile 安装。`react-dom` 承载管理面板的 portal，用的是 shell 自己那份渲染器实例 |
 | DSH UI primitives（浏览器侧） | peer `>=0.1.2-rc.1`，同样由模块表提供；devDependency 精确锁 `0.1.2-rc.1` 仅供类型检查 |
 | 平台 | 只支持 `web` profile（`dsh.client.platform: web`） |
 | 消费的公共契约 | Host 注入 `settings`；Client 注入 `slots`、`settingsScope`、`connection`、`locale`，并经 `ctx.get` 读 `conversation` |
@@ -175,7 +175,7 @@ pnpm lint
 产物：
 
 - Host：`lib/index.js`、`lib/types.js`（标准 Node ESM）。
-- Client：`lib/client.js` + `lib/client.js.map`，browser-only 单文件 lazy-CJS，包成 `window.__ModuleLoader__.load({ id, factory })`。只有 `dsh.client.external` 列出的 specifier（`react`、`react/jsx-runtime`，两者都是浏览器模块表的平台种子）可以 `require`；其余一律内联，间接 / 计算型 `require`、动态 `import` 与未声明的 external 会在构建期失败。
+- Client：`lib/client.js` + `lib/client.js.map`，browser-only 单文件 lazy-CJS，包成 `window.__ModuleLoader__.load({ id, factory })`。只有 `dsh.client.external` 列出的 specifier（`react`、`react/jsx-runtime`、`react-dom`、`@deepseek-ai/dsh-client-ui-primitives`，全部是浏览器模块表的平台种子）可以 `require`；其余一律内联，间接 / 计算型 `require`、动态 `import` 与未声明的 external 会在构建期失败。
 - 类型：`lib/types/**/*.d.ts`，只有声明，不含 JavaScript。
 
 ### 验证开发期 HMR 的前置条件

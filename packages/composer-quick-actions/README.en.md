@@ -24,7 +24,7 @@ This is a **dual-face feature package**: the Host half owns configuration valida
 | DSH peer floor | `>=0.1.2-rc.1`, with no upper bound |
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
-| React (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile |
+| React and React DOM (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile. `react-dom` carries the management overlay's portal, on the shell's own renderer instance |
 | DSH UI primitives (browser side) | peer `>=0.1.2-rc.1`, also supplied by the module table; the devDependency pins `0.1.2-rc.1` exactly, for typechecking only |
 | Platform | `web` profile only (`dsh.client.platform: web`) |
 | Public contracts consumed | Host injects `settings`; the Client injects `slots`, `settingsScope`, `connection`, `locale` and reads `conversation` through `ctx.get` |
@@ -175,7 +175,7 @@ pnpm lint
 Output:
 
 - Host: `lib/index.js`, `lib/types.js` — plain Node ESM.
-- Client: `lib/client.js` plus `lib/client.js.map` — a browser-only, single-file lazy-CJS bundle wrapped as `window.__ModuleLoader__.load({ id, factory })`. Only the specifiers listed in `dsh.client.external` (`react` and `react/jsx-runtime`, both platform seeds of the browser module table) may be `require`d; everything else is inlined, and indirect or computed `require`, dynamic `import` and undeclared externals fail the build.
+- Client: `lib/client.js` plus `lib/client.js.map` — a browser-only, single-file lazy-CJS bundle wrapped as `window.__ModuleLoader__.load({ id, factory })`. Only the specifiers listed in `dsh.client.external` (`react`, `react/jsx-runtime`, `react-dom` and `@deepseek-ai/dsh-client-ui-primitives`, all of them platform seeds of the browser module table) may be `require`d; everything else is inlined, and indirect or computed `require`, dynamic `import` and undeclared externals fail the build.
 - Types: `lib/types/**/*.d.ts` — declarations only, no JavaScript.
 
 ### Prerequisites for verifying dev HMR

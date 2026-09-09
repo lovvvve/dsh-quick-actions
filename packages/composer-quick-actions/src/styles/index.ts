@@ -330,9 +330,16 @@ export const QUICK_ACTIONS_CSS = `
 /* ------------------------------------------------------------------------- */
 
 /*
- * The overlay sits above the anchored popovers, and its click-catching backdrop
- * with it. Neither paints: only DSH alias theme tokens may be used here, and
- * this release has no token to spend on a modal scrim (spec 8.4).
+ * The overlay and its click-catching backdrop. Neither paints: only DSH alias
+ * theme tokens may be used here, and this release has no token to spend on a
+ * modal scrim (spec 8.4).
+ *
+ * These two numbers rank the overlay against its own backdrop, and nothing
+ * else. Since ticket 26 the overlay is portaled to the document body, so it and
+ * the anchored popovers (19 and 20, still rendered in the input dock) sit in
+ * different stacking contexts: which of them paints on top follows from where
+ * the dock's own ancestors land in the root context, not from comparing 31
+ * against 20. Raising these would not change that.
  */
 .dsh-cqa-manager-backdrop {
   z-index: 30;
