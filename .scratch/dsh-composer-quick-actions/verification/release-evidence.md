@@ -948,3 +948,38 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 **已写入四份 README**：功能包中英文各加一节「安装报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`」，给出判断方法（单跑 `pnpm install` 复现即与本插件无关）与三种处理方式（单次标志 / 等窗口过期 / 补精确版本豁免），bundle 中英文各加一段摘要并链回。
 
 这也修正了本文件上一节「第 4 步通过」的适用范围：那次验证跑在**空 profile** 上，因此没有其它插件的 lockfile 条目可供校验。单命令安装的结论不变，但「装了近期更新过插件的既有 profile」是它没有覆盖到的情形。
+
+---
+
+## 票据 28 — 合并为单包（2026-09-10）
+
+### 触发与取证
+
+用户问「为什么我们有两个包，别的插件只装一个」。调查本机 web profile 里全部七个第三方插件，**无一例外都是单包**：`dshmarket`、`dsh-context`、`dsh-better-sidebar`、`dsh-codex-connect`、`@linxin666/dsh-remote-web-ui`、`@linxin666/dsh-client-ui-skill-explorer`、`@xmanrui/dsh-im`，每个都在同一个包里同时声明 `dsh.bundle.patch` 与 `dsh.client`，且都含 patch 文件与实现产物。
+
+```yaml
+# dshmarket 的 cordis.patch.yml —— 插入行的 name 就是这个包自己
+- insert:
+    - id: dsh-market
+      name: 'dshmarket'
+```
+
+[票据 07](../issues/07-select-plugin-architecture-and-package-contract.md)的 `## Answer` 把双包架构直接写成结论，**通篇未给出必须拆开的理由**，也未记录考察过单包方案。
+
+### 改动与验证
+
+`cordis.patch.yml` 迁进功能包并改指自己，`dsh.bundle.patch` 与 `files` 同步；`packages/composer-quick-actions-bundle` 整个删除；打包契约、docs 契约、`tests/gui/install.sh` 收为单包，`profile-override.mjs` 删除；四份 README 收为两份。
+
+| 门 | 结果 |
+|---|---|
+| `pnpm test` | 22 文件 / **485 通过**（合并前 499，少掉的 14 条全是第二个包专属断言） |
+| `pnpm typecheck` / `pnpm lint` | 均通过 |
+| `publish --dry-run` | 单个 `dsh-quick-actions@0.1.0` |
+| `pnpm pack` 后核对 | tarball 自带 `cordis.patch.yml`（行 `name` 为 `dsh-quick-actions`）、`dsh.bundle.patch` 声明就位、`dependencies` 为空 |
+
+安装流程的实际收敛：离线安装从「打两个包 → 在 profile 写 `overrides` → `add` bundle tarball → 重启」四步，缩为「打一个包 → `add` 那个 tarball → 重启」。
+
+### 本节未覆盖
+
+- 新形态下的陌生人安装路径**未实测**。票据 27 第 4 步验的是双包 rc，结论在单包下只会更强（少了一层传递依赖），但仍应在发 `0.1.0` 之后复验。
+- 已发布的 `dsh-quick-actions-bundle@0.1.0-rc.1` 尚未弃养或撤回，须用户执行。
