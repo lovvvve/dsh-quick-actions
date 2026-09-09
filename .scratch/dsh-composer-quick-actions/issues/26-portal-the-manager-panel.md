@@ -36,6 +36,25 @@ Blocked by: none
 
 本票据在地图目标达成之后创建，属发布后的界面打磨，不回溯阻塞任何已关闭票据。注意验收当时的覆盖物来自用户 profile 里的第三方侧栏插件，**不要**把修复写成针对某个具体类名的规避；要修的是本插件面板的层叠归属。
 
+### 2026-09-09 — code review 结果与修复
+
+票据关闭后补跑了双轴 code review（固定点 `922686f`，Standards 与 Spec 两个子代理并行）。两轴独立指到同一处最重的问题，说明它不是风格分歧。
+
+**已修（按严重度）**
+
+1. **GUI 断言会静默跳过它的核心场景**（两轴共同的最重项）。`stacking.spec.ts` 原本靠 `if (await editable.count() > 0)` 探测既有自定义动作来决定要不要打开编辑表单；而文档化入口 `verify-round.sh` 的种子是三条预置、零自定义，于是那个 13px 确认复选框——票据 21 真正失手的目标、也是本 spec 存在的理由——根本不被测，而且**绿灯**。改为 spec 自己经管理面板新建一条 `层叠验证动作`，硬断言该行与复选框都存在，`afterEach` 再删掉。**已在默认种子下开窗复验：三视口全过**，即修复前会空过的那个配置。
+2. **样式注释失效**。`styles/index.ts` 里「The overlay sits above the anchored popovers」在 portal 之后不再成立：管理面板在根层叠上下文排序，两个 popover 仍在 dock 的上下文里，先后不由 31 与 20 这两个数字决定。改写为说明这两个数字只排管理面板与它自己的 backdrop。（`modal.ts` 的同类过时注释在票据 26 中已改，这条当时漏了。）
+3. **两份 README 未随 external 同步**。加上 `react-dom` 与早已漏写的 `@deepseek-ai/dsh-client-ui-primitives`，兼容性表的 React 行也改为涵盖 React DOM 并说明它承载 portal。
+4. **判断项三条**：`mount()` 改为返回渲染结果，新用例不再绕开它直接 `render`；不泄漏断言由全局 `[data-quick-actions-backdrop]` 改为限定 `.dsh-cqa-manager-backdrop`（前者三个面板共用，断言对象不唯一）；层叠成因的论证原本在源码与两个测试里近逐字重复三遍，现收敛为源码留全文、测试引位置。
+5. CLAUDE.md 里过期的「`tests/gui/` 下 13 个 spec」改为不写死数量并注明现为 15 个。
+
+**未采纳，附理由**
+
+- **错误边界路径不加断言**（Spec 轴 (a)3）。要求 4 点名「每 Slot 错误边界与 fiber dispose」两条，dispose 已有真实组件的回归。边界 fallback 走的是同一条路径：`SurfaceErrorBoundary` 用 fallback 替换 children → `ManagerPanel` 卸载 → React 撤下 portal 子节点。要为它单独写用例，只能让边界包住一个会抛的桩件，那测的是 React 的 portal 语义或我自己写的桩，不是本组件的行为。以「不拥有容器」的构造性论证加 dispose 回归为准，此处如实记下而非补一条同义反复的测试。
+- **`.gitignore` 的 `**/dist/`**（Standards 轴 C）。评审指出票据 22 对杂散产物的家法是无条件删除而非忽略。该条目是用户明确要求添加的，保留；`dist/` 目录本身也已删除，两者并存。
+
+**过程记录**：修复过程中我一度把反引号写进 `styles/index.ts` 的 CSS 注释，终止了整份模板字符串，`tsc` 报 3 个错。当时我用 `命令 | tail; echo $?` 读退出码，读到的是 `tail` 的状态而非命令的，差点误判为通过——是输出里的「Found 3 errors」暴露的。后续质量门改为显式捕获退出码。
+
 ## Answer（答案）
 
 `ManagerPanel` 与它的 backdrop 现在经 `createPortal` 渲染在 `document.body` 上，脱离输入坞的祖先层叠上下文；`z-index: 31` 从此按页面自身的层叠上下文排序。取证见 `verification/release-evidence.md` 的票据 26 一节。

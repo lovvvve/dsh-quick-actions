@@ -859,3 +859,18 @@ Agent 报告步骤 1–8 全部通过后，**用户本人回复「生产验收�
 
 - **`ActionPanel` 与 `ConfirmPanel` 仍在 dock 子树内**，带着同一个根因，只是票据 21 与本轮都未观察到用户可见症状。它们的锚定定位依赖 `.dsh-cqa-anchor` 的相对定位，portal 需要改用视口坐标重算，属另一次改动。
 - 视觉基线未重拍：`screenshots.spec.ts` 只拍布局 cell，不含管理面板，portal 不影响它；面板样式全是扁平选择器，没有根植于 dock 的后代规则。
+
+### code review 后的修复（2026-09-09）
+
+票据关闭后补跑双轴 code review（固定点 `922686f`）。两轴各自独立指出同一处最重的问题：`tests/gui/stacking.spec.ts` 在文档化入口的种子（三条预置、零自定义动作）下会跳过编辑表单，于是那个 13px 确认复选框不被测却**绿灯**。已改为 spec 自建一条自定义动作并硬断言该行与复选框存在，`afterEach` 删除。
+
+| 项 | 结果 |
+|---|---|
+| `stacking.spec.ts`，**默认种子** `seed-scale.mjs 3`，三视口 | **3 通过**，2.8 分钟（修复前该配置会空过） |
+| `pnpm test` | 22 文件 / 498 通过 |
+| `pnpm typecheck` / `pnpm lint` | 均通过（显式捕获退出码） |
+| 关窗 | `package.json` / `pnpm-workspace.yaml` sha256 逐条 OK，profile 与开窗前字节一致 |
+
+同轮另修：`styles/index.ts` 中 portal 后失效的层叠注释、两份 README 的 external 清单与依赖表（补 `react-dom` 与早已漏写的 primitives）、`mount()` 返回渲染结果、不泄漏断言限定到 `.dsh-cqa-manager-backdrop`、重复论证收敛、CLAUDE.md 的 spec 计数。错误边界路径经论证不补同义反复的测试，理由记在票据 26 的评审评论里。
+
+一处过程教训：`命令 | tail; echo $?` 读到的是 `tail` 的退出码而非命令的。本轮曾据此差点把 `tsc` 的 3 个错误误判为通过（实际由输出文字发现）。质量门此后一律显式捕获退出码。
