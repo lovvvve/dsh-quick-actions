@@ -16,6 +16,8 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 > 这一条就够了：功能包作为本包的依赖由 registry 一并装下，profile 无需 `overrides`。已在全新 `DSH_HOME` 上实测。
 
+如果安装以 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` 结束，而被点名的包**不是**本插件，那是 pnpm 在校验整个 profile 的 lockfile：profile 里某个已装插件在最近 24 小时内发过新版。给这一次命令加 `--config.minimumReleaseAge=0` 即可，成因与另外两种处理方式见功能包 README 的[安装排障](../composer-quick-actions/README.md#安装报-err_pnpm_minimum_release_age_violation)。
+
 ## 本地 / 离线安装
 
 因为本包只依赖、不内嵌功能包，离线安装必须让**两个 tarball 都能被解析**：

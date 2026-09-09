@@ -103,6 +103,30 @@ If you only want the published version, skip this section entirely and use the r
 
 - pnpm prints `Issues with peer dependencies found`, and `pnpm peers check` lists every DSH peer this package declares as missing. **That is expected**: DSH's own packages live in DSH's install anchor rather than in the profile's `node_modules`, where the profile's pnpm cannot see them (`autoInstallPeers: false`). Every other third-party DSH plugin in the same profile behaves the same way. The peer declarations document which DSH contracts this package consumes; they take no part in resolution.
 
+### The install fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`
+
+The install may end like this, with **not one of the named packages being this plugin**:
+
+```text
+ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION  4 lockfile entries failed verification:
+  some-other-plugin@1.2.3 was published at ..., within the minimumReleaseAge cutoff (...)
+```
+
+Nothing is wrong with this plugin, and you did not install it wrongly. pnpm enforces a supply-chain policy that rejects dependencies **published inside a cooling-off window** (24 hours by default), and it checks the **whole profile lockfile** rather than only the package you are adding. So if any plugin already in the profile shipped a release in the last day without an exemption, adding anything at all is refused.
+
+To confirm: run a bare `pnpm install` in the profile directory, adding nothing. The same error means it has nothing to do with this plugin.
+
+Three ways out:
+
+1. **Pass a flag for this one command** (recommended — it affects this invocation only and leaves your policy alone):
+
+   ```sh
+   dsh plugin --profile web add dsh-quick-actions-bundle --config.minimumReleaseAge=0
+   ```
+
+2. **Wait the window out.** Each line of the error gives a publish time and the cutoff; once the newest of them is 24 hours old the install works with no changes.
+3. **Add each named `name@version` to `minimumReleaseAgeExclude`** in the profile's `pnpm-workspace.yaml`. Permanent, but it gives up that protection for those packages.
+
 ## Configuring Preset Quick Actions
 
 The Preset Catalog is assembled in a fixed order: the package's own built-in manifest first, then whatever the Host composition appends through `Config.presets`. `Config.presets` **is** the authorization channel for presets — there is no third-party runtime registration API.

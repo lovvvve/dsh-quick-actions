@@ -16,6 +16,8 @@ Then restart the web profile.
 
 > That one command is the whole install: the registry brings the feature package down as this package's dependency, so the profile needs no `overrides`. Verified on a fresh `DSH_HOME`.
 
+If the install ends in `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` naming packages that are **not** this plugin, pnpm is checking the whole profile lockfile and some plugin already installed there shipped a release in the last 24 hours. Pass `--config.minimumReleaseAge=0` for that one command; the cause and two other remedies are in the feature package's [install troubleshooting](../composer-quick-actions/README.en.md#the-install-fails-with-err_pnpm_minimum_release_age_violation).
+
 ## Local / offline install
 
 Because this package depends on the feature package rather than embedding it, an offline install has to make **both tarballs resolvable**:

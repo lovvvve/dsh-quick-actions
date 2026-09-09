@@ -932,3 +932,19 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 | `pnpm test` | 22 文件 / **499 通过**（打包契约新增「两个包版本必须同步」一条） |
 | `pnpm typecheck` / `pnpm lint` | 均通过（显式捕获退出码） |
 | 两个包 `publish --dry-run` | 均为 `0.1.0`，bundle 依赖解析为 `dsh-quick-actions@0.1.0` |
+
+### 用户侧安装报错：`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`（2026-09-10）
+
+用户在**自己的 profile**上执行 README 的正式安装命令失败。在其 profile 的**副本**上完整复现，原 profile 全程未被写入。
+
+**根因不在本插件。** 被拦下的四个 lockfile 条目全是用户自己装的其它插件——`@linxin666/dsh-client-ui-skill-explorer@0.3.19`、`@linxin666/dsh-remote-web-ui@0.3.19`、`@xmanrui/dsh-im@4.18.0`、`dsh-context@0.47.0`——它们的发布时间都落在 pnpm 24 小时冷却窗口内。同一次运行里本插件其实解析成功（日志有 `+ dsh-quick-actions-bundle 0.1.0-rc.1`），是随后的整表校验把安装拒了。
+
+**对照实验坐实了这一点**：在同一副本里**什么都不装**、只跑一次 `pnpm install`，报同样的四条错，且日志写明 `Lockfile is up to date, resolution step is skipped`——连重新解析都没发生。该 profile 当前对任何 pnpm 操作都是这个状态。
+
+为什么以前装别的插件不出现：`minimumReleaseAgeExclude` 按**精确版本**记豁免，用户主动装某个包时 pnpm 在非严格模式下会为那个确切版本自动补一条（清单里 remote-web-ui 同时有 0.3.17 与 0.3.18，即两次升级的痕迹）。但这四个包后来被更新到 0.3.19 / 4.18.0 / 0.47.0 时没有留下对应豁免，于是 lockfile 里躺着四个无豁免且在窗口内的版本。是时间点问题，与装什么无关。
+
+加 `--config.minimumReleaseAge=0` 后在副本上安装成功，两个包均落地。该标志正是 `tests/gui/install.sh` 从票据 17 起一直携带的那个，其注释记的就是同一现象。
+
+**已写入四份 README**：功能包中英文各加一节「安装报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`」，给出判断方法（单跑 `pnpm install` 复现即与本插件无关）与三种处理方式（单次标志 / 等窗口过期 / 补精确版本豁免），bundle 中英文各加一段摘要并链回。
+
+这也修正了本文件上一节「第 4 步通过」的适用范围：那次验证跑在**空 profile** 上，因此没有其它插件的 lockfile 条目可供校验。单命令安装的结论不变，但「装了近期更新过插件的既有 profile」是它没有覆盖到的情形。

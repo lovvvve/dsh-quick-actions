@@ -103,6 +103,30 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 - pnpm 会打印 `Issues with peer dependencies found`，`pnpm peers check` 会把本包声明的 DSH peer 全部列为 missing。**这是正常的**：DSH 核心包装在 DSH 自己的安装锚点里，而不是 profile 的 `node_modules` 里，profile 的 pnpm 看不到它们（`autoInstallPeers: false`）。同一个 profile 里已装的其它第三方 DSH 插件也是同样表现。peer 声明在这里的作用是记录本包消费的 DSH 契约面，不参与解析。
 
+### 安装报 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`
+
+安装可能以这样的错误结束，而**被点名的包一个都不是本插件**：
+
+```text
+ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION  4 lockfile entries failed verification:
+  some-other-plugin@1.2.3 was published at ..., within the minimumReleaseAge cutoff (...)
+```
+
+这不是本插件的问题，也不是你装错了。pnpm 有一条供应链策略：拒绝**发布时间在冷却窗口内**（默认 24 小时）的依赖。它校验的是**整个 profile 的 lockfile**，不只是你这次要装的包——所以只要 profile 里任何一个已装插件在最近一天发过新版且没拿到豁免，装任何东西都会被拦下。
+
+判断方法：在 profile 目录里单跑一次 `pnpm install`，什么都不加。如果报同样的错，问题就与本插件完全无关。
+
+三种处理方式：
+
+1. **给这一次命令加个标志**（推荐，只影响本次，不改你的长期策略）：
+
+   ```sh
+   dsh plugin --profile web add dsh-quick-actions-bundle --config.minimumReleaseAge=0
+   ```
+
+2. **等冷却期过去**。错误信息里每一条都写了发布时间和截止时间，等最晚的那个满 24 小时即可，无需任何操作。
+3. **把被点名的 `名字@版本` 逐条加进 profile `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude`**。一劳永逸，但等于对这些包放弃这层保护。
+
 ## 配置预置动作
 
 预置目录由两部分拼成，顺序固定：先是本包内置的预置清单，然后是 Host composition 在 `Config.presets` 里追加的条目。`Config.presets` 就是**预置的授权声明通道**——没有第三方运行时注册 API。
