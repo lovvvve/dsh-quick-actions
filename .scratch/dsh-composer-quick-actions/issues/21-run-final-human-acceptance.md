@@ -23,3 +23,17 @@ Blocked by: 18
 Agent 在本票据中的职责限于：准备一次性 profile 与最终 tarball、按用户指示驱动步骤、把结果追加到 `verification/release-evidence.md`。第 9 步的答复只能来自用户本人；没有这句明确答复，本票据不得置为 `resolved`，Wayfinder 地图目标也不得宣告完成。
 
 用户在任一步骤报告偏差时，按规格第 13.1 节判断严重度：内容丢失、重复发送、持久化损坏或 Composer 崩溃一律阻止发布，须回到对应实施票据修复后重跑票据 18 的自动化，再重新进入本票据。
+
+## Comments（评论）
+
+### 2026-09-09 — 阻塞已解除
+
+[票据 18](./18-run-integration-and-release-verification.md) 已 `resolved`：自动化证据完整，第 13.2 节行为矩阵全部有归属，四轮真实 GUI 验证记录在 `verification/release-evidence.md`。本票据的 `Blocked by` 至此清空（该行保留历史，不删项）。
+
+开工前必读的三处：
+
+1. **证据文件的第 13.2 节对账表**与第四轮末尾的「第 13.2 节的剩余缺口」一节——唯一未逐字执行的是 README 升级/降级里「override 与 `add` 指向**另一个版本**的两个 tarball」，因为两个包按[票据 20](./20-choose-publishing-identity-and-license.md) 暂不发布、本地只有 `0.1.0`。
+2. **三处已记录的行为发现**（票据 18 的 `## Answer`）。其中两处已立为[票据 25](./25-close-two-edge-state-ux-gaps.md)，都不阻塞本票据；用户在第 13.4 节步骤 2/8 里可能会撞上第 3 项（表单打开时按 Escape 会关掉整个管理面板），事先说明可以省掉一次误报。
+3. **`tests/gui/` 的驱动**：一次性 profile 的安装与卸载已脚本化（`install.sh`、`reinstall-round.sh`、`close-window.sh`），profile 的两份文件在开窗前取 sha256、关窗后校验。本票据准备环境时应复用它们，而不是手工执行 README 步骤——手工路径已在票据 18 第一至三轮执行过，脚本路径在第四轮执行过，两者都有证据。
+
+spec 第 13.4 节要求「除非用户另行明确同意，不得在该流程中触发真实模型调用」。票据 18 第三轮已获得用户对真实模型调用的明确许可，但**那次许可属于票据 18**，不自动延续到本票据。

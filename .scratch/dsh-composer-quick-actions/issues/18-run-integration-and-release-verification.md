@@ -2,7 +2,7 @@
 
 Type: task
 Mode: AFK
-Status: claimed
+Status: resolved
 Blocked by: 08, 13, 14, 15, 16, 17, 24
 
 ## Question（问题）
@@ -75,3 +75,50 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 2. **预置升级/降级的完整往返**：预置移除后既有数据保留为墓碑、重新加入后恢复、行为签名换 ID 的处理——模型层已有用例，GUI 层只验了「新增」这一半。
 3. **结构化 mutation outcome 的 conflict 分支**：成功与拒绝（只读）已验，revision 冲突的 GUI 分类未验。
 4. **占位符拒绝与 Unicode code point / `trim()` 口径**在集成运行里各跑一遍（模型层已覆盖，票据要求集成层也过一遍）。
+
+### 2026-09-09 — 第四轮：最后四项闭合，本票据收口
+
+第三轮列出的四项全部完成，均未触发模型调用，共开一次安装窗口：**重装恢复**（三段各一次启动）、**预置升级/降级的完整往返**（四段各一次启动）、**结构化 mutation outcome 的 conflict 分支**、**占位符拒绝与 Unicode code point / `trim()` 口径**。安装窗口本身已脚本化。详见 `verification/release-evidence.md` 的第四轮一节；结论见下面的 `## Answer`。
+
+## Answer（答案）
+
+**自动化证据完整，本票据到此为止。** 第 13.2 节的行为矩阵已在模型 / Host / Client 三层加真实 GUI 四层全部有归属，没有需要真实 GUI 或模型调用的剩余项。最终人工验收仍归[票据 21](./21-run-final-human-acceptance.md)，它需要用户在一次性会话里亲自确认。
+
+四轮的分工与结果：
+
+| 轮次 | 覆盖 | 结果 |
+|---|---|---|
+| 第一轮 | 安装形态在真实 DSH 上逐条执行；Catalog `base` 端到端、常驻判定、三布局、等宽、窄视口、键盘与无障碍 | 36 条（12 × 三视口）通过；关闭了票据 14 与票据 23 的两个挂起项 |
+| 第二轮 | 规模矩阵 0/1/6/25/50 与 53 项被动超限、跨 DSH 重启持久化 | 六行全过；harness 加上命名空间备份/还原 |
+| 第三轮 | 发送路径六条（真实模型）、Host Config 变化、断线只读与失败草稿保留、生命周期 stop/update 清理、9 张截图基线 | 全过；修掉 `boot.sh` 一直静默失效的 `stop_ours` |
+| 第四轮 | 重装恢复、预置往返、conflict 分支、占位符与 Unicode/`trim()` 口径 | 全过；安装窗口脚本化，关窗后 profile 逐字还原 |
+
+### 本轮交付
+
+| 文件 | 作用 |
+|---|---|
+| `tests/gui/install.sh` | 把 README 的本地 tarball 安装/卸载流程做成可复现驱动，并对 profile 的两份文件取 sha256 指纹 |
+| `tests/gui/profile-override.mjs` | profile `overrides` 的唯一写入口：先逐字备份，再经 yaml 文档 API 写入，原子替换 |
+| `tests/gui/close-window.sh` | 关窗：停服务 → 卸载 → 指纹校验 |
+| `tests/gui/reinstall.spec.ts` + `reinstall-round.sh` | 重装恢复三段 |
+| `tests/gui/presets.spec.ts` + `presets-round.sh` | 预置往返四段（overlay 经 `dsh --patch`，不改用户文件） |
+| `tests/gui/conflict.spec.ts` | revision 冲突的竞态判据、刷新到权威、显式重试 |
+| `tests/gui/validation.spec.ts` | 占位符拒绝、code point 与 `trim()` 口径 |
+| `tests/gui/verify-round.sh` | 常规套件的驱动（种入已知命名空间 → 启动 → 跑 → 还原），可转发参数重跑单个 spec |
+| `tests/gui/support.ts` | `enterSession(page, 'plugin' \| 'history')`、`storedNamespace()` |
+
+### 三个记录在案的行为发现（都不改本版行为）
+
+1. **断线时插件不发布结果反馈**（第三轮）。`retained` 的两个发布点是「`submit()` 抛错」与「提交后的下一次 Input 提交里草稿仍未清空」；断线时 submit 不抛错，DSH 也不再发布任何 Input 提交，于是执行机停在观察阶段，用户看到文本留在草稿里却没有说明。第 9.5 节的零内容丢失不受影响。
+2. **Composer 动作控件用原生 `disabled` 而非 `aria-disabled`**（第三轮）。CLAUDE.md 那条规则记的是票据 16 的管理面板键盘重排场景，不覆盖此处，故不判偏离。
+3. **管理面板的表单不接管开场焦点**（第四轮）。于是点「编辑」/「新建」后按 Escape 会关掉整个面板而不是只退出表单——`modal.ts` 注释所述的意图只在焦点已在表单内时成立。
+
+第 1 与第 3 项是可改进的用户可见缺口，已合并立为[票据 25](./25-close-two-edge-state-ux-gaps.md)；两者都不阻塞票据 21。
+
+### 唯一未逐字执行的步骤
+
+README 升级/降级里的「override 与 `add` 指向**另一个版本**的两个 tarball」需要第二个版本，而两个包按[票据 20](./20-choose-publishing-identity-and-license.md) 的决定**暂不发布**，本地只有 `0.1.0`。该步骤的机械部分（override 改指向、重复 `add` 的幂等、重启）本轮已执行，其数据侧后果（目录增删、墓碑、往返无损）由第四轮的预置往返四段覆盖。发布之后应补这一条。
+
+### 环境归还
+
+每一轮都在用户自己的实时 DSH 上开临时窗口并在收尾关闭。第四轮关窗后核对：`profiles/web/package.json` 与 `pnpm-workspace.yaml` 的 sha256 与开窗前**逐条匹配**、功能包已移出 profile `node_modules`、`cordis.patch.yml` 零引用、`<DSH_HOME>/settings.yaml` 只剩用户自己的 4 个命名空间、harness 备份已消费删除、端口 3080 关闭。

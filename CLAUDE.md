@@ -13,9 +13,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。**剩下的是自动化与发布验证（票据 18）、最终人工验收（票据 21）。**
+这是**进行中**的持久化 DSH 插件项目，不是已完成产品。`packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。自动化与发布验证已完成（票据 18：四轮真实 GUI，`tests/gui/` 下 13 个 spec + 7 个 round 驱动 + 脚本化的安装窗口，证据在 `verification/release-evidence.md`）。**剩下的是最终人工验收（票据 21，需用户本人回复「生产验收通过」），以及两处非阻塞的边缘状态 UX 缺口（票据 25）。**
 
-真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者都未经真实 DSH 运行验证**——功能包还没有安装进运行中的 DSH，Client 读取目录 `base`、常驻判定、等宽与端到端发送都归票据 18 在前台 GUI 会话实测。
+真正完成的有七件事：DSH 核心 `insertText` 补丁（`.scratch/.../core/`，仅作能力基线，**未合入官方，不得宣称正式上游版本**）、workspace + Client 构建适配器、共享领域模型（纯 JSON，`src/model/`）、Host 侧装配（`src/host/`）、Client 控制器、Composer 界面与动作执行，以及管理与动作面板界面。**后四者已由票据 18 在用户自己的实时 DSH 上实测**（四轮临时安装窗口，每轮收尾卸载并把 profile 与 Settings 逐字还原）：Client 读取目录 `base`、常驻判定、等宽（误差 0.0 px）、端到端发送与确认、重装恢复、预置往返、revision 冲突分支均已确证，取证见 `.scratch/dsh-composer-quick-actions/verification/release-evidence.md`。
 
 ## 命令
 
@@ -34,6 +34,18 @@ pnpm watch:client            # 只重建 Client bundle
 pnpm vitest run tools/dsh-client-bundle/tests/bundle.spec.ts
 pnpm vitest run -t 'rejects computed require calls'
 ```
+
+GUI 验证（票据 18，`tests/gui/`，**不在 vitest include 内**，需要插件已装进 web profile 且 profile 已启动）：
+
+```bash
+sh tests/gui/reinstall-round.sh   # 开安装窗口（打包 + 安装）并跑重装恢复三段
+sh tests/gui/verify-round.sh      # 常规套件（= pnpm verify:gui），可转发参数重跑单个 spec
+sh tests/gui/presets-round.sh     # 预置往返四段（dsh --patch overlay）
+sh tests/gui/send-round.sh        # 发送路径（真实模型调用，需用户许可）
+sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
+```
+
+每个 `*-round.sh` 自带 profile 启停与命名空间备份/还原（`boot.sh`、`install.sh`、`settings-namespace.mjs`）。**不要直接 `pnpm verify:gui`**：`validation.spec.ts` 与 `conflict.spec.ts` 会写入 Settings，必须跑在种子命名空间上并在退出时还原。
 
 注意 `typecheck` 是**两遍**：`*.spec.ts` 和 `tsdown.config.ts` 不在项目引用里，只有第二遍 `tsconfig.test.json` 才覆盖它们；只跑 `tsc -b` 会漏掉测试侧类型错误。`lib/` 是 gitignored 的构建产物；包级 `tsc -b` 只发 `.d.ts`（`emitDeclarationOnly`），别让它重新向 `lib/types/` 发 JS 或 sourcemap——那会把整包第二份 JS 打进 tarball（票据 17 修复，`tests/release/packaging.spec.ts` 固定）。
 
@@ -74,7 +86,7 @@ pnpm vitest run -t 'rejects computed require calls'
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [18 运行集成与发布验证](.scratch/dsh-composer-quick-actions/issues/18-run-integration-and-release-verification.md)（18、21 未认领；16、17、20、22、23 与 24 已 resolved）。票据 24 已解除票据 18 的最后一项阻塞，票据 22 已补齐 spec 第 11.2 节的关闭清理前置项。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。当前 frontier 是 [21 最终人工验收](.scratch/dsh-composer-quick-actions/issues/21-run-final-human-acceptance.md)（21、25 未认领；16、17、18、20、22、23 与 24 已 resolved）。票据 18 已 resolved 并解除票据 21 的阻塞；票据 25（两处边缘状态的用户可见反馈缺口）由票据 18 的 GUI 验证发现，不阻塞 21。**票据 21 是 HITL：第 9 步要求用户本人说出「生产验收通过」，Agent 不得代为判定。**
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。

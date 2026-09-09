@@ -462,19 +462,123 @@ Host Settings 是权威源，Client 重启后取回存储布局而非默认值�
 #### 本轮的两个行为发现（不是缺陷，但应记录）
 
 1. **断线时插件不发布结果反馈**。`retained` 只在 `submit()` **抛错**时发布；连接断开时 DSH 的 submit 既不抛错也不落地，执行层因此停在观察阶段，用户看到文本留在草稿里而没有说明。第 9.5 节的硬要求（零内容丢失）不受影响，且重连后窗口会释放——但「留下文本却不解释」是一处可改进的 UX 缺口。
+
+   **第四轮更正机制描述**：`retained` 其实有**两个**发布点——`submit()` 抛错，或提交之后的**下一次 Input 提交**里草稿仍未被清空（`execution.ts` 的 `observe`）。断线时 `submit()` 不抛错，而 DSH 也不会再发布任何 Input 提交，于是执行机停在 `submitted` 观察阶段，两个发布点都不触发。结论不变（用户得不到解释），成因比原记录更准确。
 2. **Composer 动作控件用原生 `disabled` 而非 `aria-disabled`** 表达不可用（占用草稿时附 `title` 说明原因）。CLAUDE.md 里「其余一律 `aria-disabled` + 守卫」那条记的是票据 16 **管理面板键盘重排**场景，不覆盖 Composer 按钮，故不判为偏离；断言已改为机制无关（`toBeDisabled` 同时覆盖两种写法）。
 
 #### 本轮修掉的一个基础设施缺陷
 
 `boot.sh` 的 `stop_ours` **一直静默失效**：`setsid` 在调用方已是组长时会 fork，`$!` 记到的是转瞬即逝的父进程，因此进程组信号一直打空（错误被 `2>/dev/null` 吞掉）。改由组长自己写 pidfile；测试内停 profile 改用 Node 的 `process.kill(-pgid)`，因为外部 `kill` 会把 `-<pid>` 当成选项。
 
-### 下一轮必须先修的 harness 卫生问题
+### 第一轮遗留的 harness 卫生问题（第二轮已闭合）
 
-本轮结束时发现测试**误建了 2 条克隆动作**（`总结对话`、`压缩上下文`，带 `clonedFromPresetId`），已随命名空间清除。管理面板用例必须改成严格只读，或在每次运行前后重置插件命名空间；否则规模矩阵（0/1/6/25/50）会被残留数据污染。
+第一轮结束时发现测试**误建了 2 条克隆动作**（`总结对话`、`压缩上下文`，带 `clonedFromPresetId`），已随命名空间清除。管理面板用例必须改成严格只读，或在每次运行前后重置插件命名空间；否则规模矩阵（0/1/6/25/50）会被残留数据污染。第二轮按后者实现（种子工具备份 → 种入 → 退出时还原）。
 
-### 本轮未覆盖
+### 第一轮未覆盖的项（第二至四轮已逐条闭合）
 
-- 发送动作全部项（单飞、确认面板、失败草稿保留、命令发送动作的两种确认设置、queue）——按用户指示不触发真实模型调用，暂缓。
-- 布局切换 / 管理面板 / 搜索面板 / 键盘与无障碍的窄视口结果，以及 0/1/6/25/50 与 53 项超限降级的规模矩阵。
-- Settings 跨 DSH 重启持久化、卸载与重装、生命周期 stop/update 清理。
-- 截图基线（三种布局 × 桌面/窄）。
+- 发送动作全部项（单飞、确认面板、失败草稿保留、命令发送动作的两种确认设置、queue）——第一轮按用户指示不触发真实模型调用，**第三轮**在获得许可后完成。
+- 布局切换 / 管理面板 / 搜索面板 / 键盘与无障碍的窄视口结果，以及 0/1/6/25/50 与 53 项超限降级的规模矩阵——**第二轮**完成。
+- Settings 跨 DSH 重启持久化（**第二轮**）、卸载与重装（**第四轮**）、生命周期 stop/update 清理（**第三轮**）。
+- 截图基线（三种布局 × 桌面/窄）——**第三轮**完成。
+
+### 第四轮（2026-09-09）：收口前的最后四项
+
+第三轮列出的四项——重装恢复、预置升级/降级的完整往返、结构化 mutation outcome 的 conflict 分支、占位符与 Unicode / `trim()` 口径的集成层复核——本轮全部完成，都不需要模型调用，共开一次安装窗口。
+
+本轮把**安装窗口本身脚本化**（`tests/gui/install.sh` + `profile-override.mjs` + `close-window.sh`）。前三轮的安装是手工执行的，而重装恢复必须在一轮之内关掉再开一次窗口，于是 README 的离线流程逐条落成可复现脚本：打包 → profile `overrides`（yaml 文档 API 写入，其余键与注释逐字保留）→ `dsh plugin add` bundle tarball → `--dump-config` 核对 row → 重启 profile。用户 profile 的两份文件在开窗前取 sha256 指纹，关窗后逐条校验。
+
+#### 脚本化过程中暴露的两个安装事实
+
+1. **两个 tarball 路径都必须是绝对路径**。`dsh plugin` 是 pnpm 的转发器，pnpm 在 **profile 目录**里运行，相对路径会解析到 `<DSH_HOME>/profiles/web/` 下并以 `ENOENT` 失败。README 第 2 步只对 override 写了「绝对路径」，第 3 步 `add` 的参数同样如此。
+2. **`plugin remove` 也需要那个一次性标志**。卸载会先校验它即将改写的 lockfile，因此同样撞上 `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`（仍是用户 profile 里那 3 个第三方插件版本，与本插件无关）。第三轮的卸载一节记过这条，脚本化时漏加，一次失败后补上。
+
+#### 1. 重装恢复（`reinstall.spec.ts` + `reinstall-round.sh`，三段各一次启动）
+
+| 阶段 | 结果 |
+|---|---|
+| `mark` | 通过：经 GUI 把布局设为 `launcher` 并新建自定义动作「重装恢复标记」；`settings.yaml` 的插件命名空间里 `layout: launcher` 与该动作标签均已落盘 |
+| `gone`（已卸载） | 通过：在**本轮受控启动**的服务下，进入有历史的会话后 `data-quick-actions-layout` / `data-quick-actions-manage` / `dsh-cqa-` 样式表**计数均为 0**；同时命名空间**原样保留** `launcher` 与该动作 |
+| `back`（已重装） | 通过：布局回到 `launcher`（不是随包默认 `ribbon`），标记动作的标签与文本原样回来 |
+
+`gone` 阶段特意不满足于「随便一个屏幕上没有插件」——hero 屏本来就没有表面。判据改为先进入带 `data-chat-flow-kind` 的会话再断言零渲染，因此**闭合了第三轮卸载一节里那处标注为「存在混淆、不作为结论」的 GUI 观测**。
+
+顺带把 README「重复 `add` 同一版本是幂等的」这条声明也执行了一遍：同一 tarball 再 `add` 一次后，`dsh.profile.bundles` 里仍只有一条 `dsh-composer-quick-actions-bundle`、`dependencies` 未变、功能包仍在 profile `node_modules` 里。
+
+#### 2. 预置升级 / 降级的完整往返（`presets.spec.ts` + `presets-round.sh`，四段各一次启动）
+
+预置经 `dsh --patch` overlay 声明（应用在所有 bundle 层之后，与 profile 自身 `cordis.patch.yml` 同位），**不改用户文件**；跨四次启动携带的是用户 Settings 里的存量状态，那正是往返的被测对象。基线为 `seed-scale.mjs 3`（随包三条、无隐藏、无自定义）。
+
+| 阶段 | 目录 | 结果 |
+|---|---|---|
+| `stage` | 随包 3 + 探针（`confirm: true`） | 通过：探针**追加在末尾**（spec 第 5.3 节）；克隆它 → 克隆的编辑表单确认开关**为开**（克隆复制策略而非重施默认值）；隐藏它 → 行上 `data-quick-action-hidden`、计数仍为 5（隐藏计入合计）、表面回落到 4 |
+| `tombstone` | 随包 3 | 通过：探针**不显示**（表面 4 条 = 随包 3 + 克隆）、**不计数**（`共 4`）、管理列表无该行；而 `settings.yaml` 里 `presetStateById['qa-preset-probe']` 仍是 `{hidden: true}`、`actionOrder` 仍保留该 preset 引用——**经过一次目录已不含该 ID 的规范重写后依然如此** |
+| `restore` | 随包 3 + 探针（同 ID，标签已改） | 通过：**仍然隐藏**（表面不变），管理行标签为升级后的新文案（同 ID 可更新标签/图标/文本，spec 第 5.1 节），计数回到 5 |
+| `signature` | 随包 3 + 探针 v2（新 ID，`confirm: false`） | 通过：旧 ID 再次成为墓碑，v2 作为新动作**追加在末尾**；克隆 v2 → 编辑表单确认开关**为关**，即新 ID 的策略取自目录、不继承旧 ID 留下的偏好 |
+
+这四段合起来覆盖第 13.2 节「预置新增、文案更新、移除、重新加入和行为签名换 ID」一行的 GUI 侧；上一轮只验了「新增」这一半。
+
+#### 3. 结构化 mutation outcome 的 conflict 分支（`conflict.spec.ts`）
+
+**本轮的关键发现：DSH 的 settings 镜像是跨连接实时同步的。** 第一版判据按「A 写入 → B 持有旧 revision → B 写入即冲突」设计，并把「B 确实还是旧值」写成前置断言；实测该前置断言**失败**——B 无需刷新就看到了 A 的写入。也就是说顺序写入的第二方永远不会持旧栅栏：它会被通知并按新 revision 重新规划。这条断言因此保留在用例里（先正向断言镜像的实时性），而冲突改为**真实竞态**：两个连接的管理面板都先打开，然后在同一瞬间各派发一次**同步** click（在 `page.evaluate` 内派发，两次之间不含任何 Playwright 可操作性往返），两次写入都在任一方被通知之前出发。
+
+通过，且**连跑 4 次全过**（其中一次 `--repeat-each=3`）：
+
+- 恰好一方拿到 `data-quick-actions-write-failure="conflict"`（`role="alert"`，文案「设置已在别处被修改，已刷新到最新状态；请核对后重新确认这次修改。」），另一方无任何失败提示且写入落地；
+- 失败方随即显示**胜者的值**而不是自己点的值——即 spec 第 10 节的「刷新最新权威状态」，不维护第二套离线真相；
+- 面板保持打开并给出显式重试；点重试后**按刷新后的栅栏重新规划并落地**，失败提示消失。
+
+这同时说明 `refused` 与 `conflict` 的区分不是猜测：拒绝不动 revision，只有丢失栅栏才会让它前移，而控制器是按写后的权威快照判定的。
+
+#### 4. 占位符拒绝与 Unicode code point / `trim()` 口径（`validation.spec.ts`，桌面，三条）
+
+模型层已穷尽覆盖这些规则，集成层要证的是**用户真正打字的那个表单跑的就是同一份实现**（spec 第 4.3 节要求配置入口、表单、迁移与 mutation 共用一组规则），且表单接受的草稿 Host 也接受。
+
+| 用例 | 结果 |
+|---|---|
+| 标签上限按 **Unicode code point** 计 | 通过：41 个星平面字符（`𝔸`）报「标签超出长度上限」；**40 个（= 80 个 UTF-16 码元）无错并保存成功**——若按 `.length` 计会被拒，若 Host 与表单口径不同则会在保存时被拒 |
+| 空白与裁剪按 **ECMAScript `trim()`** | 通过：仅含 U+00A0 / U+FEFF / 空格 / 换行的文本在尝试保存后报「发送文本至少要有一个非空白字符」，且**未产生任何写入**（无失败提示、无新动作）；标签两端空白（含 U+00A0、U+FEFF）保存后被裁剪，而**发送文本原样保留**自身的首尾空白与换行（用编辑表单读回逐字比对） |
+| 保留占位符拒绝 | 通过：文本含 U+FFFC 或 U+E100 时报「发送文本包含 DSH 保留的引用占位符，无法作为静态文本提交」；点保存被表单拒绝、草稿原样留存、**不产生一次写入** |
+
+判据说明：断言读的是 `.dsh-cqa-label` 的 `textContent` 而非 `toHaveText`——后者会归一化空白，而空白正是被测对象。
+
+#### 本轮的一个新发现（不判缺陷，已另立票据）
+
+**管理面板的表单不接管开场焦点。** `useInitialFocusIn` 用在 ManagerPanel / ActionPanel / ConfirmPanel 上，却没有用在 `ActionForm` 上；于是点「编辑」或「新建」后焦点仍停在行内那颗按钮（在面板内、表单外），此时按 Escape 不经过表单的 `stopPropagation`，而直达面板自己的 Escape 处理器——**整个管理面板被关掉，而不是只退出表单**。`modal.ts` 的注释写的是「嵌套编辑上下文会在 Escape 到达本处理器前拦下它，因此退出表单不会关闭面板」，该意图只在焦点已在表单内时成立。
+
+本轮不改它：那是发货 UI 的焦点行为变更，按仓库「一轮只领一张票据」的约定应另开票据（见票据 25）。harness 已改为不依赖 Escape 的作用域——离开表单和面板都走各自的显式控件（「取消」与关闭按钮），这同时避开另一个真实风险：面板已关时的 Escape 会落到 DSH 自己的 Composer，而它也监听 Escape。
+
+#### 本轮的 harness 修正
+
+- **有状态的 round 关掉 Playwright 重试**（`presets.spec.ts`、`reinstall.spec.ts` 的 `test.describe.configure({ retries: 0 })`）。首跑失败后的重试会从上一次留下的状态开始（克隆已建、预置已隐藏），第二次失败的原因就与第一次无关了——实测确实如此（第一次失败在「隐藏」按钮，重试却失败在起始计数 4≠5）。失败的阶段应由 round 从种子重跑，不由 Playwright 重试。
+- **`enterSession(page, 'plugin' | 'history')`**：`openResidentComposer` 现在是它的一个入口。`history` 只等 DSH 自己的会话流（`data-chat-flow-kind`），供「断言插件缺席」的阶段使用。
+- **`tests/gui/verify-round.sh`**：常规套件也有了自己的驱动（种入已知命名空间 → 启动 → 跑 → 退出时还原），并可转发参数给 playwright 以重跑单个 spec。此前这一步是手工设 `DSH_GUI_ENTRY`；而 `validation.spec.ts` 与 `conflict.spec.ts` 会写入，所以「跑在恰好存在的那个命名空间上」不再可接受。
+
+#### 本轮的完整回归与质量门
+
+| 门 | 结果 |
+|---|---|
+| `sh tests/gui/verify-round.sh`（常规套件，三视口） | **40 通过 / 83 跳过 / 0 失败**，3.8 分钟。83 跳过 = 各 round 自带驱动的用例（send / scale / restart / screenshots / lifecycle / host-config / presets / reinstall）与两条桌面限定用例在窄视口的跳过 |
+| `conflict.spec.ts` 稳定性 | 4 次全过（单跑 1 次 + `--repeat-each=3`） |
+| `pnpm test` | 22 文件 / **485 通过** |
+| `pnpm typecheck` | 两遍均通过 |
+| `pnpm lint` | 通过 |
+
+#### 关窗与环境还原
+
+`close-window.sh` 卸载后逐项核对：
+
+| 检查 | 结果 |
+|---|---|
+| `profiles/web/package.json` | sha256 与开窗前指纹**逐条匹配** |
+| `profiles/web/pnpm-workspace.yaml` | sha256 **逐条匹配**（override 块与注释一并消失） |
+| `profiles/web/node_modules` | 功能包已移除 |
+| `profiles/web/cordis.patch.yml` | `composer-quick-actions` 出现次数 **0** |
+| `<DSH_HOME>/settings.yaml` | 插件命名空间 **0** 次出现；仅剩用户自己的 4 个命名空间（`ui-onboarding` / `llm-openai-codex` / `agent-default-model` / `locale`），共 603 字节 |
+| harness 备份 | `.playwright/` 下的命名空间备份与 profile 备份均已消费并删除 |
+| 端口 3080 | 已关闭 |
+
+Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非卸载的一部分（正因如此重装才能恢复用户的动作）；本轮它是被种子工具的「还原到安装前状态（原本不存在）」清掉的，两条路径都执行过。
+
+#### 第 13.2 节的剩余缺口
+
+**没有需要真实 GUI 或模型调用的剩余项。** 唯一未逐字执行的是 README 升级/降级步骤里的「override 与 `add` 指向**另一个版本**的两个 tarball」——它需要第二个版本，而两个包按票据 20 的决定**暂不发布**，本地也只有 `0.1.0`。该步骤的机械部分（override 改指向 + 重复 `add` 幂等 + 重启）本轮已执行，其**数据侧后果**（目录增删、墓碑、往返无损）正是上面第 2 项四段覆盖的内容。
