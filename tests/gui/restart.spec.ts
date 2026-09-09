@@ -17,6 +17,10 @@ test.describe('choosing a layout', () => {
 
   test('stores the chosen layout', async ({ page }) => {
     await openResidentComposer(page)
+    // `ensureLayout` writes nothing when the layout already matches, so a leftover `bar`
+    // would let the restore half pass on a stale value. Go through `ribbon` to force this
+    // round's own write.
+    await ensureLayout(page, 'ribbon')
     await ensureLayout(page, 'bar')
 
     await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', 'bar')

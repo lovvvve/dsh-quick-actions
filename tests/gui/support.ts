@@ -5,8 +5,12 @@ import { expect, type Locator, type Page, type Response } from '@playwright/test
  * token is what gives a browser profile its credential — a bare `/` answers 401 with
  * "reopen the URL printed by dsh web". Every spec therefore opens the GUI through
  * `openGui`, and the token stays in the environment instead of in the repository.
+ *
+ * `||`, not `??`: the drivers compute this with a `grep`, which yields an empty string
+ * rather than nothing when the log has no entry url — and `page.goto('')` fails with an
+ * opaque URL error instead of the channel probe's explanation.
  */
-export const guiEntry = process.env.DSH_GUI_ENTRY ?? '/'
+export const guiEntry = process.env.DSH_GUI_ENTRY || '/'
 
 export function openGui(page: Page): Promise<Response | null> {
   return page.goto(guiEntry, { waitUntil: 'domcontentloaded' })
@@ -30,12 +34,21 @@ export function actionFaces(page: Page): Locator {
   return page.locator('[data-quick-action]')
 }
 
+export function managerPanel(page: Page): Locator {
+  return page.locator('[data-quick-actions-manager]')
+}
+
 /**
- * The composer's visual box — what the equal-width rule is measured against. DSH's class
- * names are hashed per build, so it is found structurally instead: climb from the input
- * until an ancestor is wider than the input itself, which is the bordered card the input
- * is inset into. The plugin cell sits in the input dock beside that card, not inside it,
- * so the cell's own ancestors cannot be used as the reference.
+ * The composer's visual box, in fractional CSS px — what the equal-width rule is measured
+ * against. DSH's class names are hashed per build, so the reference is found structurally
+ * instead: climb from the input until an ancestor is wider than the input itself, which is
+ * the bordered card the input is inset into. The plugin cell sits in the input dock beside
+ * that card rather than inside it, so the cell's own ancestors cannot serve as the
+ * reference.
+ *
+ * The climb stops at `body`: without a bound, a build that drops the card's padding would
+ * silently promote the page-wide shell into the reference and the gate would compare the
+ * plugin against the viewport.
  */
 export function composerBoxEdges(page: Page): Promise<{ left: number; right: number; width: number }> {
   return page.evaluate(() => {
@@ -43,11 +56,18 @@ export function composerBoxEdges(page: Page): Promise<{ left: number; right: num
     if (input === null) throw new Error('composer input not found')
     const inputWidth = input.getBoundingClientRect().width
     let node: HTMLElement | null = input.parentElement
-    while (node !== null && node.getBoundingClientRect().width <= inputWidth + 0.5) {
+    while (
+      node !== null
+      && node !== document.body
+      && node.getBoundingClientRect().width <= inputWidth + 0.5
+    ) {
       node = node.parentElement
     }
-    const rect = (node ?? input).getBoundingClientRect()
-    return { left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) }
+    if (node === null || node === document.body) {
+      throw new Error('no bordered composer box between the input and the body')
+    }
+    const rect = node.getBoundingClientRect()
+    return { left: rect.left, right: rect.right, width: rect.width }
   })
 }
 
@@ -101,37 +121,39 @@ export async function openResidentComposer(page: Page): Promise<void> {
   const rows = page.locator('[role="treeitem"]')
   await expect(rows.first()).toBeVisible({ timeout: 20_000 })
 
-  // The tree nests sessions inside workspace rows, and clicking a workspace row collapses
-  // it — which hides the very sessions we are looking for. Only leaf rows are sessions.
-  const leaves = await rows.evaluateAll(elements => elements
-    .map((element, index) => ({ index, leaf: element.querySelector('[role="treeitem"]') === null }))
-    .filter(row => row.leaf)
-    .map(row => row.index))
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    // The tree nests sessions inside workspace rows, and clicking a workspace row
+    // collapses it — which hides the very sessions we are looking for. Only leaf rows are
+    // sessions, and the snapshot is retaken every attempt because a click can reorder or
+    // collapse the tree under us.
+    const leaves = await rows.evaluateAll(elements => elements
+      .map((element, index) => ({ index, leaf: element.querySelector('[role="treeitem"]') === null }))
+      .filter(row => row.leaf)
+      .map(row => row.index))
+    // The row that worked once is tried first: sessions with history do not lose it. A
+    // cached index that is no longer a leaf is dropped rather than clicked blindly.
+    const preferred = attempt === 0 && knownLeaf !== undefined && leaves.includes(knownLeaf)
+      ? knownLeaf
+      : leaves[attempt]
+    if (preferred === undefined) break
 
-  // Trying each leaf costs a full mount wait, and four misses exhaust a test's budget. The
-  // row that worked once is tried first for the rest of the run: sessions with history do
-  // not become sessions without it.
-  const ordered = knownLeaf === undefined
-    ? leaves.slice(0, 8)
-    : [knownLeaf, ...leaves.filter(index => index !== knownLeaf)].slice(0, 8)
-
-  for (const index of ordered) {
-    await rows.nth(index).click()
+    await rows.nth(preferred).click()
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
-    try {
-      // The surface mounts only after the controller has read the catalog and settings,
-      // so an immediate count would race the first render.
-      // A profile that has just booted mounts the first surface slowly: the web app is
-      // loading its module table while this waits, so the budget is generous.
-      await layoutCell(page).first().waitFor({ state: 'visible', timeout: 25_000 })
-      knownLeaf = index
-      if (requested !== null) await page.setViewportSize(requested)
-      await expect(layoutCell(page)).toBeVisible()
-      await dismissShellOverlays(page)
-      return
-    } catch {
-      // This session shows the hero: no Resident Composer here, try the next row.
-    }
+    // A profile that has just booted mounts the first surface slowly: the web app is
+    // loading its module table while this waits, so the budget is generous.
+    const mounted = await layoutCell(page).first()
+      .waitFor({ state: 'visible', timeout: 25_000 })
+      .then(() => true, () => false)
+    if (!mounted) continue // this session shows the hero; try the next row
+
+    knownLeaf = preferred
+    if (requested !== null) await page.setViewportSize(requested)
+    // Asserted outside the discovery fallback on purpose: a cell that disappears when the
+    // window shrinks is a responsive defect, and swallowing it here would report it as
+    // "no session with history" instead.
+    await expect(layoutCell(page)).toBeVisible()
+    await dismissShellOverlays(page)
+    return
   }
 
   throw new Error(
@@ -150,43 +172,61 @@ export async function ensureLayout(page: Page, layout: 'ribbon' | 'bar' | 'launc
   await page.locator(`[data-quick-actions-layout-choice="${layout}"]`).click()
   await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', layout)
   await page.locator('[data-quick-actions-manager-close]').click()
-  await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
+  await expect(managerPanel(page)).toHaveCount(0)
 }
 
 /**
- * The packaged catalog is three presets and no custom actions. Every spec that counts
- * actions depends on that, and a stray custom action would quietly shift the counts — so
- * state it, rather than discovering it as an off-by-one somewhere else.
+ * The packaged catalog is three presets. Specs that count actions depend on that, so they
+ * state it rather than discovering it as an off-by-one somewhere else.
+ *
+ * Only meaningful under `ribbon`: `bar` folds what does not fit into "more" and `launcher`
+ * renders no faces at all, so callers set the layout first.
  */
 export async function expectPackagedProjection(page: Page): Promise<void> {
-  await expect(actionFaces(page), 'projection is not the packaged catalog: leftover custom actions?')
-    .toHaveCount(3)
+  await expect(actionFaces(page), 'projection is not the packaged catalog').toHaveCount(3)
 }
 
 /**
- * Delete every custom action the run may have created. A management spec that clicks its
- * way through the overlay can land on a clone control, and a clone persists in the user's
- * Settings — so teardown removes them instead of trusting that no click ever strays.
- * Presets carry a clone control and customs carry a delete control, which is what tells
- * the two apart.
+ * Ref keys (`custom:<id>`) of every Custom Quick Action the manager lists — hidden and
+ * disabled included, which is why this reads the overlay rather than the composer
+ * projection. Presets are excluded: only editable rows carry a delete control.
  */
-export async function removeStrayCustomActions(page: Page): Promise<void> {
-  if (await manageEntry(page).count() === 0) return
+export async function customActionKeys(page: Page): Promise<string[]> {
   await manageEntry(page).click()
-
-  const ask = page.locator('[data-quick-actions-delete="ask"]')
-  for (let guard = 0; guard < 60 && await ask.count() > 0; guard += 1) {
-    await ask.first().click()
-    await page.locator('[data-quick-actions-delete="confirm"]').first().click()
-  }
-
+  const keys = await managerPanel(page).locator('[data-quick-action]').evaluateAll(elements => elements
+    .filter(element => element.querySelector('[data-quick-actions-delete]') !== null)
+    .map(element => element.getAttribute('data-quick-action') ?? ''))
   await page.locator('[data-quick-actions-manager-close]').click()
-  await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
+  await expect(managerPanel(page)).toHaveCount(0)
+  return keys
 }
 
-/** Rounded rect, in CSS px, of one element — the geometry spec section 13.3 measures. */
+/**
+ * Delete only the Custom Quick Actions that appeared since `baseline` — the keys captured
+ * before the test ran. A management spec that clicks its way through the overlay can land
+ * on a clone control, and a clone persists in the user's Settings; deleting every editable
+ * row instead would take the user's own quick actions with it, which is not this suite's
+ * to do.
+ */
+export async function removeCustomActionsAddedSince(page: Page, baseline: readonly string[]): Promise<void> {
+  const current = await customActionKeys(page)
+  const strays = current.filter(key => !baseline.includes(key))
+  if (strays.length === 0) return
+
+  await manageEntry(page).click()
+  for (const key of strays) {
+    const row = managerPanel(page).locator(`[data-quick-action="${key}"]`)
+    await row.locator('[data-quick-actions-delete="ask"]').click()
+    await row.locator('[data-quick-actions-delete="confirm"]').click()
+    await expect(row).toHaveCount(0)
+  }
+  await page.locator('[data-quick-actions-manager-close]').click()
+  await expect(managerPanel(page)).toHaveCount(0)
+}
+
+/** Fractional rect, in CSS px, of one element — the geometry spec section 13.3 measures. */
 export async function edges(locator: Locator): Promise<{ left: number; right: number; width: number }> {
   const box = await locator.boundingBox()
   if (box === null) throw new Error('element has no box')
-  return { left: Math.round(box.x), right: Math.round(box.x + box.width), width: Math.round(box.width) }
+  return { left: box.x, right: box.x + box.width, width: box.width }
 }

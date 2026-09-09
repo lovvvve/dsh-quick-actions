@@ -11,10 +11,19 @@ import { actionFaces, ensureLayout, layoutCell, manageEntry, openResidentCompose
  *   DSH_QA_EXPECTED  how many actions the projection should render
  *   DSH_QA_OVERCAP   `1` when the seeded total is above the 50-action limit
  */
-const expected = Number(process.env.DSH_QA_EXPECTED ?? '3')
+const requested = process.env.DSH_QA_EXPECTED
+const expected = Number(requested)
 const overCap = process.env.DSH_QA_OVERCAP === '1'
 
-test.describe(`quick actions at ${expected} actions`, () => {
+test.describe(`quick actions at ${requested ?? 'no'} seeded actions`, () => {
+  // Without the driver nothing has been seeded, so these would assert against whatever
+  // the profile already holds and report it as a scale row — a green line in the log
+  // that proves nothing. `restart.spec.ts` guards itself the same way.
+  test.skip(
+    requested === undefined || !Number.isInteger(expected) || expected < 0,
+    'run through tests/gui/scale-round.sh, which seeds the row first',
+  )
+
   test.beforeEach(async ({ page }) => {
     await openResidentComposer(page)
     await ensureLayout(page, 'ribbon')

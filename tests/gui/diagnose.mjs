@@ -4,8 +4,9 @@
 //   DSH_GUI_ENTRY=<token url> node tests/gui/diagnose.mjs
 import { chromium } from '@playwright/test'
 
-const entry = process.env.DSH_GUI_ENTRY
-if (entry === undefined) throw new Error('set DSH_GUI_ENTRY to the url printed by dsh web')
+// `||`: a failed grep in the drivers yields an empty string, which is not nullish.
+const entry = process.env.DSH_GUI_ENTRY || ''
+if (entry === '') throw new Error('set DSH_GUI_ENTRY to the url printed by dsh web')
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })

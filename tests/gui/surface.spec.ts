@@ -32,9 +32,13 @@ test.describe('quick actions surface', () => {
   })
 
   test('matches the composer input box edges within 1 CSS px', async ({ page }) => {
-    // The reference is the composer's own box, found by walking up from the plugin cell
-    // to the first ancestor that also contains the input — DSH's class names are hashed
-    // per build, so addressing them directly would rot.
+    // The reference is the composer's bordered box, found by climbing from the *input* to
+    // the first wider ancestor (see `composerBoxEdges`): DSH's class names are hashed per
+    // build, so addressing them directly would rot.
+    //
+    // Both sides stay fractional. Rounding each one first turns this stated 1 CSS px gate
+    // into anywhere from 0 to 2 px, which would let a real 1.4 px violation read as
+    // compliant.
     const cell = await edges(layoutCell(page))
     const reference = await composerBoxEdges(page)
 

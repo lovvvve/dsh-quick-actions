@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test'
-import { ensureLayout, expectPackagedProjection, layoutCell, manageEntry, openResidentComposer, removeStrayCustomActions } from './support.js'
+import {
+  customActionKeys,
+  ensureLayout,
+  expectPackagedProjection,
+  layoutCell,
+  manageEntry,
+  managerPanel,
+  openResidentComposer,
+  removeCustomActionsAddedSince,
+} from './support.js'
 
 /**
  * The management overlay and the layout setting, on the live GUI. Layout is a global
@@ -8,43 +17,46 @@ import { ensureLayout, expectPackagedProjection, layoutCell, manageEntry, openRe
  * here submits anything.
  */
 test.describe('quick actions management', () => {
+  let baseline: string[] = []
+
   test.beforeEach(async ({ page }) => {
     await openResidentComposer(page)
-    // A leftover custom action from an earlier run would shift every count below.
+    // Normalize the layout *before* counting: `bar` folds overflow into "more" and
+    // `launcher` renders no faces at all, so a leftover layout would fail the count and
+    // blame the catalog for it.
+    await ensureLayout(page, 'ribbon')
     await expectPackagedProjection(page)
+    // What the user already had. Teardown removes only what appears beyond this.
+    baseline = await customActionKeys(page)
   })
 
   test.afterEach(async ({ page }) => {
-    // Leave the user's DSH on the default layout however the test ended. An open panel
-    // holds a backdrop that would swallow the manage click, so dismiss it first.
+    // Leave the user's DSH the way it was found. An open panel holds a backdrop that
+    // would swallow the manage click, so dismiss it first.
     if (await layoutCell(page).count() === 0) return
     await page.keyboard.press('Escape')
     await ensureLayout(page, 'ribbon')
-    // These specs write to the user's own Settings, so they hand the profile back the way
-    // they found it: the packaged catalog, on the default layout.
-    await removeStrayCustomActions(page)
-    await expectPackagedProjection(page)
+    await removeCustomActionsAddedSince(page, baseline)
   })
 
   test('opens a labelled dialog that lists the packaged presets', async ({ page }) => {
     await manageEntry(page).click()
 
-    const dialog = page.locator('[data-quick-actions-manager]')
-    await expect(dialog).toBeVisible()
-    await expect(dialog).toHaveRole('dialog')
+    await expect(managerPanel(page)).toBeVisible()
+    await expect(managerPanel(page)).toHaveRole('dialog')
     // An accessible name is a hard gate of spec section 13.3.
-    await expect(dialog).toHaveAttribute('aria-labelledby', /.+/)
+    await expect(managerPanel(page)).toHaveAttribute('aria-labelledby', /.+/)
     // Presets are read-only but reorderable, hideable and clonable.
     await expect(page.locator('[data-quick-actions-clone]')).toHaveCount(3)
   })
 
   test('closes on Escape and returns focus to the manage entry', async ({ page }) => {
     await manageEntry(page).click()
-    await expect(page.locator('[data-quick-actions-manager]')).toBeVisible()
+    await expect(managerPanel(page)).toBeVisible()
 
     await page.keyboard.press('Escape')
 
-    await expect(page.locator('[data-quick-actions-manager]')).toHaveCount(0)
+    await expect(managerPanel(page)).toHaveCount(0)
     await expect(manageEntry(page)).toBeFocused()
   })
 
@@ -57,7 +69,7 @@ test.describe('quick actions management', () => {
     // Settings are the authority, so a reload must come back on the stored layout —
     // this is the persistence requirement of spec section 13.2, seen from the GUI.
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', 'bar', { timeout: 20_000 })
+    await expect(layoutCell(page)).toHaveAttribute('data-quick-actions-layout', 'bar', { timeout: 30_000 })
   })
 
   test('the launcher layout opens the shared searchable panel', async ({ page }) => {

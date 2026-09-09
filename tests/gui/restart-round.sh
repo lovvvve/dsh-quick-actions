@@ -4,39 +4,21 @@
 # harness, and check the Client comes back on the stored one.
 #
 # Usage, from the repository root:  sh tests/gui/restart-round.sh
-# Requires: the plugin installed in the web profile, and DSH_HOME set (default ~/.dsh).
+# Requires the plugin installed in the web profile. The profile this round boots is
+# stopped on exit; the restore half puts the layout back to `ribbon`.
 set -u
 
-DSH_HOME=${DSH_HOME:-$HOME/.dsh}
-export DSH_HOME
-LOG=.playwright/dsh-web.log
-mkdir -p .playwright
+. tests/gui/boot.sh
 
-boot() {
-  pkill -f "dsh@latest web" 2>/dev/null
-  pkill -f "_npx/.*dsh.* web" 2>/dev/null
-  for _ in $(seq 1 30); do
-    if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:3080/)" = "000" ]; then break; fi
-    sleep 1
-  done
-  : > "$LOG"
-  nohup npx --yes @deepseek-ai/dsh@latest web --no-open >>"$LOG" 2>&1 &
-  for _ in $(seq 1 90); do
-    if grep -q "dsh web: http" "$LOG" 2>/dev/null; then
-      # The url is printed before the app is ready to serve its first client load, and a
-      # cold first mount is what makes the first test of a boot need a retry.
-      sleep 8
-      return 0
-    fi
-    sleep 1
-  done
-  echo "server never printed its entry url; see $LOG" >&2
-  return 1
+cleanup() {
+  status=$?
+  stop_ours
+  exit "$status"
 }
+trap cleanup EXIT INT TERM
 
 half() {
-  DSH_GUI_ENTRY=$(grep -o 'http://127.0.0.1:3080/?token=[^ )]*' "$LOG" | tail -1) \
-  DSH_QA_RESTART="$1" \
+  DSH_GUI_ENTRY=$(entry_url) DSH_QA_RESTART="$1" \
     pnpm exec playwright test restart.spec.ts --project=desktop
 }
 

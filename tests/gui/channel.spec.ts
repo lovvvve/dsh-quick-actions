@@ -26,8 +26,19 @@ test.describe('DSH GUI channel', () => {
     await openGui(page)
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
 
+    // Absence is only evidence once the plugin has had its say: `apply()` injects the
+    // stylesheet, so waiting for that proves the Client bundle ran and then chose to
+    // render nothing here. Asserting a zero count the moment the composer appears would
+    // pass on render latency alone, and would stay green if a regression started
+    // rendering the layout on the hero a second later.
+    await page.waitForFunction(
+      () => [...document.querySelectorAll('style')].some(tag => (tag.textContent ?? '').includes('dsh-cqa-')),
+      undefined,
+      { timeout: 30_000 },
+    )
+
     // The hero deliberately does not mount `conversation.composer.dock`, and the plugin
-    // treats that dock as the public Resident Composer beacon — so nothing may render here.
+    // treats that dock as the public Resident Composer beacon.
     await expect(layoutCell(page)).toHaveCount(0)
     await expect(manageEntry(page)).toHaveCount(0)
   })
