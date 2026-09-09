@@ -10,9 +10,9 @@
 |---|---|---|
 | 已发布 tarball `0.1.2-rc.1` | `npm pack` 取回，解包到 `$CLAUDE_JOB_DIR/tmp/prim/package/`（79 文件，156 KB） | 导出面、`.d.ts`、`files`/`exports`/`peerDependencies`、CSS |
 | 已发布 tarball `0.0.1-rc.1` | 同上，`$CLAUDE_JOB_DIR/tmp/old/package/` | `latest` dist-tag 指向物的对比 |
-| 本机 DSH `0.1.2-rc.1` 安装 | `/home/yulong/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/` | 模块系统实现、第一方 bundle 的 `require`、web 前端 shell 产物 |
+| 本机 DSH `0.1.2-rc.1` 安装 | `~/.npm/_npx/<hash>/node_modules/@deepseek-ai/` | 模块系统实现、第一方 bundle 的 `require`、web 前端 shell 产物 |
 | 实机 web profile | `~/.dsh/profiles/web/`（`package.json#dsh.profile.bundles`） | 第三方插件的既有用法 |
-| 本仓库构建适配器 | `/home/yulong/dsh-quick-actions/tools/dsh-client-bundle/src/index.ts` | AST 边界门禁影响面 |
+| 本仓库构建适配器 | `tools/dsh-client-bundle/src/index.ts` | AST 边界门禁影响面 |
 | 隔离实测 harness | `$CLAUDE_JOB_DIR/tmp/tc`（tsc）、`$CLAUDE_JOB_DIR/tmp/bundle`、`$CLAUDE_JOB_DIR/tmp/bundle-inline`（tsdown） | 类型解析与构建可行性的正/反向实测 |
 
 未使用 Web 检索、二手文章或运行时 Client Inspect。本机 GUI（`http://127.0.0.1:3080`）未访问。
@@ -221,7 +221,7 @@ export declare function Modal(props: ModalProps): import("react").ReactPortal | 
 
 ### 4.2 第一方 `require` 的确切位置
 
-全部形如同一行（下列均在 `/home/yulong/.npm/_npx/b86ed90107c62dab/node_modules/@deepseek-ai/`）：
+全部形如同一行（下列均在 `~/.npm/_npx/<hash>/node_modules/@deepseek-ai/`）：
 
 ```js
 let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
@@ -293,9 +293,9 @@ Host 侧对 `dsh.client.external` 只做「可选字符串数组」的形状校�
 
 `.d.ts` 的再导出写成 `export { StateDot } from './StateDot.tsx'`，而 tarball 不发布 `.tsx`/`src/`。这是唯一的真实风险点，因此做了实测而非推理。
 
-harness：`$CLAUDE_JOB_DIR/tmp/tc`，`package.json` 仅 `{"type":"module"}`，`node_modules` 只放解包后的 primitives + `@types/react@18.3.31`（从仓库 `node_modules` 只读复制），`tsconfig.json` 逐字抄 `/home/yulong/dsh-quick-actions/tsconfig.base.json` 的 `compilerOptions`（`module`/`moduleResolution: NodeNext`、`strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、`verbatimModuleSyntax`、`jsx: react-jsx`、`skipLibCheck: true`）加 `noEmit`。探针文件 import 并使用了 `Button`/`Modal`/`Tooltip`/`Toast`/`Menu`/`RiskConfirmation`/`Pill`/`Input`/`projectUserText`/`useDismissOnOutsidePointer`/`useAnchoredPosition` + 7 个图标，以及 `ButtonVariant`/`MenuEntry`/`TooltipSide` 三个类型。
+harness：`$CLAUDE_JOB_DIR/tmp/tc`，`package.json` 仅 `{"type":"module"}`，`node_modules` 只放解包后的 primitives + `@types/react@18.3.31`（从仓库 `node_modules` 只读复制），`tsconfig.json` 逐字抄 `tsconfig.base.json` 的 `compilerOptions`（`module`/`moduleResolution: NodeNext`、`strict`、`noUncheckedIndexedAccess`、`exactOptionalPropertyTypes`、`verbatimModuleSyntax`、`jsx: react-jsx`、`skipLibCheck: true`）加 `noEmit`。探针文件 import 并使用了 `Button`/`Modal`/`Tooltip`/`Toast`/`Menu`/`RiskConfirmation`/`Pill`/`Input`/`projectUserText`/`useDismissOnOutsidePointer`/`useAnchoredPosition` + 7 个图标，以及 `ButtonVariant`/`MenuEntry`/`TooltipSide` 三个类型。
 
-编译器：仓库已安装的 `typescript@6.0.3`（`/home/yulong/dsh-quick-actions/node_modules/.bin/tsc`，只读调用，输出目录在 tmp）。
+编译器：仓库已安装的 `typescript@6.0.3`（`node_modules/.bin/tsc`，只读调用，输出目录在 tmp）。
 
 | 实测 | 结果 |
 |---|---|

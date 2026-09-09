@@ -286,7 +286,7 @@ client.js size: 146124
 | DSH 运行时 | `npx @deepseek-ai/dsh@latest web`，`latest` dist-tag 解析为 **0.1.2-rc.1**（`next` 同版，`alpha` 为 0.1.5-alpha.1） |
 | 核心包版本 | `dsh-settings` / `dsh-client-ui-settings` / `dsh-client-connection` / `dsh-client-ui-conversation` / `dsh-client-ui-renderer` / `dsh-client-locale` 均 0.1.2-rc.1，`@deepseek-ai/cordis` 4.0.2 |
 | peer 结论 | 插件声明 `>=0.1.2-rc.1`，与运行时**正好相等**，不存在版本缺口 |
-| `DSH_HOME` | `/home/yulong/.dsh`（用户自有环境，非隔离目录） |
+| `DSH_HOME` | `~/.dsh`（用户自有环境，非隔离目录） |
 | web profile | 已装 7 个第三方插件（dshmarket / dsh-context / dsh-codex-connect / remote-web-ui / better-sidebar / dsh-im / skill-explorer）+ `@deepseek-ai/dsh-base`、`dsh-web-app`；`patchReload: "live"` |
 | PATH 陷阱 | 有两个 `dsh`：桌面 shim（内置 0.1.2-rc.1）会**优先 exec** 用户全局的 `0.1.1-rc.2`，因此安装命令必须显式走 `npx @deepseek-ai/dsh@latest`，否则用错运行时 |
 | 浏览器 | Playwright 1.63.0 + Chromium 153.0.8010.12（headless shell） |
