@@ -2,80 +2,66 @@
 
 *中文：[README.md](./README.md)*
 
-Global Quick Actions next to every ordinary, session-backed **Resident Composer** in DSH. Preset Quick Actions ship with the package and are read-only; Custom Quick Actions belong to the user. All user data is persisted through DSH's local Settings and survives restarts.
+Global Quick Actions next to every ordinary, session-backed **Resident Composer** in DSH. One press sends a piece of text you wrote in advance.
 
-This is a **dual-face feature package**: the Host half owns configuration validation and Settings authority on the Node side, the Client half registers the composer's dock Slots in the browser. The same package also carries `dsh.bundle.patch`, so it is the installable form itself — there is no companion package.
+Preset Quick Actions ship with the package and are read-only — you can hide or clone them. Custom Quick Actions are entirely yours. Everything is persisted through DSH's local Settings and survives restarts.
 
-## What the first release does
+## What it does
 
-- **Send Actions only.** One press loads a pre-configured piece of static text into the draft and submits it through the official path. There is exactly one loading path: `setDraft(text)` → `submit()`.
-- **There is no insert action** (insert at the selection, keep the editing context). DSH has not published `insertText`, so inserting is left to a separate future effort; this release neither detects nor depends on that capability.
-- Action text is **static**: no variables, templates, scripts or any runtime-generated content.
-- Presets and customs are capped at **50 combined**. Once you are at the cap, adding and cloning stop. If an upgrade, a package update or a Host config change pushes existing state past the cap, **no data is lost** — adding and cloning are simply refused until you are back under it.
-- Each action carries its own **send confirmation**. Confirmation defaults to on (the default is written only when an action is created or cloned) and is yours to change afterwards.
-- Every action is **global**. This release has no per-Agent, per-Preset or per-conversation visibility rules, and no cross-device sync, import or export.
-- Quick Actions never appear next to a no-session, hero or takeover composer.
+- **Send Actions**: load a piece of static text into the draft and submit it through the official path. There is exactly one loading path, `setDraft(text)` → `submit()`.
+- **Three layouts**: a ribbon above the input, a bar inside it, or a single launcher opening a searchable panel. Switch at any time.
+- **Per-action send confirmation**, on by default and yours to change.
+- **Text starting with `/` is a valid Command Send Action**, adjudicated by DSH itself.
+- Presets and customs are capped at **50 combined**. At the cap, adding and cloning stop; if an upgrade or a config change pushes existing state past it, **no data is lost** — adding and cloning are simply refused until you are back under it.
+
+This release has **no insert action** (insert at the selection, keep the editing context): DSH has not published `insertText`, and this release neither detects nor depends on it. Action text is static — no variables, templates or scripts. Every action is global, with no per-Agent or per-conversation visibility rules and no cross-device sync, import or export. Quick Actions never appear next to a no-session, hero or takeover composer.
 
 ## Compatibility
 
 | Item | Value |
 |---|---|
-| Verified baseline | DSH core packages at `0.1.2-rc.1` (`@deepseek-ai/dsh` itself, plus `dsh-base` / `dsh-settings` / `dsh-web-app`). Note that `dsh --version` on the desktop build prints its dependency-set label, which is a different number from the core package version. |
-| DSH peer floor | `>=0.1.2-rc.1`, with no upper bound |
+| Verified baseline | DSH core packages at `0.1.2-rc.1`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
+| DSH peers | `>=0.1.2-rc.1`, with no upper bound |
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
-| React and React DOM (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile. `react-dom` carries the management overlay's portal, on the shell's own renderer instance |
-| DSH UI primitives (browser side) | peer `>=0.1.2-rc.1`, also supplied by the module table; the devDependency pins `0.1.2-rc.1` exactly, for typechecking only |
-| Platform | `web` profile only (`dsh.client.platform: web`) |
-| Public contracts consumed | Host injects `settings`; the Client injects `slots`, `settingsScope`, `connection`, `locale` and reads `conversation` through `ctx.get` |
+| React and React DOM (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile |
+| DSH UI primitives (browser side) | `>=0.1.2-rc.1`, also supplied by the module table |
+| Platform | `web` profile only |
 
-The floor is the core package version this effort took all of its evidence on. It is **not** the first officially supported DSH release — that release is not knowable yet, and this document makes no such claim. There is no upper bound because DSH is still in 0.x rc, where `^0.1.2-rc.1` would exclude 0.2.x outright.
-
-This release does **not** depend on `insertText` and detects no DSH capability at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
-
-### Known limitation: how the styles are authored
-
-The controls are the official `@deepseek-ai/dsh-client-ui-primitives` (`Button`, `Pill`, `Input` and the official icons), colours come from DSH theme tokens only, and no global theme is overridden. The plugin's own layout styles, however, are **written as a `dsh-cqa-`-prefixed style string rather than as CSS Modules**.
-
-Delivery is identical to what first-party DSH plugins do — a `<style data-plugin-css>` tag injected at runtime behind the same idempotence check that `dsh-client-ui-chat` and friends use. The difference is only in how the styles are authored (a hand-written string rather than `.module.css`) and how class names are generated (a prefix by convention rather than a compile-time hash), and **neither is visible to the user**. Collision safety rests on the prefix convention rather than on the compiler. This is a known and accepted trade-off for the first release.
+Nothing is capability-detected at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
 
 ## Install
-
-### From the registry
 
 ```sh
 dsh plugin --profile web add dsh-quick-actions
 ```
 
-Then restart the web profile.
-
-> One package is the whole thing: it carries its own `dsh.bundle.patch`, which inserts its Host half into the profile, while its `dsh.client` declaration makes the web app load the browser half. There is no second package and no profile `overrides`.
+Then restart the web profile. One package is the whole thing: it carries `dsh.bundle.patch`, which inserts its Host half into the profile, while its `dsh.client` declaration makes the web app load the browser half.
 
 ### Local / offline install
 
 ```sh
 mkdir -p /tmp/quick-actions
 pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.2.tgz
 ```
 
-Then restart the web profile. The package declares `prepack`, so `pnpm pack` builds it first and the tarball always carries fresh output.
+The `--filter` form works from anywhere in the repository; from the package directory itself, `pnpm pack --pack-destination /tmp/quick-actions` is the same thing.
 
 Use an **absolute path** for the tarball: `dsh plugin` is a pnpm forwarder and pnpm runs in the profile directory, so a relative path resolves under `<DSH_HOME>/profiles/web/` and fails with `ENOENT`.
 
 ### What a good install looks like
 
-- `<DSH_HOME>/profiles/web/package.json` gains `dsh-quick-actions` both under `dependencies` and at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` itself — do not hand-edit them.
-- The package lands at `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`.
-- You can check the layer without starting a server:
+- `<DSH_HOME>/profiles/web/package.json` gains `dsh-quick-actions` both under `dependencies` and at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` — do not hand-edit them.
+- You can check without starting a server:
 
   ```sh
   dsh --profile web --dump-config | grep -A1 'id: composer-quick-actions'
   ```
 
-  The composed profile tree should show `- id: composer-quick-actions` / `name: dsh-quick-actions`, attributed to the `dsh-quick-actions` layer. That row takes effect on the **next profile boot**.
+  You should see `- id: composer-quick-actions` / `name: dsh-quick-actions`. That row takes effect on the **next profile boot**.
 
-- pnpm prints `Issues with peer dependencies found`, and `pnpm peers check` lists every DSH peer this package declares as missing. **That is expected**: DSH's own packages live in DSH's install anchor rather than in the profile's `node_modules`, where the profile's pnpm cannot see them (`autoInstallPeers: false`). Every other third-party DSH plugin in the same profile behaves the same way. The peer declarations document which DSH contracts this package consumes; they take no part in resolution.
+- pnpm prints `Issues with peer dependencies found`. **That is expected**: DSH's own packages live in DSH's install anchor, where the profile's pnpm cannot see them. Every other third-party DSH plugin in the same profile behaves the same way.
 
 ### The install fails with `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`
 
@@ -86,26 +72,24 @@ ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION  4 lockfile entries failed verification:
   some-other-plugin@1.2.3 was published at ..., within the minimumReleaseAge cutoff (...)
 ```
 
-Nothing is wrong with this plugin, and you did not install it wrongly. pnpm enforces a supply-chain policy that rejects dependencies **published inside a cooling-off window** (24 hours by default), and it checks the **whole profile lockfile** rather than only the package you are adding. So if any plugin already in the profile shipped a release in the last day without an exemption, adding anything at all is refused.
+pnpm enforces a supply-chain policy that rejects dependencies published inside a cooling-off window (24 hours by default), and it checks the **whole profile lockfile** rather than only the package you are adding. So if any plugin already in the profile shipped a release in the last day without an exemption, adding anything at all is refused.
 
-To confirm: run a bare `pnpm install` in the profile directory, adding nothing. The same error means it has nothing to do with this plugin.
+To confirm it has nothing to do with this plugin, run a bare `pnpm install` in the profile directory, adding nothing; the same error means exactly that. Three ways out:
 
-Three ways out:
-
-1. **Pass a flag for this one command** (recommended — it affects this invocation only and leaves your policy alone):
+1. Pass a flag for this one command, affecting nothing else:
 
    ```sh
    dsh plugin --profile web add dsh-quick-actions --config.minimumReleaseAge=0
    ```
 
-2. **Wait the window out.** Each line of the error gives a publish time and the cutoff; once the newest of them is 24 hours old the install works with no changes.
-3. **Add each named `name@version` to `minimumReleaseAgeExclude`** in the profile's `pnpm-workspace.yaml`. Permanent, but it gives up that protection for those packages.
+2. Wait the window out. Each line of the error gives a publish time and the cutoff; once the newest is 24 hours old the install works unchanged.
+3. Add each named `name@version` to `minimumReleaseAgeExclude` in `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`, at the cost of giving up that protection for those packages.
 
 ## Configuring Preset Quick Actions
 
-The Preset Catalog is assembled in a fixed order: the package's own built-in manifest first, then whatever the Host composition appends through `Config.presets`. `Config.presets` **is** the authorization channel for presets — there is no third-party runtime registration API.
+The preset catalog is two parts in order: the list built into the package, then whatever the Host composition appends through `Config.presets`. That is the only channel for declaring presets — there is no runtime registration API.
 
-Put `config` on the row the bundle inserts:
+Put `config` on the plugin's row:
 
 ```yaml
 # <DSH_HOME>/profiles/web/cordis.patch.yml
@@ -114,91 +98,63 @@ Put `config` on the row the bundle inserts:
     presets:
       - id: run-tests
         label: Run tests
-        text: Run the test suite and paste every failure.
+        text: Run the test suite and paste the failures.
         icon: ✅
       - id: compact
-        label: Compact
+        label: Compact context
         text: /compact
 ```
 
 Field rules:
 
-- `id` is required, unique across the catalog, and **permanent**. Label, icon and text may change under the same `id`; `confirm` is the immutable safety signature, so changing it needs a new `id`. Editing a text so it starts with `/` — or stops doing so — crosses that same signature.
-- `label` and `text` are required; `icon` and `confirm` are optional (`confirm` defaults to `true`).
-- Do not declare an action type. The data contract keeps a `kind` discriminant, but this release pins it to `'send'`: authors do not declare it, the form offers no selector, users cannot change it, and normalization writes it out.
-- An invalid preset — a missing field, a duplicate `id`, a `kind` other than `'send'`, a catalog over 50 entries — makes **plugin loading fail loudly** and names every problem at once, rather than truncating silently or letting the last entry win.
+- `id` is required, unique across the catalog and **permanent**. Label, icon and text may change under the same `id`; `confirm` is part of the safety signature, so changing it needs a new `id` — and so does making the text start with `/`, or stop starting with it.
+- `label` and `text` are required; `icon` and `confirm` are optional, and `confirm` defaults to `true`.
+- An invalid preset (a missing field, a duplicate `id`, a catalog over 50 entries) makes **plugin loading fail loudly** and lists every problem at once, rather than truncating silently.
 
-Users can hide or clone a preset but never edit or delete one; a clone becomes an ordinary Custom Quick Action.
+Users can hide or clone a preset but never edit or delete it; a clone becomes an ordinary Custom Quick Action.
 
-The Host publishes the assembled catalog snapshot as the composition `base` layer of a **read-only** Settings namespace, `composer-quick-actions-catalog`, and the Client reads only that layer. The namespace has no user layer, so it produces no persisted section — even hand-writing a section of that name into `settings.yaml` will not change the catalog the Client sees. It does appear in the Settings namespace directory, but it registers no config card, so it renders no form.
+## Three layouts
 
-## The three layouts
-
-The layout is one global persisted setting, switched in the management panel:
+Layout is a global persisted setting, switched in the management panel:
 
 | Value | Name | Where |
 |---|---|---|
-| `ribbon` (default) | Action ribbon | One row above the input box, matching its width |
-| `bar` | Action bar | One row inside the input box; whatever does not fit folds into "more" |
-| `launcher` | Single launcher | One entry button that opens a searchable action panel |
+| `ribbon` (default) | Action ribbon | One row above the input, matching its width |
+| `bar` | Action bar | One row inside the input; whatever does not fit folds into "more" |
+| `launcher` | Single launcher | One entry button opening a searchable panel |
 
-`bar` and `launcher` share the same searchable action panel; search matches labels and text only, and preserves the shared order. The management panel is registered as an independent layer and is where preset ordering, hiding, restoring and cloning, custom action CRUD and enable/disable, and the layout switch all live.
+`bar` and `launcher` share the same searchable panel, and the search matches labels and texts only. The management panel is where you reorder, hide, restore and clone presets, create, edit, enable and delete custom actions, and switch layout.
+
+## Command Send Action
+
+Static text whose first non-whitespace character is `/` is marked as a command.
+
+- It travels **exactly the same path** as any other Send Action, and the command is adjudicated by DSH itself; this plugin never parses or rewrites command semantics.
+- Confirmation is on by default and **can be turned off**. The `confirm` you set is never rewritten.
+- With confirmation on, the panel shows precisely what will be submitted. **The native candidate menu you get when typing `/` in the composer does not appear here**, so adjudication may differ from typing the same command by hand.
+- With confirmation off, the command is submitted in one press with no preview.
+- The management form warns you when text becomes a command, but locks no control.
 
 ## Settings paths
 
 User data lives in `<DSH_HOME>/settings.yaml` (`~/.dsh` when `DSH_HOME` is unset):
 
-- `composer-quick-actions` — the **only persisted namespace**. It holds `schemaVersion`, `layout`, the custom actions, the shared order and the preset deltas (hidden / reordered).
-- `composer-quick-actions-catalog` — the Preset Catalog: read-only, never written as a user layer, and therefore **never present** in this file.
+- `composer-quick-actions` — the **only** persisted namespace: layout, custom actions, the shared order and preset differences.
+- `composer-quick-actions-catalog` — the preset catalog. Read-only, never written to the user layer, so it does **not** appear in that file.
 
-The Host is the sole validation and migration authority: at startup it performs one idempotent canonical rewrite of the stored section against the current catalog, fenced by its revision. The Client never writes a file, never treats browser storage as a source of truth and never migrates; every change it makes carries an expected revision, and on a conflict the authoritative snapshot refreshes and the retry is yours to trigger explicitly — the plugin never silently overwrites another writer. Data written by a higher `schemaVersion` is kept untouched, so a downgrade round-trip loses nothing.
-
-## Command Send Action
-
-Static text whose first non-whitespace character is `/` is a **valid** Send Action, badged as a Command.
-
-- It travels the **exact same** single path as any other Send Action: `setDraft(text)` → `submit()`. Commands are always adjudicated by DSH itself; this plugin never parses or rewrites command semantics, and never registers or drives any input-trigger pipeline.
-- Confirmation defaults to on and **can be turned off**. Normalization never rewrites the `confirm` you set based on the text; the default is written once, at create and clone time.
-- With confirmation on, the panel shows exactly what will be submitted. **However**: the native candidate menu you get when typing `/` in the input box does not appear here. The adjudicated result can therefore differ from what you would expect after typing the same command character by character — a known, accepted trade-off.
-- With confirmation off, the command is submitted in one click with no preview at all. That is your explicit choice about a static command you configured yourself.
-- The management form warns you when a text becomes a command, but **locks nothing**; the confirmation switch stays yours.
-
-## Development
-
-```sh
-pnpm install
-pnpm build          # tsc -b (declarations only) + tsdown (Host ESM + single-file lazy-CJS Client)
-pnpm watch:client   # rebuild the Client bundle only
-pnpm test
-pnpm typecheck
-pnpm lint
-```
-
-Output:
-
-- Host: `lib/index.js`, `lib/types.js` — plain Node ESM.
-- Client: `lib/client.js` plus `lib/client.js.map` — a browser-only, single-file lazy-CJS bundle wrapped as `window.__ModuleLoader__.load({ id, factory })`. Only the specifiers listed in `dsh.client.external` (`react`, `react/jsx-runtime`, `react-dom` and `@deepseek-ai/dsh-client-ui-primitives`, all of them platform seeds of the browser module table) may be `require`d; everything else is inlined, and indirect or computed `require`, dynamic `import` and undeclared externals fail the build.
-- Types: `lib/types/**/*.d.ts` — declarations only, no JavaScript.
-
-### Prerequisites for verifying dev HMR
-
-`pnpm watch:client` is **not** the same thing as DSH GUI HMR. Before expecting an edit to reach a running page, confirm all three:
-
-1. The checkout the DSH profile actually loads is the checkout you are watching. An offline install installs a *copy* from a tarball, so editing sources will not affect it — point a `file:`/`link:` spec at your working copy while developing.
-2. That checkout's Client build watcher is running and has produced at least one complete successful artifact.
-3. The page has refetched the new bundle. The Client artifact is published atomically: a failed watch build keeps the last complete successful output, so a page may still be running the old code — check that this round's watch build succeeded first.
+The Host is the single validation authority and normalizes stored data idempotently at boot. Every change made in the UI carries an expected revision; on a conflict the panel refreshes to the latest state and asks you to confirm again, never silently overwriting someone else's write. Data written by a higher `schemaVersion` is kept as-is, so a downgrade round-trip loses nothing.
 
 ## Upgrade, downgrade and uninstall
 
-**Upgrade / downgrade** — once published:
+**Upgrade / downgrade**:
 
 ```sh
 dsh plugin --profile web add dsh-quick-actions@<version>
 ```
 
-With a local tarball, point the `add` at the new (or older) tarball and restart the profile. Re-adding the same version is idempotent and leaves no duplicate in `dsh.profile.bundles`.
+With a local tarball, `add` the tarball of the version you want. Restart the profile afterwards. Re-adding the same version is idempotent.
 
-Cross-version data compatibility is the Host's job: a newly added preset only appends to the end of an existing order and rewrites no stored data, and on a downgrade back to this release, data from a higher `schemaVersion` is kept as-is — not shown, not counted, not rewritten — so the round-trip is lossless.
+Cross-version data compatibility is the Host's job: new presets are appended to the end of the existing order and nothing stored is rewritten.
 
 **Uninstall**:
 
@@ -206,14 +162,29 @@ Cross-version data compatibility is the Host's job: a newly added preset only ap
 dsh plugin --profile web remove dsh-quick-actions
 ```
 
-`dsh plugin` drops both the dependency and the layer in `dsh.profile.bundles`. After a profile restart the actions are gone.
+Both the dependency and the layer in `dsh.profile.bundles` go away. After a profile restart the actions are gone.
 
-**Full manual cleanup** (uninstall deliberately does none of this, so that reinstalling restores your actions):
+**Full manual cleanup** (uninstalling does none of this, because a reinstall should restore your actions):
 
-1. Delete the `composer-quick-actions` section from `<DSH_HOME>/settings.yaml` — the only place user data is kept.
-2. If you used the local tarball flow, delete that `overrides` entry from `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`.
-3. If you wrote `config` for `composer-quick-actions` into the profile's `cordis.patch.yml`, delete that block too.
+1. Delete the `composer-quick-actions` section from `<DSH_HOME>/settings.yaml` — the only place user data lives.
+2. Remove any entry you added for this plugin from `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`.
+3. Delete any `config` you wrote for `composer-quick-actions` in the profile's `cordis.patch.yml`.
 4. Restart the profile.
+
+## Development
+
+```sh
+pnpm install
+pnpm build          # Host ESM plus the single-file lazy-CJS Client
+pnpm watch:client   # rebuild the Client bundle only
+pnpm test
+pnpm typecheck
+pnpm lint
+```
+
+Output: the Host is `lib/index.js` and `lib/types.js` (plain Node ESM); the Client is `lib/client.js` plus a sourcemap, a browser-only single-file lazy-CJS bundle; types are `lib/types/**/*.d.ts`, declarations only.
+
+`pnpm watch:client` is **not** DSH GUI HMR. For a change to reach a running page, three things must hold: the profile is loading the checkout you are watching (an offline install loads a copy of the tarball), that checkout's watcher is running and has produced one complete build, and the page has refetched the new output. The Client artifact is published atomically, so a failed watch build keeps the last successful one and the page may still be running old code.
 
 ## License
 
