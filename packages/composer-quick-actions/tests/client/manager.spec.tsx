@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { useSyncExternalStore } from 'react'
 import type { ReactElement } from 'react'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import type { RenderResult } from '@testing-library/react'
 import { createQuickActionDockEntries } from '../../src/client/surfaces/entries.js'
 import { createResidentComposerRegistry } from '../../src/client/surfaces/residency.js'
 import { createQuickActionSessionRegistry } from '../../src/client/session/execution.js'
@@ -177,8 +178,9 @@ function Session({ sessionId }: { readonly sessionId: string }): ReactElement {
   )
 }
 
-function mount(sessionId = 'session-1'): void {
-  render(<Session sessionId={sessionId} />)
+/** Returns the render result, so a case can ask what is and is not inside the dock's own DOM. */
+function mount(sessionId = 'session-1'): RenderResult {
+  return render(<Session sessionId={sessionId} />)
 }
 
 /** Let the controller's serialized write queue settle, with React in `act`. */
@@ -197,6 +199,15 @@ function openManager(): void {
 
 function panel(): HTMLElement {
   return screen.getByRole('dialog', { name: zh['manager.title'] })
+}
+
+/**
+ * The overlay's own backdrop, addressed by the class only it carries: the
+ * `data-quick-actions-backdrop` marker is shared with the two anchored popovers,
+ * so a bare query would not say whose scrim it found.
+ */
+function managerBackdrop(): HTMLElement | null {
+  return document.querySelector<HTMLElement>('.dsh-cqa-manager-backdrop')
 }
 
 function rowOf(key: string): HTMLElement {
@@ -474,21 +485,15 @@ describe('the management overlay', () => {
   })
 
   it('renders on document.body, out of the dock subtree it is registered in', () => {
-    // Ticket 26. The overlay is `position: fixed; z-index: 31`, but a Slot entry
-    // renders inside the input dock, and any ancestor there that opens a stacking
-    // context caps that z-index inside it: ticket 21's acceptance found the shell's
-    // sidebar handle (`z-index: 8`) painting over the panel. A portal to the body
-    // puts it in the page's own stacking context, where its z-index means what it
-    // says. The backdrop goes with it — left behind, it would scrim the wrong layer.
-    const { container } = render(<Session sessionId="session-1" />)
+    // Ticket 26; why a z-index alone could not do it is written at the portal itself.
+    // The backdrop goes with the panel — left behind, it would scrim the wrong layer.
+    const { container } = mount()
 
     openManager()
 
-    const dialog = panel()
-    const backdrop = document.querySelector('[data-quick-actions-backdrop]') as HTMLElement
-    expect(container.contains(dialog)).toBe(false)
-    expect(dialog.parentElement).toBe(document.body)
-    expect(backdrop.parentElement).toBe(document.body)
+    expect(container.contains(panel())).toBe(false)
+    expect(panel().parentElement).toBe(document.body)
+    expect(managerBackdrop()?.parentElement).toBe(document.body)
   })
 
   it('takes the portal down with it, on close and on unmount', () => {
@@ -496,16 +501,16 @@ describe('the management overlay', () => {
 
     openManager()
     fireEvent.keyDown(panel(), { key: 'Escape' })
-    expect(document.querySelector('[data-quick-actions-manager]')).toBeNull()
-    expect(document.querySelector('[data-quick-actions-backdrop]')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
+    expect(managerBackdrop()).toBeNull()
 
     // And a fiber that goes away with the panel open leaves nothing on the body
     // either (spec 7.3): the portal is not a container this feature owns.
     openManager()
-    expect(document.querySelector('[data-quick-actions-manager]')).toBeTruthy()
+    expect(screen.getByRole('dialog', { name: zh['manager.title'] })).toBeTruthy()
     cleanup()
-    expect(document.querySelector('[data-quick-actions-manager]')).toBeNull()
-    expect(document.querySelector('[data-quick-actions-backdrop]')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
+    expect(managerBackdrop()).toBeNull()
   })
 
   it('draws one overlay, not one per Resident Composer', () => {
