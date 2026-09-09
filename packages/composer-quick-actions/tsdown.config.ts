@@ -31,6 +31,10 @@ export default [
     // fails the adapter's CSS guard instead of quietly duplicating the shell's
     // styles. Keep this list in step with `dsh.client.external` in package.json;
     // `tests/release/packaging.spec.ts` asserts the two are the same set.
-    external: ['react', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'],
+    // `react-dom` carries the management overlay's portal (ticket 26). It is a
+    // module-table seed shared with the shell's own renderer, so requiring it is
+    // what keeps the portal on the page's single React DOM instance — bundling
+    // it would ship a second one.
+    external: ['react', 'react/jsx-runtime', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
   }),
 ]

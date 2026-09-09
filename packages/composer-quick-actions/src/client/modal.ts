@@ -2,11 +2,17 @@
  * The modal semantics every Quick Action panel shares (spec 8.4).
  *
  * Spec 8.4 makes Escape cancellation, a clear focus ring, keyboard traversal and
- * focus return after a panel closes hard gates. None of these panels render
- * through a portal — a Slot entry renders in place, inside the composer stack —
- * so without a Tab boundary a keyboard user would tab straight out of an open
- * panel into the draft behind it, and every route back into the panel would take
- * the Escape handler with it.
+ * focus return after a panel closes hard gates. A Slot entry renders in place,
+ * inside the composer stack, so without a Tab boundary a keyboard user would tab
+ * straight out of an open panel into the draft behind it, and every route back
+ * into the panel would take the Escape handler with it.
+ *
+ * That holds for the management overlay too, even though ticket 26 moved it onto
+ * `document.body` through a portal: a portal relocates the DOM node, not the
+ * React tree, so its events still bubble to the dock and its Tab order still
+ * follows document order — which is now the end of the body, further from the
+ * draft rather than nearer it. Both hooks below are unaffected either way,
+ * because both work off the panel element they are handed.
  *
  * This module is a leaf beside `dsh.ts`, owned by no directory of spec 14's
  * source map: the confirmation panel (`session/`), the action panel and the

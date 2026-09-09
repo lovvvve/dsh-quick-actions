@@ -48,6 +48,7 @@
       "external": [
         "react",
         "react/jsx-runtime",
+        "react-dom",
         "@deepseek-ai/dsh-client-ui-primitives"
       ]
     }
@@ -62,7 +63,8 @@
     "@deepseek-ai/dsh-client-ui-settings": ">=0.1.2-rc.1",
     "@deepseek-ai/dsh-settings": ">=0.1.2-rc.1",
     "@deepseek-ai/schemastery": "^3.18.2",
-    "react": "^18.3.1"
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.2",

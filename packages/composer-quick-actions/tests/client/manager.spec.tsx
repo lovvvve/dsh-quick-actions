@@ -473,6 +473,41 @@ describe('the management overlay', () => {
     expect(panel()).toBeTruthy()
   })
 
+  it('renders on document.body, out of the dock subtree it is registered in', () => {
+    // Ticket 26. The overlay is `position: fixed; z-index: 31`, but a Slot entry
+    // renders inside the input dock, and any ancestor there that opens a stacking
+    // context caps that z-index inside it: ticket 21's acceptance found the shell's
+    // sidebar handle (`z-index: 8`) painting over the panel. A portal to the body
+    // puts it in the page's own stacking context, where its z-index means what it
+    // says. The backdrop goes with it — left behind, it would scrim the wrong layer.
+    const { container } = render(<Session sessionId="session-1" />)
+
+    openManager()
+
+    const dialog = panel()
+    const backdrop = document.querySelector('[data-quick-actions-backdrop]') as HTMLElement
+    expect(container.contains(dialog)).toBe(false)
+    expect(dialog.parentElement).toBe(document.body)
+    expect(backdrop.parentElement).toBe(document.body)
+  })
+
+  it('takes the portal down with it, on close and on unmount', () => {
+    mount()
+
+    openManager()
+    fireEvent.keyDown(panel(), { key: 'Escape' })
+    expect(document.querySelector('[data-quick-actions-manager]')).toBeNull()
+    expect(document.querySelector('[data-quick-actions-backdrop]')).toBeNull()
+
+    // And a fiber that goes away with the panel open leaves nothing on the body
+    // either (spec 7.3): the portal is not a container this feature owns.
+    openManager()
+    expect(document.querySelector('[data-quick-actions-manager]')).toBeTruthy()
+    cleanup()
+    expect(document.querySelector('[data-quick-actions-manager]')).toBeNull()
+    expect(document.querySelector('[data-quick-actions-backdrop]')).toBeNull()
+  })
+
   it('draws one overlay, not one per Resident Composer', () => {
     render(
       <>

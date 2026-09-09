@@ -33,6 +33,7 @@
  */
 import { useCallback, useEffect, useId, useState } from 'react'
 import type { ReactElement } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
 import { ActionForm } from './ActionForm.js'
 import { ManagedRow } from './ManagedRow.js'
@@ -192,7 +193,36 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
     [controller, write],
   )
 
-  return (
+  /*
+    Rendered on the body rather than in place (ticket 26).
+
+    This overlay is `position: fixed; z-index: 31`, but a Slot entry renders
+    inside the input dock, and a z-index only ranks its element against siblings
+    in the same stacking context: any ancestor in that dock which opens one caps
+    this panel inside it. Ticket 21's acceptance found the shell's sidebar width
+    handle — `position: absolute; z-index: 8` — painting over the panel's left
+    edge, which swallowed clicks aimed at the confirmation switch's 13 px box.
+
+    A portal to `document.body` puts the overlay in the page's own stacking
+    context, where 31 means what it says. `document.body` is the target rather
+    than a container this feature appends: React inserts and removes the
+    children itself, so there is no node left behind when the fiber goes away
+    (spec 7.3), and nothing to clean up on dispose.
+
+    The backdrop travels with it. Left behind, it would scrim the dock's layer
+    while the panel floated above the page — and its click-to-close would land
+    under the panel it is supposed to be behind.
+
+    Only this panel is portaled. The two anchored popovers (`ActionPanel`,
+    `ConfirmPanel`) position themselves against `.dsh-cqa-anchor`'s
+    `position: relative` in the dock, so a portal would move their positioning
+    basis to the viewport; that is a separate change, and ticket 21 measured
+    their controls as reachable at all three viewports.
+
+    `document` is always there: the Client bundle is browser-only, enforced in
+    both tsdown and Rolldown by the build adapter.
+  */
+  return createPortal(
     <>
       {/*
         The backdrop closes the panel with no side effect. It paints nothing: the
@@ -420,6 +450,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
           </>
         )}
       </div>
-    </>
+    </>,
+    document.body,
   )
 }
