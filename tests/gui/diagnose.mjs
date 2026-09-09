@@ -1,57 +1,52 @@
-// Throwaway diagnostic: geometry of the plugin surface against the composer input, to
-// pin what "equal width" must be measured against. Prints boxes and DSH class names
-// only — never conversation titles or message text. Run with:
+// Throwaway diagnostic: how a submitted quick action shows up in DSH's conversation flow,
+// so "sent exactly once" can be asserted on something real. Prints counts and attribute
+// values only — never message text beyond this round's own fixtures. Submits nothing.
 //   DSH_GUI_ENTRY=<token url> node tests/gui/diagnose.mjs
 import { chromium } from '@playwright/test'
 
-// `||`: a failed grep in the drivers yields an empty string, which is not nullish.
 const entry = process.env.DSH_GUI_ENTRY || ''
 if (entry === '') throw new Error('set DSH_GUI_ENTRY to the url printed by dsh web')
+const probe = '/qa-probe-unknown-command'
 
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } })
 await page.goto(entry, { waitUntil: 'domcontentloaded' })
-await page.waitForTimeout(4000)
+await page.waitForTimeout(5000)
 
 const rows = page.locator('[role="treeitem"]')
-for (let index = 0; index < Math.min(await rows.count(), 8); index += 1) {
+const leaves = await rows.evaluateAll(els => els
+  .map((el, i) => ({ i, leaf: el.querySelector('[role="treeitem"]') === null }))
+  .filter(r => r.leaf).map(r => r.i))
+for (const index of leaves.slice(0, 6)) {
   await rows.nth(index).click()
-  await page.waitForTimeout(3500)
+  await page.waitForTimeout(4000)
   if (await page.locator('[data-quick-actions-layout]').count() > 0) break
 }
 
-const geometry = await page.evaluate(() => {
-  const box = (element) => {
-    const rect = element.getBoundingClientRect()
-    return {
-      tag: element.tagName.toLowerCase(),
-      cls: (element.className ?? '').toString().slice(0, 40),
-      left: Math.round(rect.left * 10) / 10,
-      right: Math.round(rect.right * 10) / 10,
-      width: Math.round(rect.width * 10) / 10,
-    }
-  }
-  const cell = document.querySelector('[data-quick-actions-layout]')
-  const input = document.querySelector('textarea, [role="textbox"]')
-  const chain = []
-  let node = input
-  for (let depth = 0; depth < 5 && node !== null; depth += 1) {
-    chain.push(box(node))
-    node = node.parentElement
+console.log('exact getByText matches:', await page.getByText(probe, { exact: true }).count())
+console.log('loose getByText matches:', await page.getByText(probe, { exact: false }).count())
+
+const shape = await page.evaluate((needle) => {
+  const holders = [...document.querySelectorAll('*')].filter(element => {
+    if (!(element.textContent ?? '').includes(needle)) return false
+    return ![...element.children].some(child => (child.textContent ?? '').includes(needle))
+  })
+  const kinds = {}
+  for (const element of document.querySelectorAll('[data-chat-flow-kind]')) {
+    const kind = element.getAttribute('data-chat-flow-kind') ?? '?'
+    kinds[kind] = (kinds[kind] ?? 0) + 1
   }
   return {
-    layoutAttr: cell?.getAttribute('data-quick-actions-layout') ?? null,
-    densityAttr: cell?.getAttribute('data-quick-actions-density') ?? null,
-    cell: cell === null ? null : box(cell),
-    cellParent: cell?.parentElement === undefined ? null : box(cell.parentElement),
-    inputChain: chain,
-    actionCount: document.querySelectorAll('[data-quick-action]').length,
-    actionClasses: [...document.querySelectorAll('[data-quick-action]')]
-      .map(element => (element.className ?? '').toString().slice(0, 70)),
-    actionNames: [...document.querySelectorAll('[data-quick-action]')]
-      .map(element => (element.getAttribute('aria-label') ?? element.textContent ?? '').trim().slice(0, 30)),
+    innermostHolders: holders.length,
+    holderShape: holders.slice(0, 3).map(element => ({
+      tag: element.tagName.toLowerCase(),
+      chatFlowKind: element.closest('[data-chat-flow-kind]')?.getAttribute('data-chat-flow-kind') ?? null,
+      chatTurn: element.closest('[data-chat-turn]')?.getAttribute('data-chat-turn') ?? null,
+    })),
+    flowKinds: kinds,
+    turns: document.querySelectorAll('[data-chat-turn]').length,
   }
-})
+}, probe)
+console.log('flow shape:', JSON.stringify(shape, null, 1))
 
-console.log(JSON.stringify(geometry, null, 1))
 await browser.close()
