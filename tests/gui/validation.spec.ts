@@ -111,12 +111,19 @@ test.describe('custom action validation', () => {
     // Read rather than matched: `toHaveText` normalizes the very whitespace under test.
     expect(await stored.locator('.dsh-cqa-label').textContent()).toBe(label)
 
-    await stored.getByRole('button', { name: '编辑' }).click()
+    const edit = stored.getByRole('button', { name: '编辑' })
+    await edit.click()
     const editing = page.locator('[data-quick-actions-form="edit"]')
     expect(await editing.getByLabel('发送文本', { exact: true }).inputValue()).toBe(text)
-    // Cancel rather than Escape: the form takes no initial focus, so Escape here is still
-    // aimed at the row's Edit button and would close the panel behind the form as well.
-    await editing.getByRole('button', { name: '取消' }).click()
+
+    // Ticket 25: the form takes the caret on open, so the first Escape is typed *inside*
+    // it and leaves the form alone — before that fix it was still aimed at the row's Edit
+    // button and closed the whole panel. Focus then returns to that button, inside the panel.
+    await expect(editing.getByLabel('标签', { exact: true })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(editing).toHaveCount(0)
+    await expect(managerPanel(page)).toBeVisible()
+    await expect(edit).toBeFocused()
   })
 
   test('refuses a text holding a DSH-reserved reference placeholder', async ({ page }) => {
