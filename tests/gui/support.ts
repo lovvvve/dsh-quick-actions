@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { expect, type Locator, type Page, type Response } from '@playwright/test'
+import { parse } from 'yaml'
 
 /**
  * `dsh web` prints its entry URL with a `token` query parameter, and redeeming that
@@ -109,7 +113,27 @@ let knownLeaf: number | undefined
  * and the requested viewport is applied afterwards — resizing the window is also what the
  * responsive rule of spec section 13.3 actually describes.
  */
-export async function openResidentComposer(page: Page): Promise<void> {
+export function openResidentComposer(page: Page): Promise<void> {
+  return enterSession(page, 'plugin')
+}
+
+/**
+ * DSH's own conversation flow rows: what a session with history has and the hero screen
+ * does not.
+ */
+export function conversationFlow(page: Page): Locator {
+  return page.locator('[data-chat-flow-kind]')
+}
+
+/**
+ * Enter a sidebar session and wait for `landmark`.
+ *
+ * `plugin` waits for this plugin's own layout cell — the Resident Composer beacon every
+ * other spec needs. `history` waits only for DSH's conversation flow, and exists for the
+ * round that asserts the plugin is *absent*: the hero screen carries a composer too, so
+ * "no cell on whatever screen I landed on" would prove nothing about an uninstall.
+ */
+export async function enterSession(page: Page, landmark: 'plugin' | 'history'): Promise<void> {
   const requested = page.viewportSize()
   if (requested !== null && requested.width < 1000) {
     await page.setViewportSize({ width: 1440, height: Math.max(requested.height, 800) })
@@ -141,7 +165,8 @@ export async function openResidentComposer(page: Page): Promise<void> {
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
     // A profile that has just booted mounts the first surface slowly: the web app is
     // loading its module table while this waits, so the budget is generous.
-    const mounted = await layoutCell(page).first()
+    const beacon = landmark === 'plugin' ? layoutCell(page).first() : conversationFlow(page).first()
+    const mounted = await beacon
       .waitFor({ state: 'visible', timeout: 25_000 })
       .then(() => true, () => false)
     if (!mounted) continue // this session shows the hero; try the next row
@@ -151,14 +176,17 @@ export async function openResidentComposer(page: Page): Promise<void> {
     // Asserted outside the discovery fallback on purpose: a cell that disappears when the
     // window shrinks is a responsive defect, and swallowing it here would report it as
     // "no session with history" instead.
-    await expect(layoutCell(page)).toBeVisible()
+    if (landmark === 'plugin') await expect(layoutCell(page)).toBeVisible()
     await dismissShellOverlays(page)
     return
   }
 
   throw new Error(
-    'no sidebar session mounted the quick actions layout cell; the plugin renders only at a '
-    + 'Resident Composer, so this DSH needs at least one conversation with history',
+    landmark === 'plugin'
+      ? 'no sidebar session mounted the quick actions layout cell; the plugin renders only at a '
+        + 'Resident Composer, so this DSH needs at least one conversation with history'
+      : 'no sidebar session showed a conversation flow; this DSH needs at least one '
+        + 'conversation with history',
   )
 }
 
@@ -222,6 +250,29 @@ export async function removeCustomActionsAddedSince(page: Page, baseline: readon
   }
   await page.locator('[data-quick-actions-manager-close]').click()
   await expect(managerPanel(page)).toHaveCount(0)
+}
+
+export interface StoredNamespace {
+  readonly layout?: string
+  readonly userActionsById?: Readonly<Record<string, { readonly label?: string }>>
+  readonly actionOrder?: readonly { readonly source: string; readonly id: string }[]
+  readonly presetStateById?: Readonly<Record<string, unknown>>
+}
+
+/**
+ * This plugin's own section of the user's live Settings file.
+ *
+ * Two claims can only be checked here, because neither is on screen by definition: a
+ * tombstone is what the projection does *not* show, and data surviving an uninstall is
+ * what there is no plugin left to render. Only this one namespace is read, and no spec
+ * prints it.
+ */
+export function storedNamespace(): StoredNamespace {
+  const file = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'settings.yaml')
+  const document = parse(readFileSync(file, 'utf8')) as Record<string, StoredNamespace | undefined>
+  const section = document['composer-quick-actions']
+  if (section === undefined) throw new Error('the plugin has no section in the settings file')
+  return section
 }
 
 /** Fractional rect, in CSS px, of one element — the geometry spec section 13.3 measures. */
