@@ -1,5 +1,5 @@
 {
-  "name": "dsh-composer-quick-actions-bundle",
+  "name": "dsh-quick-actions-bundle",
   "version": "0.1.0",
   "description": "Installable DSH web-profile bundle for Composer Quick Actions",
   "license": "MIT",
@@ -14,6 +14,6 @@
     }
   },
   "dependencies": {
-    "dsh-composer-quick-actions": "workspace:*"
+    "dsh-quick-actions": "workspace:*"
   }
 }

@@ -15,7 +15,7 @@ import { homedir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { parseDocument } from 'yaml'
 
-const PACKAGE = 'dsh-composer-quick-actions'
+const PACKAGE = 'dsh-quick-actions'
 const BACKUP = '.playwright/profile-pnpm-workspace-backup.yaml'
 
 const profilePnpm = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'profiles', 'web', 'pnpm-workspace.yaml')

@@ -10,7 +10,7 @@ Blocked by: none
 把两个包真正发布出去，使任何人都能用[功能包 README](../../../packages/composer-quick-actions/README.md)「正式安装」一节那条命令装上：
 
 ```sh
-dsh plugin --profile web add dsh-composer-quick-actions-bundle
+dsh plugin --profile web add dsh-quick-actions-bundle
 ```
 
 **本票据推翻[票据 20](./20-choose-publishing-identity-and-license.md) 的「暂不发布」。** 那条决定当时的理由是「只定身份不推包，试用走本地 tarball，不让发布阻塞票据 17/18/21」；首版验收既已通过（票据 21），该理由不再成立。反转须逐处落到文档，不得默默执行：票据 20 的 `## Answer`、地图的决策索引、根 `CLAUDE.md`「环境与陷阱」里那条「**不要**给任何包加 `publishConfig` 或执行 `npm publish`」。
@@ -24,10 +24,23 @@ dsh plugin --profile web add dsh-composer-quick-actions-bundle
 | 正式安装本就是一条命令 | README「正式安装」一节已写好，并注明当前会 404 |
 | 发现与安装是**两条**通道 | npm 负责安装；插件市场的目录来自策展仓库 [awesome-dsh-plugin](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin) 的 `plugins.json`，上架须去那里提 PR，市场本身不收插件条目的 PR |
 
+### 已完成：发布前改名
+
+用户在发布前要求把包名缩短为与仓库同名。已执行，记在 [spec 第 19 节](../spec.md)，[票据 20](./20-choose-publishing-identity-and-license.md) 追加了指向本票据的说明而其原文不改：
+
+| 角色 | 旧名 | 现名 |
+|---|---|---|
+| 功能包 | `dsh-composer-quick-actions` | `dsh-quick-actions` |
+| 安装 bundle | `dsh-composer-quick-actions-bundle` | `dsh-quick-actions-bundle` |
+
+**只改 npm 包名。** Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间一律仍是 `composer-quick-actions`：它们是另一条身份轴，其中 Settings 那两个一经发布就是陌生人机器上的用户数据，此后改名须写迁移。议题跟踪目录 `.scratch/dsh-composer-quick-actions/` 与包目录名也不动，它们不参与解析。
+
+改名过程中的一次返工值得记下：首版批量替换用的是无差别 `sed`，把跟踪器目录路径和历史记录里的旧包名一并改掉了——前者让所有链接指向不存在的目录，后者会让票据 20 与发布证据谎称当时用的就是新名。已整体回退重做，改为负向前瞻只替换后面不跟斜杠的出现，并把文件清单收窄到前瞻性文件。
+
 ### 待办
 
 1. **（HITL）** 用户本机 `npm login`，含 2FA。只有用户能做。
-2. `pnpm --filter dsh-composer-quick-actions publish --dry-run` 核对将要上传的内容，再正式发布。**功能包必须先发**——bundle 依赖它。
+2. `pnpm --filter dsh-quick-actions publish --dry-run` 核对将要上传的内容，再正式发布。**功能包必须先发**——bundle 依赖它。
 3. 发布 bundle 包。
 4. **在全新 `DSH_HOME` 里实测陌生人的安装路径**：只用那条官方命令，不加 profile `overrides`、不指 tarball。本地流程当初需要 override 加两个 tarball（票据 17），从 registry 装能否收敛成一条命令**尚无人验证**，这是本票据唯一的实质未知。
 5. 删掉四份 README 里的「尚未发布」注记，正式安装一节改为可直接执行。

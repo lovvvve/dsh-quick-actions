@@ -1,6 +1,6 @@
 # The `dsh.bundle.patch` layer of this package.
 #
-# `dsh plugin --profile web add dsh-composer-quick-actions-bundle` installs this
+# `dsh plugin --profile web add dsh-quick-actions-bundle` installs this
 # package as a profile dependency; because the manifest declares `dsh.bundle`,
 # the CLI appends the package to `dsh.profile.bundles`, and profile boot then
 # applies this layer over the bundles ahead of it. The single `insert` mounts the
@@ -21,4 +21,4 @@
 # has a worked example.
 - insert:
     - id: composer-quick-actions
-      name: dsh-composer-quick-actions
+      name: dsh-quick-actions

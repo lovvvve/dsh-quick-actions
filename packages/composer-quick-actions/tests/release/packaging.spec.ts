@@ -176,8 +176,8 @@ describe('packing isolation', () => {
 
 describe('release identity', () => {
   it('publishes the names, version and license ticket 20 settled on', () => {
-    expect(feature.name).toBe('dsh-composer-quick-actions')
-    expect(bundle.name).toBe('dsh-composer-quick-actions-bundle')
+    expect(feature.name).toBe('dsh-quick-actions')
+    expect(bundle.name).toBe('dsh-quick-actions-bundle')
     expect(feature.version).toBe('0.1.0')
     expect(bundle.version).toBe(feature.version)
     expect(feature.license).toBe('MIT')
@@ -263,8 +263,8 @@ describe('install bundle', () => {
   })
 
   it('depends on the feature package at the version it was released with', () => {
-    expect(bundle.dependencies?.['dsh-composer-quick-actions']).toBe('workspace:*')
-    expect(packedBundle.manifest.dependencies?.['dsh-composer-quick-actions']).toBe(feature.version)
+    expect(bundle.dependencies?.['dsh-quick-actions']).toBe('workspace:*')
+    expect(packedBundle.manifest.dependencies?.['dsh-quick-actions']).toBe(feature.version)
   })
 
   it('does not embed the feature package, so an offline install needs both tarballs', () => {

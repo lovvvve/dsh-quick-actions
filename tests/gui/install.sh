@@ -14,7 +14,7 @@
 # Provides: qa_pack, qa_install, qa_uninstall, qa_profile_snapshot, qa_profile_verify.
 
 QA_TARBALLS=.playwright/tarballs
-QA_BUNDLE_NAME=dsh-composer-quick-actions-bundle
+QA_BUNDLE_NAME=dsh-quick-actions-bundle
 QA_PROFILE=${DSH_HOME:-$HOME/.dsh}/profiles/web
 QA_FINGERPRINT=.playwright/profile-fingerprint.txt
 # The desktop shim would exec an older globally installed `dsh`, so the runtime is always
@@ -25,7 +25,7 @@ QA_DSH="npx --yes @deepseek-ai/dsh@latest"
 # so a path relative to this repository resolves under `<DSH_HOME>/profiles/web` and fails
 # with ENOENT. The README says "绝对路径" for the override for the same reason.
 qa_feature_tarball() {
-  ls "$(pwd)/$QA_TARBALLS"/dsh-composer-quick-actions-[0-9]*.tgz 2>/dev/null | head -1
+  ls "$(pwd)/$QA_TARBALLS"/dsh-quick-actions-[0-9]*.tgz 2>/dev/null | head -1
 }
 
 qa_bundle_tarball() {
@@ -37,7 +37,7 @@ qa_bundle_tarball() {
 qa_pack() {
   mkdir -p "$QA_TARBALLS"
   rm -f "$QA_TARBALLS"/*.tgz
-  pnpm --filter dsh-composer-quick-actions pack --pack-destination "$QA_TARBALLS" || return 1
+  pnpm --filter dsh-quick-actions pack --pack-destination "$QA_TARBALLS" || return 1
   pnpm --filter $QA_BUNDLE_NAME pack --pack-destination "$QA_TARBALLS" || return 1
   ls -l "$QA_TARBALLS"
 }

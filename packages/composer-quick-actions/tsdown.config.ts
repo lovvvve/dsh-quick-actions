@@ -1,7 +1,7 @@
 import type { UserConfig } from 'tsdown'
 import { dshClientBundle } from '@dsh-plugins/dsh-client-bundle'
 
-const id = 'dsh-composer-quick-actions'
+const id = 'dsh-quick-actions'
 
 const host: UserConfig = {
   name: id,

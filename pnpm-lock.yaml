@@ -90,7 +90,7 @@ importers:
 
   packages/composer-quick-actions-bundle:
     dependencies:
-      dsh-composer-quick-actions:
+      dsh-quick-actions:
         specifier: workspace:*
         version: link:../composer-quick-actions
 

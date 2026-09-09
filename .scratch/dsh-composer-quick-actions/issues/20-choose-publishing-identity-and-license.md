@@ -51,3 +51,14 @@ Blocked by: 11
 **落地归属**
 
 本票据新增根 `LICENSE`（MIT，holder lovvvve）——它是许可证决策的规范载体，与装配契约无关。其余 8 处身份字面量全部归**票据 17** 统一落地，本票据不碰：`cordis.patch.yml` 的 `name`、两个 `package.json` 的 `name`/`version`/`license`、bundle 的 `dependencies`、两个 README 的标题与安装命令。在票据 17 完成之前，仓库内仍是 `0.0.0` 且 `package.json` 无 `license` 字段，属预期状态而非遗漏。
+
+### 2026-09-09 — 包名已由票据 27 在首次发布前缩短
+
+本票据正文与 `## Answer` 记录的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle` 是 2026-09-08 当时的决定，**原文保留不改**。用户在真正发布前要求缩短为与仓库同名，[票据 27](./27-publish-to-npm-and-list-in-market.md) 已执行：
+
+| 角色 | 本票据定的名 | 现名 |
+|---|---|---|
+| 功能包 | `dsh-composer-quick-actions` | `dsh-quick-actions` |
+| 安装 bundle | `dsh-composer-quick-actions-bundle` | `dsh-quick-actions-bundle` |
+
+身份的其余部分（无 scope、`0.1.0`、MIT、copyright holder lovvvve、不设 `publishConfig`、已排除 `@deepseek-ai` 与 `@dsh-plugins`）全部沿用本票据的结论。变更本身与其边界记在 [spec 第 19 节](../spec.md)，该节优先级高于本票据的包名。**改的只有 npm 包名**：Cordis 装载条目 id 与两个 Settings 命名空间不动。

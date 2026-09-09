@@ -1,10 +1,10 @@
-# dsh-composer-quick-actions
+# dsh-quick-actions
 
 *English: [README.en.md](./README.en.md)*
 
 在 DSH 每个常规、由会话支持的**常驻消息编辑器（Resident Composer）**旁提供全局快捷动作。预置动作（Preset Quick Action）由作者提供、只读；自定义动作（Custom Quick Action）由用户自己维护。全部用户数据经 DSH 本地 Settings 持久化，跨重启保留。
 
-这是一个 Host + Client **双面功能包**：Host 半边在 Node 侧拥有配置校验与 Settings 权威，Client 半边在浏览器侧注册消息编辑器的 dock Slot。安装形态是配套的 [`dsh-composer-quick-actions-bundle`](../composer-quick-actions-bundle/README.md)。
+这是一个 Host + Client **双面功能包**：Host 半边在 Node 侧拥有配置校验与 Settings 权威，Client 半边在浏览器侧注册消息编辑器的 dock Slot。安装形态是配套的 [`dsh-quick-actions-bundle`](../composer-quick-actions-bundle/README.md)。
 
 ## 首版能做什么
 
@@ -44,7 +44,7 @@
 ### 正式安装
 
 ```sh
-dsh plugin --profile web add dsh-composer-quick-actions-bundle
+dsh plugin --profile web add dsh-quick-actions-bundle
 ```
 
 然后重启 web profile。
@@ -59,43 +59,43 @@ dsh plugin --profile web add dsh-composer-quick-actions-bundle
 
    ```sh
    mkdir -p /tmp/quick-actions
-   pnpm --filter dsh-composer-quick-actions pack --pack-destination /tmp/quick-actions
-   pnpm --filter dsh-composer-quick-actions-bundle pack --pack-destination /tmp/quick-actions
+   pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
+   pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   得到 `dsh-composer-quick-actions-0.1.0.tgz` 与 `dsh-composer-quick-actions-bundle-0.1.0.tgz`。
+   得到 `dsh-quick-actions-0.1.0.tgz` 与 `dsh-quick-actions-bundle-0.1.0.tgz`。
 
 2. 在 profile 的 pnpm 配置里为功能包加一条 override，指向功能包 tarball 的**绝对路径**：
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-composer-quick-actions: file:/tmp/quick-actions/dsh-composer-quick-actions-0.1.0.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
    ```
 
 3. 安装 bundle tarball：
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-composer-quick-actions-bundle-0.1.0.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
    ```
 
 4. 重启 web profile。
 
-第 2 步是**必需**的，不是可选优化。`dsh plugin` 是 pnpm 的转发器，bundle 的依赖 `dsh-composer-quick-actions@0.1.0` 会照常去 registry 解析；在包未发布之前，只把两个 tarball 一起 `add`（或先 `add` 功能包再 `add` bundle）都不行——直接依赖不会满足传递依赖，pnpm 仍然报 `ERR_PNPM_FETCH_404`。override 是唯一可复现的解析方式。
+第 2 步是**必需**的，不是可选优化。`dsh plugin` 是 pnpm 的转发器，bundle 的依赖 `dsh-quick-actions@0.1.0` 会照常去 registry 解析；在包未发布之前，只把两个 tarball 一起 `add`（或先 `add` 功能包再 `add` bundle）都不行——直接依赖不会满足传递依赖，pnpm 仍然报 `ERR_PNPM_FETCH_404`。override 是唯一可复现的解析方式。
 
 包发布之后这一步就不需要了：把 override 删掉，改用上面的正式安装命令即可。
 
 ### 安装后应当看到什么
 
-- `<DSH_HOME>/profiles/web/package.json` 里，`dependencies` 多了 bundle，`dsh.profile.bundles` 末尾多了 `dsh-composer-quick-actions-bundle`（这两处都由 `dsh plugin` 自己维护，不要手工编辑）。
-- 功能包以传递依赖的形式落在 `<DSH_HOME>/profiles/web/node_modules/dsh-composer-quick-actions`。
+- `<DSH_HOME>/profiles/web/package.json` 里，`dependencies` 多了 bundle，`dsh.profile.bundles` 末尾多了 `dsh-quick-actions-bundle`（这两处都由 `dsh plugin` 自己维护，不要手工编辑）。
+- 功能包以传递依赖的形式落在 `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`。
 - 检查这一层是否装好，不必启动服务器：
 
   ```sh
   dsh --profile web --dump-config | grep -A1 'id: composer-quick-actions'
   ```
 
-  合成后的 profile 树里应当出现 `- id: composer-quick-actions` / `name: dsh-composer-quick-actions`，并被注明来自 `dsh-composer-quick-actions-bundle` 层。这条 row 在**下一次 profile 启动**时生效。
+  合成后的 profile 树里应当出现 `- id: composer-quick-actions` / `name: dsh-quick-actions`，并被注明来自 `dsh-quick-actions-bundle` 层。这条 row 在**下一次 profile 启动**时生效。
 
 - pnpm 会打印 `Issues with peer dependencies found`，`pnpm peers check` 会把本包声明的 DSH peer 全部列为 missing。**这是正常的**：DSH 核心包装在 DSH 自己的安装锚点里，而不是 profile 的 `node_modules` 里，profile 的 pnpm 看不到它们（`autoInstallPeers: false`）。同一个 profile 里已装的其它第三方 DSH 插件也是同样表现。peer 声明在这里的作用是记录本包消费的 DSH 契约面，不参与解析。
 
@@ -191,7 +191,7 @@ pnpm lint
 **升级 / 降级**——发布后：
 
 ```sh
-dsh plugin --profile web add dsh-composer-quick-actions-bundle@<version>
+dsh plugin --profile web add dsh-quick-actions-bundle@<version>
 ```
 
 本地 tarball 则是把 override 与 `add` 指向新（或旧）版本的两个 tarball，再重启 profile。重复 `add` 同一版本是幂等的，不会在 `dsh.profile.bundles` 里留下重复项。
@@ -201,7 +201,7 @@ dsh plugin --profile web add dsh-composer-quick-actions-bundle@<version>
 **卸载**：
 
 ```sh
-dsh plugin --profile web remove dsh-composer-quick-actions-bundle
+dsh plugin --profile web remove dsh-quick-actions-bundle
 ```
 
 `dsh plugin` 会同时把依赖和 `dsh.profile.bundles` 里的那一层去掉。重启 profile 后动作就不再出现。

@@ -27,7 +27,7 @@
  * the input box exactly rather than approximately.
  */
 
-const TAG_ID = 'dsh-composer-quick-actions/surfaces.css'
+const TAG_ID = 'dsh-quick-actions/surfaces.css'
 
 export const QUICK_ACTIONS_CSS = `
 .dsh-cqa-ribbon,
@@ -491,7 +491,7 @@ export function installQuickActionStyles(): () => void {
   const existing = document.querySelector<HTMLStyleElement>(selector)
   const tag = existing ?? document.createElement('style')
   if (existing === null) {
-    tag.dataset['plugin'] = 'dsh-composer-quick-actions'
+    tag.dataset['plugin'] = 'dsh-quick-actions'
     tag.dataset['pluginCss'] = TAG_ID
     tag.textContent = QUICK_ACTIONS_CSS
     document.head.appendChild(tag)

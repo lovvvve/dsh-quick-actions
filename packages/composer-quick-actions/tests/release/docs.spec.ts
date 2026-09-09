@@ -99,7 +99,7 @@ describe('feature readme coverage', () => {
 describe('every readme carries the released version it names', () => {
   for (const doc of Object.keys(docs) as (keyof typeof docs)[]) {
     it(`${doc} names the tarballs of the current version only`, () => {
-      const mentioned = [...docs[doc].matchAll(/dsh-composer-quick-actions(?:-bundle)?-(\d[^.\s]*(?:\.[^.\s]*)*)\.tgz/g)]
+      const mentioned = [...docs[doc].matchAll(/dsh-quick-actions(?:-bundle)?-(\d[^.\s]*(?:\.[^.\s]*)*)\.tgz/g)]
         .map((match) => match[1] as string)
       expect([...new Set(mentioned)]).toStrictEqual([version])
     })
@@ -107,8 +107,8 @@ describe('every readme carries the released version it names', () => {
 
   for (const doc of ['bundle README.md', 'bundle README.en.md'] as const) {
     it(`${doc} names both tarballs an offline install has to resolve`, () => {
-      expect(docs[doc]).toContain(`dsh-composer-quick-actions-${version}.tgz`)
-      expect(docs[doc]).toContain(`dsh-composer-quick-actions-bundle-${version}.tgz`)
+      expect(docs[doc]).toContain(`dsh-quick-actions-${version}.tgz`)
+      expect(docs[doc]).toContain(`dsh-quick-actions-bundle-${version}.tgz`)
     })
   }
 })

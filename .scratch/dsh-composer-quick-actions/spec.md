@@ -680,3 +680,38 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 ### 18.4 后续
 
 若日后要抹平该偏离，须先做 `@tsdown/css` 的内联验证，通过后另开票据；**不得**在其他票据里顺手改。本节不重开第 8.4 节的其余三项要求。
+
+---
+
+## 19. 首次发布前的包名变更
+
+### 19.1 决定
+
+两个 npm 包名在**首次发布之前**缩短，与仓库同名：
+
+| 角色 | 第 11.1 与 20 节定的旧名 | 现名 |
+|---|---|---|
+| 功能包 | `dsh-composer-quick-actions` | `dsh-quick-actions` |
+| 安装 bundle | `dsh-composer-quick-actions-bundle` | `dsh-quick-actions-bundle` |
+
+其余身份要素不变：无 scope、初始版本 `0.1.0`、MIT（copyright holder lovvvve）、不设 `publishConfig`。本节取代第 11.1 节与[票据 20](./issues/20-choose-publishing-identity-and-license.md)记录的包名；那两处保留原文，作为当时决定的记录。
+
+### 19.2 只有 npm 包名改变
+
+以下三类标识**一律不动**，它们与包名是不同的身份轴：
+
+| 标识 | 值 | 不改的理由 |
+|---|---|---|
+| Cordis 装载条目 id | `composer-quick-actions` | 别人在自己的 patch 层里禁用本插件时要写的目标；`cordis.patch.yml` 的注释明确写了不得改名 |
+| Settings 命名空间 | `composer-quick-actions`、`composer-quick-actions-catalog` | 落在用户 `settings.yaml` 里的数据键。一经发布即为陌生人机器上的真实数据，此后改名须写迁移 |
+| 本地化命名空间 | `composer-quick-actions` | 与包名无关；改名只会制造无谓的字典键变更 |
+
+这不是不一致。CONTEXT.md 的领域术语本就是 **Composer Quick Action**——消息编辑器的快捷动作，内部标识保留该限定词是准确的；包名缩短只为对齐仓库名与输入便利。
+
+### 19.3 时机
+
+改名只在**首次发布之前**成立。npm 包名一经发布即永久占用，不可改名也不可真正释放，届时更名等于发一个新包并弃养旧包。因此本节不构成「包名可随时调整」的先例。
+
+### 19.4 票据映射
+
+由[票据 27](./issues/27-publish-to-npm-and-list-in-market.md)执行：改名连同发布与市场上架在同一张票据内完成，改名后的打包契约由 `tests/release/packaging.spec.ts` 与 `docs.spec.ts` 固定。

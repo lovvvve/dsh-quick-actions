@@ -67,7 +67,7 @@ Label: `wayfinder:map`
 
 <!-- 地图目标已于 2026-09-09 达成。以下是其后新开的项。 -->
 
-- [发布到 npm 并在插件市场上架](./issues/27-publish-to-npm-and-list-in-market.md) — **开放中**。用户决定真正推包，本票据推翻票据 20 的「暂不发布」。安装走 npm，发现走策展仓库 `awesome-dsh-plugin` 的 PR，两条通道分开。唯一实质未知是从 registry 装能否收敛成一条命令（本地流程曾需 override 加两个 tarball）。
+- [发布到 npm 并在插件市场上架](./issues/27-publish-to-npm-and-list-in-market.md) — **开放中**。用户决定真正推包，本票据推翻票据 20 的「暂不发布」。已在发布前把包名缩短为与仓库同名 `dsh-quick-actions` / `dsh-quick-actions-bundle`（[spec 第 19 节](./spec.md)；上面票据 20 那行记的是当时的旧名，原文保留）——**只改 npm 包名**，Cordis 装载条目 id 与两个 Settings 命名空间不动。安装走 npm，发现走策展仓库 `awesome-dsh-plugin` 的 PR，两条通道分开。唯一实质未知是从 registry 装能否收敛成一条命令（本地流程曾需 override 加两个 tarball）。
 
 - [把管理面板 portal 到 body](./issues/26-portal-the-manager-panel.md) — **已 resolved**。`ManagerPanel` 与其 backdrop 经 `createPortal` 渲染到 `document.body`，`z-index: 31` 从此在页面自身的层叠上下文里排序；以 body 为目标而非自建容器，dispose 不泄漏由构造保证。`react-dom` 是 shell 冻结 seed 表条目，加进 `external` / `dsh.client.external` / peer 三处后不引入第二份渲染器。焦点与 Escape 两级作用域无回退（portal 只搬 DOM 不搬 React 树）。`pnpm test` 498 通过；新增机制无关的 `tests/gui/stacking.spec.ts`（遍历面板控件做 `elementFromPoint`），第二轮三视口全过，场景正是票据 21 失手的编辑表单。**按用户定案只做管理面板**：两个锚定 popover 仍在 dock 子树内、带着同一根因，未观察到用户可见症状，不得记成已解决。
 

@@ -1,10 +1,10 @@
-# dsh-composer-quick-actions
+# dsh-quick-actions
 
 *中文：[README.md](./README.md)*
 
 Global Quick Actions next to every ordinary, session-backed **Resident Composer** in DSH. Preset Quick Actions ship with the package and are read-only; Custom Quick Actions belong to the user. All user data is persisted through DSH's local Settings and survives restarts.
 
-This is a **dual-face feature package**: the Host half owns configuration validation and Settings authority on the Node side, the Client half registers the composer's dock Slots in the browser. The installable form is its companion, [`dsh-composer-quick-actions-bundle`](../composer-quick-actions-bundle/README.en.md).
+This is a **dual-face feature package**: the Host half owns configuration validation and Settings authority on the Node side, the Client half registers the composer's dock Slots in the browser. The installable form is its companion, [`dsh-quick-actions-bundle`](../composer-quick-actions-bundle/README.en.md).
 
 ## What the first release does
 
@@ -44,7 +44,7 @@ Delivery is identical to what first-party DSH plugins do — a `<style data-plug
 ### From the registry
 
 ```sh
-dsh plugin --profile web add dsh-composer-quick-actions-bundle
+dsh plugin --profile web add dsh-quick-actions-bundle
 ```
 
 Then restart the web profile.
@@ -59,43 +59,43 @@ The install bundle only **declares** a dependency on the feature package — it 
 
    ```sh
    mkdir -p /tmp/quick-actions
-   pnpm --filter dsh-composer-quick-actions pack --pack-destination /tmp/quick-actions
-   pnpm --filter dsh-composer-quick-actions-bundle pack --pack-destination /tmp/quick-actions
+   pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
+   pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   That gives you `dsh-composer-quick-actions-0.1.0.tgz` and `dsh-composer-quick-actions-bundle-0.1.0.tgz`.
+   That gives you `dsh-quick-actions-0.1.0.tgz` and `dsh-quick-actions-bundle-0.1.0.tgz`.
 
 2. Add one pnpm override to the profile, pointing the feature package at the **absolute path** of its tarball:
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-composer-quick-actions: file:/tmp/quick-actions/dsh-composer-quick-actions-0.1.0.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
    ```
 
 3. Install the bundle tarball:
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-composer-quick-actions-bundle-0.1.0.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
    ```
 
 4. Restart the web profile.
 
-Step 2 is **required**, not an optimization. `dsh plugin` is a pnpm forwarder, so the bundle's `dsh-composer-quick-actions@0.1.0` dependency is resolved from the registry as usual. Until the packages are published, neither adding both tarballs in one command nor adding the feature package before the bundle works — a direct dependency does not satisfy a transitive one, and pnpm still fails with `ERR_PNPM_FETCH_404`. The override is the one reproducible way to resolve it.
+Step 2 is **required**, not an optimization. `dsh plugin` is a pnpm forwarder, so the bundle's `dsh-quick-actions@0.1.0` dependency is resolved from the registry as usual. Until the packages are published, neither adding both tarballs in one command nor adding the feature package before the bundle works — a direct dependency does not satisfy a transitive one, and pnpm still fails with `ERR_PNPM_FETCH_404`. The override is the one reproducible way to resolve it.
 
 Once the packages are published this step goes away: drop the override and use the registry command above.
 
 ### What a good install looks like
 
-- `<DSH_HOME>/profiles/web/package.json` gains the bundle under `dependencies` and `dsh-composer-quick-actions-bundle` at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` itself — do not hand-edit them.
-- The feature package lands as a transitive dependency at `<DSH_HOME>/profiles/web/node_modules/dsh-composer-quick-actions`.
+- `<DSH_HOME>/profiles/web/package.json` gains the bundle under `dependencies` and `dsh-quick-actions-bundle` at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` itself — do not hand-edit them.
+- The feature package lands as a transitive dependency at `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`.
 - You can check the layer without starting a server:
 
   ```sh
   dsh --profile web --dump-config | grep -A1 'id: composer-quick-actions'
   ```
 
-  The composed profile tree should show `- id: composer-quick-actions` / `name: dsh-composer-quick-actions`, attributed to the `dsh-composer-quick-actions-bundle` layer. That row takes effect on the **next profile boot**.
+  The composed profile tree should show `- id: composer-quick-actions` / `name: dsh-quick-actions`, attributed to the `dsh-quick-actions-bundle` layer. That row takes effect on the **next profile boot**.
 
 - pnpm prints `Issues with peer dependencies found`, and `pnpm peers check` lists every DSH peer this package declares as missing. **That is expected**: DSH's own packages live in DSH's install anchor rather than in the profile's `node_modules`, where the profile's pnpm cannot see them (`autoInstallPeers: false`). Every other third-party DSH plugin in the same profile behaves the same way. The peer declarations document which DSH contracts this package consumes; they take no part in resolution.
 
@@ -191,7 +191,7 @@ Output:
 **Upgrade / downgrade** — once published:
 
 ```sh
-dsh plugin --profile web add dsh-composer-quick-actions-bundle@<version>
+dsh plugin --profile web add dsh-quick-actions-bundle@<version>
 ```
 
 With local tarballs, point both the override and the `add` at the new (or older) pair of tarballs and restart the profile. Re-adding the same version is idempotent and leaves no duplicate in `dsh.profile.bundles`.
@@ -201,7 +201,7 @@ Cross-version data compatibility is the Host's job: a newly added preset only ap
 **Uninstall**:
 
 ```sh
-dsh plugin --profile web remove dsh-composer-quick-actions-bundle
+dsh plugin --profile web remove dsh-quick-actions-bundle
 ```
 
 `dsh plugin` drops both the dependency and the layer in `dsh.profile.bundles`. After a profile restart the actions are gone.
