@@ -67,9 +67,10 @@ test.describe('while the connection is down', () => {
     await expect(composerInput(page)).toHaveText(SEND_TEXT, { timeout: 30_000 })
 
     // No feedback note is asserted here, and that is the observed behaviour rather than an
-    // oversight: `retained` is published when `submit()` *throws*, and with nothing behind
-    // the connection DSH's submit neither throws nor lands, so the execution layer stays in
-    // its observation stage. Retention — the requirement of spec 9.5 — holds either way:
+    // oversight: `retained` is published either when `submit()` *throws* or when the next
+    // Input commit still carries the loaded draft, and with nothing behind the connection
+    // DSH's submit neither throws nor commits again — so the execution layer stays in its
+    // observation stage. Retention — the requirement of spec 9.5 — holds either way:
     // the text is still the user's. The missing note is recorded as a finding in the
     // ticket-18 evidence rather than asserted as if it were the contract.
     await composerInput(page).fill('')
