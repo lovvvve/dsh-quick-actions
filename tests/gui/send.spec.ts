@@ -113,6 +113,21 @@ test.describe('quick action send path', () => {
     expect(await sentByUser(page, SEND_TEXT).count()).toBe(before + 1)
   })
 
+  test('a second activation while the first turn is in flight is queued by DSH', async ({ page }) => {
+    const before = await sentByUser(page, SEND_TEXT).count()
+    const control = page.locator(sendAction)
+
+    // Two sequential activations, unlike the same-tick pair above: the first send has landed
+    // and the model is answering, so the second is a legitimate activation that DSH's own
+    // queue takes. The plugin must neither block it nor report a failure — spec 13.2's
+    // "模型运行期间官方 queue" row.
+    await control.click()
+    await control.click()
+
+    await expect(sentByUser(page, SEND_TEXT)).toHaveCount(before + 2, { timeout: 60_000 })
+    await expect(page.locator('[data-quick-actions-feedback="failed"]')).toHaveCount(0)
+  })
+
   test('an occupied draft disables activation instead of discarding it', async ({ page }) => {
     const before = await sentByUser(page, SEND_TEXT).count()
     await composerInput(page).fill('这是用户自己的草稿')
