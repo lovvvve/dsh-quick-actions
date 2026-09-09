@@ -1,12 +1,11 @@
 /**
- * The release surface as a contract: what the two manifests declare, what the
- * install bundle mounts, and what the two tarballs actually carry.
+ * The release surface as a contract: what the manifest declares, what the bundle
+ * patch mounts, and what the tarball actually carries.
  *
  * These are packaging invariants, not smoke tests. Every one of them has a
  * failure mode that only surfaces after a release: a second generation of
  * JavaScript riding along in the tarball, a `require` the browser module table
- * cannot answer, a bundle that mounts a package name nobody publishes, or a
- * bundle tarball assumed to embed the feature package it merely depends on.
+ * cannot answer, or a patch that mounts a package name nobody publishes.
  *
  * `pnpm pack` runs here for real, because the published file list is a product
  * of `files`, the build and pnpm's own always-include rules together — none of
@@ -27,7 +26,6 @@ import { parse as parseYaml } from 'yaml'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { inject as clientInject } from '../../src/client/index.js'
 import {
-  bundleDir,
   featureDir,
   manifest,
   outputFingerprint,
@@ -39,7 +37,6 @@ import {
 } from './support.js'
 
 const feature = manifest(featureDir)
-const bundle = manifest(bundleDir)
 
 /** Read one declared string list, so a malformed manifest fails as a bad manifest. */
 function stringList(value: unknown, subject: string): readonly string[] {
@@ -129,7 +126,6 @@ let scratch: string
 let staged: StagedWorkspace
 let stagedLibAtCopy: Readonly<Record<string, string>> | null
 let packedFeature: Packed
-let packedBundle: Packed
 
 beforeAll(() => {
   scratch = mkdtempSync(join(tmpdir(), 'quick-actions-pack-'))
@@ -138,7 +134,6 @@ beforeAll(() => {
   const tarballs = join(scratch, 'tarballs')
   mkdirSync(tarballs)
   packedFeature = pack(staged.featureDir, tarballs)
-  packedBundle = pack(staged.bundleDir, tarballs)
 }, 300_000)
 
 afterAll(() => {
@@ -175,17 +170,12 @@ describe('packing isolation', () => {
 })
 
 describe('release identity', () => {
-  it('publishes the names and license the release decisions settled on', () => {
-    // Names: ticket 20 chose the shape, ticket 27 shortened them before the first
-    // publish (spec 19). Both packages always move in lockstep — the bundle's
-    // dependency on the feature package is `workspace:*`, which resolves to the
-    // feature version at pack time, so a drift here would ship a bundle asking for
-    // a version that does not exist.
+  it('publishes the name and license the release decisions settled on', () => {
+    // Ticket 20 chose the shape, ticket 27 shortened the name before the first publish
+    // (spec 19), and ticket 28 folded the second package back in (spec 20) — so there is
+    // exactly one published name to hold.
     expect(feature.name).toBe('dsh-quick-actions')
-    expect(bundle.name).toBe('dsh-quick-actions-bundle')
-    expect(bundle.version).toBe(feature.version)
     expect(feature.license).toBe('MIT')
-    expect(bundle.license).toBe('MIT')
   })
 
   it('carries a version this release line can publish', () => {
@@ -198,12 +188,10 @@ describe('release identity', () => {
 
   it('declares no publishConfig, because unscoped packages are public by default', () => {
     expect(feature.publishConfig).toBeUndefined()
-    expect(bundle.publishConfig).toBeUndefined()
   })
 
-  it('ships the MIT text with both packages', () => {
+  it('ships the MIT text, carried in from the workspace root by pnpm', () => {
     expect(packedFeature.entries).toContain('LICENSE')
-    expect(packedBundle.entries).toContain('LICENSE')
     expect(readFileSync(join(packedFeature.root, 'LICENSE'), 'utf8')).toContain('MIT License')
   })
 })
@@ -263,26 +251,34 @@ describe('dsh.client declaration', () => {
   })
 })
 
-describe('install bundle', () => {
-  it('mounts the feature package under a stable entry id', () => {
-    const patch = parseYaml(readFileSync(join(bundleDir, 'cordis.patch.yml'), 'utf8')) as unknown
+describe('bundle patch', () => {
+  // Ticket 28: one package carries the patch, both halves and the implementation, the way
+  // every other third-party DSH plugin does. The row therefore names this very package —
+  // a patch that named anything else would mount something nobody publishes.
+  it('mounts this package itself under a stable entry id', () => {
+    const patch = parseYaml(readFileSync(join(featureDir, 'cordis.patch.yml'), 'utf8')) as unknown
     expect(patch).toStrictEqual([{ insert: [{ id: 'composer-quick-actions', name: feature.name }] }])
   })
 
   it('points dsh.bundle.patch at the packed patch file', () => {
-    expect(bundle.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
-    expect(packedBundle.entries).toContain('cordis.patch.yml')
+    expect(feature.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
+    expect(packedFeature.entries).toContain('cordis.patch.yml')
   })
 
-  it('depends on the feature package at the version it was released with', () => {
-    expect(bundle.dependencies?.['dsh-quick-actions']).toBe('workspace:*')
-    expect(packedBundle.manifest.dependencies?.['dsh-quick-actions']).toBe(feature.version)
+  // The loader entry id is a different identity axis from the package name and does not
+  // follow it (spec 19): it is what a later layer's `disabled` expression targets.
+  it('keeps the entry id even though the package is named differently', () => {
+    const patch = parseYaml(readFileSync(join(featureDir, 'cordis.patch.yml'), 'utf8')) as {
+      readonly insert: readonly { readonly id: string }[]
+    }[]
+    expect(patch[0]?.insert[0]?.id).toBe('composer-quick-actions')
+    expect(feature.name).not.toBe('composer-quick-actions')
   })
 
-  it('does not embed the feature package, so an offline install needs both tarballs', () => {
-    expect(packedBundle.entries.filter((entry) => entry.startsWith('node_modules/'))).toStrictEqual([])
-    expect(packedBundle.entries.filter((entry) => entry.endsWith('.tgz'))).toStrictEqual([])
-    expect(packedBundle.entries.filter((entry) => entry.startsWith('lib/'))).toStrictEqual([])
+  it('needs no second package, so one tarball is the whole install', () => {
+    expect(packedFeature.entries.filter((entry) => entry.startsWith('node_modules/'))).toStrictEqual([])
+    expect(packedFeature.entries.filter((entry) => entry.endsWith('.tgz'))).toStrictEqual([])
+    expect(feature.dependencies ?? {}).toStrictEqual({})
   })
 })
 
@@ -326,11 +322,9 @@ describe('packed file list', () => {
     expect(packedFeature.entries.filter((entry) => entry.endsWith('.tsbuildinfo'))).toStrictEqual([])
   })
 
-  it('ships both readmes with each package', () => {
-    for (const packed of [packedFeature, packedBundle]) {
-      expect(packed.entries).toContain('README.md')
-      expect(packed.entries).toContain('README.en.md')
-    }
+  it('ships both readmes', () => {
+    expect(packedFeature.entries).toContain('README.md')
+    expect(packedFeature.entries).toContain('README.en.md')
   })
 })
 

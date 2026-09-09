@@ -16,15 +16,15 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { bundleDir, featureDir, releasedVersion } from './support.js'
+import { featureDir, releasedVersion } from './support.js'
 
 const version = releasedVersion()
 
+// Ticket 28 folded the second package back in, so the two readmes of the one package are
+// the whole documented surface.
 const docs = {
   'feature README.md': readFileSync(join(featureDir, 'README.md'), 'utf8'),
   'feature README.en.md': readFileSync(join(featureDir, 'README.en.md'), 'utf8'),
-  'bundle README.md': readFileSync(join(bundleDir, 'README.md'), 'utf8'),
-  'bundle README.en.md': readFileSync(join(bundleDir, 'README.en.md'), 'utf8'),
 }
 
 const featureDocs = ['feature README.md', 'feature README.en.md'] as const
@@ -98,17 +98,10 @@ describe('feature readme coverage', () => {
 
 describe('every readme carries the released version it names', () => {
   for (const doc of Object.keys(docs) as (keyof typeof docs)[]) {
-    it(`${doc} names the tarballs of the current version only`, () => {
-      const mentioned = [...docs[doc].matchAll(/dsh-quick-actions(?:-bundle)?-(\d[^.\s]*(?:\.[^.\s]*)*)\.tgz/g)]
+    it(`${doc} names the tarball of the current version only`, () => {
+      const mentioned = [...docs[doc].matchAll(/dsh-quick-actions-(\d[^.\s]*(?:\.[^.\s]*)*)\.tgz/g)]
         .map((match) => match[1] as string)
       expect([...new Set(mentioned)]).toStrictEqual([version])
-    })
-  }
-
-  for (const doc of ['bundle README.md', 'bundle README.en.md'] as const) {
-    it(`${doc} names both tarballs an offline install has to resolve`, () => {
-      expect(docs[doc]).toContain(`dsh-quick-actions-${version}.tgz`)
-      expect(docs[doc]).toContain(`dsh-quick-actions-bundle-${version}.tgz`)
     })
   }
 })

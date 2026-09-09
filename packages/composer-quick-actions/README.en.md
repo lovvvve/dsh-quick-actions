@@ -4,7 +4,7 @@
 
 Global Quick Actions next to every ordinary, session-backed **Resident Composer** in DSH. Preset Quick Actions ship with the package and are read-only; Custom Quick Actions belong to the user. All user data is persisted through DSH's local Settings and survives restarts.
 
-This is a **dual-face feature package**: the Host half owns configuration validation and Settings authority on the Node side, the Client half registers the composer's dock Slots in the browser. The installable form is its companion, [`dsh-quick-actions-bundle`](../composer-quick-actions-bundle/README.en.md).
+This is a **dual-face feature package**: the Host half owns configuration validation and Settings authority on the Node side, the Client half registers the composer's dock Slots in the browser. The same package also carries `dsh.bundle.patch`, so it is the installable form itself — there is no companion package.
 
 ## What the first release does
 
@@ -44,62 +44,36 @@ Delivery is identical to what first-party DSH plugins do — a `<style data-plug
 ### From the registry
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions-bundle
+dsh plugin --profile web add dsh-quick-actions
 ```
 
 Then restart the web profile.
 
-> That one command is the whole install: the registry resolves the bundle's dependency on the feature package, so the profile needs no `overrides` and there is no second tarball to place. Verified on a fresh `DSH_HOME`.
->
-> The local / offline flow below is for when you have no registry access, or want to try changes that are not published.
+> One package is the whole thing: it carries its own `dsh.bundle.patch`, which inserts its Host half into the profile, while its `dsh.client` declaration makes the web app load the browser half. There is no second package and no profile `overrides`.
 
 ### Local / offline install
 
-The install bundle only **declares** a dependency on the feature package — it does not **embed** it — so an offline install has to make both tarballs resolvable.
+```sh
+mkdir -p /tmp/quick-actions
+pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+```
 
-1. Pack both packages. The feature package declares `prepack`, so `pnpm pack` builds it first and its tarball always carries fresh output; the bundle has nothing to build and is packed as-is:
+Then restart the web profile. The package declares `prepack`, so `pnpm pack` builds it first and the tarball always carries fresh output.
 
-   ```sh
-   mkdir -p /tmp/quick-actions
-   pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-   pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
-   ```
-
-   That gives you `dsh-quick-actions-0.1.0.tgz` and `dsh-quick-actions-bundle-0.1.0.tgz`.
-
-2. Add one pnpm override to the profile, pointing the feature package at the **absolute path** of its tarball:
-
-   ```yaml
-   # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
-   overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
-   ```
-
-3. Install the bundle tarball:
-
-   ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
-   ```
-
-4. Restart the web profile.
-
-Step 2 is **required**, not an optimization. `dsh plugin` is a pnpm forwarder, so the bundle's `dsh-quick-actions@<version>` dependency is resolved from the registry as usual, and **a direct dependency does not satisfy a transitive one**: adding both tarballs in one command, or adding the feature package before the bundle, still leaves the bundle pointing somewhere other than the tarball you built.
-
-Now that the packages are published, the failure mode has changed but the conclusion has not: skipping step 2 no longer fails with `ERR_PNPM_FETCH_404` — it **quietly installs the published version instead**, so you would be running the release while believing you were testing your build. Keep the override whenever you are testing local changes.
-
-If you only want the published version, skip this section entirely and use the registry command above.
+Use an **absolute path** for the tarball: `dsh plugin` is a pnpm forwarder and pnpm runs in the profile directory, so a relative path resolves under `<DSH_HOME>/profiles/web/` and fails with `ENOENT`.
 
 ### What a good install looks like
 
-- `<DSH_HOME>/profiles/web/package.json` gains the bundle under `dependencies` and `dsh-quick-actions-bundle` at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` itself — do not hand-edit them.
-- The feature package lands as a transitive dependency at `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`.
+- `<DSH_HOME>/profiles/web/package.json` gains `dsh-quick-actions` both under `dependencies` and at the end of `dsh.profile.bundles`. Both are maintained by `dsh plugin` itself — do not hand-edit them.
+- The package lands at `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`.
 - You can check the layer without starting a server:
 
   ```sh
   dsh --profile web --dump-config | grep -A1 'id: composer-quick-actions'
   ```
 
-  The composed profile tree should show `- id: composer-quick-actions` / `name: dsh-quick-actions`, attributed to the `dsh-quick-actions-bundle` layer. That row takes effect on the **next profile boot**.
+  The composed profile tree should show `- id: composer-quick-actions` / `name: dsh-quick-actions`, attributed to the `dsh-quick-actions` layer. That row takes effect on the **next profile boot**.
 
 - pnpm prints `Issues with peer dependencies found`, and `pnpm peers check` lists every DSH peer this package declares as missing. **That is expected**: DSH's own packages live in DSH's install anchor rather than in the profile's `node_modules`, where the profile's pnpm cannot see them (`autoInstallPeers: false`). Every other third-party DSH plugin in the same profile behaves the same way. The peer declarations document which DSH contracts this package consumes; they take no part in resolution.
 
@@ -121,7 +95,7 @@ Three ways out:
 1. **Pass a flag for this one command** (recommended — it affects this invocation only and leaves your policy alone):
 
    ```sh
-   dsh plugin --profile web add dsh-quick-actions-bundle --config.minimumReleaseAge=0
+   dsh plugin --profile web add dsh-quick-actions --config.minimumReleaseAge=0
    ```
 
 2. **Wait the window out.** Each line of the error gives a publish time and the cutoff; once the newest of them is 24 hours old the install works with no changes.
@@ -219,17 +193,17 @@ Output:
 **Upgrade / downgrade** — once published:
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions-bundle@<version>
+dsh plugin --profile web add dsh-quick-actions@<version>
 ```
 
-With local tarballs, point both the override and the `add` at the new (or older) pair of tarballs and restart the profile. Re-adding the same version is idempotent and leaves no duplicate in `dsh.profile.bundles`.
+With a local tarball, point the `add` at the new (or older) tarball and restart the profile. Re-adding the same version is idempotent and leaves no duplicate in `dsh.profile.bundles`.
 
 Cross-version data compatibility is the Host's job: a newly added preset only appends to the end of an existing order and rewrites no stored data, and on a downgrade back to this release, data from a higher `schemaVersion` is kept as-is — not shown, not counted, not rewritten — so the round-trip is lossless.
 
 **Uninstall**:
 
 ```sh
-dsh plugin --profile web remove dsh-quick-actions-bundle
+dsh plugin --profile web remove dsh-quick-actions
 ```
 
 `dsh plugin` drops both the dependency and the layer in `dsh.profile.bundles`. After a profile restart the actions are gone.

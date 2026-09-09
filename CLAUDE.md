@@ -53,15 +53,14 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 ## 架构
 
-### 三个 workspace 包
+### 两个 workspace 包
 
 | 路径 | 角色 |
 |---|---|
-| `packages/composer-quick-actions` | Host + Client **双面功能包**，导出 `.`、`./client`、`./types`、`./package.json`（`./remote` 已按 spec 第 17 节于票据 17 删除，不要加回） |
-| `packages/composer-quick-actions-bundle` | 安装 bundle，只有 `cordis.patch.yml`，把功能包 Host row 插进 DSH `web` profile |
+| `packages/composer-quick-actions` | **唯一发布的包** `dsh-quick-actions`：Host + Client 双面实现，外加自带的 `cordis.patch.yml`（`dsh.bundle.patch`）。导出 `.`、`./client`、`./types`、`./package.json`（`./remote` 已按 spec 第 17 节于票据 17 删除，不要加回） |
 | `tools/dsh-client-bundle` | 私有构建适配器（不发布），把浏览器 CJS 产物包成 DSH ModuleLoader 要的 lazy-CJS |
 
-拆成两个包是刻意的：功能包提供实现，bundle 提供可 `dsh plugin --profile web add` 的安装形态。本地/离线安装要**分别解析两个 tarball**，bundle tarball 不内嵌依赖。
+**单包是刻意的**（票据 28、spec 第 20 节）：同一个包同时声明 `dsh.bundle.patch` 与 `dsh.client`，patch 插入的行 `name` 指向它自己，这是本机 profile 里全部七个第三方 DSH 插件的一致做法。安装与离线安装都只有一个 tarball、一条命令。**不要**为了「让 bundle 独立」再拆出第二个包——早先那个 `-bundle` 包除了让离线安装需要两个 tarball 外加一条 profile `overrides`（直接依赖不满足传递依赖）之外没有任何收益。
 
 ### Host / Client 双面
 

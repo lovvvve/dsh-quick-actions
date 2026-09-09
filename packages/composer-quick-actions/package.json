@@ -22,6 +22,7 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "cordis.patch.yml",
     "lib/index.js",
     "lib/types.js",
     "lib/client.js",
@@ -36,6 +37,9 @@
     "prepack": "pnpm run build"
   },
   "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "inject": [

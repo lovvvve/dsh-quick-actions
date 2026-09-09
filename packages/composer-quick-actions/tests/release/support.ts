@@ -1,4 +1,4 @@
-/** Shared fixtures for the release specs: the two package directories and their manifests. */
+/** Shared fixtures for the release specs: the package directory and its manifest. */
 import { createHash } from 'node:crypto'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync } from 'node:fs'
 import { basename, dirname, join, relative, resolve } from 'node:path'
@@ -7,13 +7,13 @@ import { parse as parseYaml } from 'yaml'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
-/** The dual-face feature package. */
+/**
+ * The one published package: both faces, plus the bundle patch that mounts them
+ * (ticket 28 folded the separate `-bundle` package back in).
+ */
 export const featureDir = resolve(here, '../..')
 
-/** The install bundle that mounts it. */
-export const bundleDir = resolve(featureDir, '../composer-quick-actions-bundle')
-
-/** The workspace root that owns both packages and the Client build adapter. */
+/** The workspace root that owns it and the Client build adapter. */
 export const repoRoot = resolve(featureDir, '../..')
 
 /** Only the manifest fields the release contract asserts on. */
@@ -124,11 +124,10 @@ function workspacePackageDirs(): readonly string[] {
   return dirs
 }
 
-/** One throwaway copy of the workspace, with both package directories located in it. */
+/** One throwaway copy of the workspace, with the package directory located in it. */
 export interface StagedWorkspace {
   readonly root: string
   readonly featureDir: string
-  readonly bundleDir: string
 }
 
 /**
@@ -163,6 +162,5 @@ export function stageWorkspace(into: string): StagedWorkspace {
   return {
     root,
     featureDir: join(root, relative(repoRoot, featureDir)),
-    bundleDir: join(root, relative(repoRoot, bundleDir)),
   }
 }

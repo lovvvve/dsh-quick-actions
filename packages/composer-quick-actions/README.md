@@ -4,7 +4,7 @@
 
 在 DSH 每个常规、由会话支持的**常驻消息编辑器（Resident Composer）**旁提供全局快捷动作。预置动作（Preset Quick Action）由作者提供、只读；自定义动作（Custom Quick Action）由用户自己维护。全部用户数据经 DSH 本地 Settings 持久化，跨重启保留。
 
-这是一个 Host + Client **双面功能包**：Host 半边在 Node 侧拥有配置校验与 Settings 权威，Client 半边在浏览器侧注册消息编辑器的 dock Slot。安装形态是配套的 [`dsh-quick-actions-bundle`](../composer-quick-actions-bundle/README.md)。
+这是一个 Host + Client **双面功能包**：Host 半边在 Node 侧拥有配置校验与 Settings 权威，Client 半边在浏览器侧注册消息编辑器的 dock Slot。同一个包还自带 `dsh.bundle.patch`，因此它本身就是可安装形态，不需要配套的第二个包。
 
 ## 首版能做什么
 
@@ -44,62 +44,36 @@
 ### 正式安装
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions-bundle
+dsh plugin --profile web add dsh-quick-actions
 ```
 
 然后重启 web profile。
 
-> 这一条就够了：bundle 对功能包的依赖由 registry 解析，profile 无需 `overrides`，也不必分别处理两个 tarball。已在全新 `DSH_HOME` 上实测。
->
-> 下面的本地 / 离线流程是给没有 registry 访问、或要试用未发布改动的场景准备的。
+> 一个包就是全部：它自带 `dsh.bundle.patch`，把自己的 Host 半边插进 profile，`dsh.client` 声明让 web 端加载浏览器半边。不需要第二个包，也不需要 profile `overrides`。
 
 ### 本地 / 离线安装
 
-安装 bundle **只声明**对功能包的依赖，**不内嵌**它，所以离线安装必须让两个 tarball 都能被解析。
+```sh
+mkdir -p /tmp/quick-actions
+pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+```
 
-1. 打包两个包。功能包声明了 `prepack`，所以打它时 `pnpm pack` 会先跑一遍 `pnpm build`，tarball 里的产物一定是新鲜的；bundle 没有产物要构建，直接打包：
+然后重启 web profile。本包声明了 `prepack`，所以 `pnpm pack` 会先跑一遍 `pnpm build`，tarball 里的产物一定是新鲜的。
 
-   ```sh
-   mkdir -p /tmp/quick-actions
-   pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-   pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
-   ```
-
-   得到 `dsh-quick-actions-0.1.0.tgz` 与 `dsh-quick-actions-bundle-0.1.0.tgz`。
-
-2. 在 profile 的 pnpm 配置里为功能包加一条 override，指向功能包 tarball 的**绝对路径**：
-
-   ```yaml
-   # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
-   overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
-   ```
-
-3. 安装 bundle tarball：
-
-   ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
-   ```
-
-4. 重启 web profile。
-
-第 2 步是**必需**的，不是可选优化。`dsh plugin` 是 pnpm 的转发器，bundle 的依赖 `dsh-quick-actions@<版本>` 会照常去 registry 解析，而**直接依赖不会满足传递依赖**：只把两个 tarball 一起 `add`、或先 `add` 功能包再 `add` bundle，都不会让 bundle 用上你打的那个功能包。override 是唯一可复现的解析方式。
-
-包发布之后，这条路径的失败方式变了但结论没变：跳过第 2 步不再报 `ERR_PNPM_FETCH_404`，而是**静默装上 registry 上的那个版本**——于是你以为在试自己的构建，实际跑的是已发布版。要试本地改动就必须保留 override。
-
-只想用已发布版本的话，本节整节都不需要：直接用上面的正式安装命令。
+tarball 路径要用**绝对路径**：`dsh plugin` 是 pnpm 的转发器，pnpm 在 profile 目录里运行，相对路径会解析到 `<DSH_HOME>/profiles/web/` 下并以 `ENOENT` 失败。
 
 ### 安装后应当看到什么
 
-- `<DSH_HOME>/profiles/web/package.json` 里，`dependencies` 多了 bundle，`dsh.profile.bundles` 末尾多了 `dsh-quick-actions-bundle`（这两处都由 `dsh plugin` 自己维护，不要手工编辑）。
-- 功能包以传递依赖的形式落在 `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`。
+- `<DSH_HOME>/profiles/web/package.json` 里，`dependencies` 与 `dsh.profile.bundles` 末尾都多了 `dsh-quick-actions`（这两处都由 `dsh plugin` 自己维护，不要手工编辑）。
+- 包落在 `<DSH_HOME>/profiles/web/node_modules/dsh-quick-actions`。
 - 检查这一层是否装好，不必启动服务器：
 
   ```sh
   dsh --profile web --dump-config | grep -A1 'id: composer-quick-actions'
   ```
 
-  合成后的 profile 树里应当出现 `- id: composer-quick-actions` / `name: dsh-quick-actions`，并被注明来自 `dsh-quick-actions-bundle` 层。这条 row 在**下一次 profile 启动**时生效。
+  合成后的 profile 树里应当出现 `- id: composer-quick-actions` / `name: dsh-quick-actions`，并被注明来自 `dsh-quick-actions` 层。这条 row 在**下一次 profile 启动**时生效。
 
 - pnpm 会打印 `Issues with peer dependencies found`，`pnpm peers check` 会把本包声明的 DSH peer 全部列为 missing。**这是正常的**：DSH 核心包装在 DSH 自己的安装锚点里，而不是 profile 的 `node_modules` 里，profile 的 pnpm 看不到它们（`autoInstallPeers: false`）。同一个 profile 里已装的其它第三方 DSH 插件也是同样表现。peer 声明在这里的作用是记录本包消费的 DSH 契约面，不参与解析。
 
@@ -121,7 +95,7 @@ ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION  4 lockfile entries failed verification:
 1. **给这一次命令加个标志**（推荐，只影响本次，不改你的长期策略）：
 
    ```sh
-   dsh plugin --profile web add dsh-quick-actions-bundle --config.minimumReleaseAge=0
+   dsh plugin --profile web add dsh-quick-actions --config.minimumReleaseAge=0
    ```
 
 2. **等冷却期过去**。错误信息里每一条都写了发布时间和截止时间，等最晚的那个满 24 小时即可，无需任何操作。
@@ -131,7 +105,7 @@ ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION  4 lockfile entries failed verification:
 
 预置目录由两部分拼成，顺序固定：先是本包内置的预置清单，然后是 Host composition 在 `Config.presets` 里追加的条目。`Config.presets` 就是**预置的授权声明通道**——没有第三方运行时注册 API。
 
-在 bundle 插入的那条 row 上写 `config`：
+在本包插入的那条 row 上写 `config`：
 
 ```yaml
 # <DSH_HOME>/profiles/web/cordis.patch.yml
@@ -219,17 +193,17 @@ pnpm lint
 **升级 / 降级**——发布后：
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions-bundle@<version>
+dsh plugin --profile web add dsh-quick-actions@<version>
 ```
 
-本地 tarball 则是把 override 与 `add` 指向新（或旧）版本的两个 tarball，再重启 profile。重复 `add` 同一版本是幂等的，不会在 `dsh.profile.bundles` 里留下重复项。
+本地 tarball 则是 `add` 指向新（或旧）版本的那个 tarball，再重启 profile。重复 `add` 同一版本是幂等的，不会在 `dsh.profile.bundles` 里留下重复项。
 
 跨版本的数据兼容由 Host 负责：新增预置只会追加到既有顺序末尾、不改写任何存放数据；降级回本版时，更高 `schemaVersion` 的数据会被原样保留（不显示、不计数、不改写），因此往返无损。
 
 **卸载**：
 
 ```sh
-dsh plugin --profile web remove dsh-quick-actions-bundle
+dsh plugin --profile web remove dsh-quick-actions
 ```
 
 `dsh plugin` 会同时把依赖和 `dsh.profile.bundles` 里的那一层去掉。重启 profile 后动作就不再出现。

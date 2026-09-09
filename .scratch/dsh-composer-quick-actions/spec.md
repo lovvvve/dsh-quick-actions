@@ -715,3 +715,25 @@ A/B 与输入框左右边界误差不得超过 1 CSS px。视觉截图基线必�
 ### 19.4 票据映射
 
 由[票据 27](./issues/27-publish-to-npm-and-list-in-market.md)执行：改名连同发布与市场上架在同一张票据内完成，改名后的打包契约由 `tests/release/packaging.spec.ts` 与 `docs.spec.ts` 固定。
+
+---
+
+## 20. 合并为单包
+
+### 20.1 决定
+
+安装 bundle 并回功能包，**只发布一个** `dsh-quick-actions`。它同时承载：`dsh.bundle.patch` 指向自带的 `cordis.patch.yml`（插入行的 `name` 指向本包）、`dsh.client`、Host 主入口与 `./client` / `./types` 导出。本节取代第 11.1 节与[票据 07](./issues/07-select-plugin-architecture-and-package-contract.md)的双包架构；那两处保留原文，作为当时决定的记录。
+
+### 20.2 依据
+
+[票据 07](./issues/07-select-plugin-architecture-and-package-contract.md)把「双面功能包 + 安装 bundle」直接写成结论，**未给出必须拆开的理由**，也未记录考察过单包方案。调查本机 web profile 里全部七个第三方 DSH 插件，**无一例外都是单包**：同一个包同时声明 `dsh.bundle.patch` 与 `dsh.client`，patch 插入的行 `name` 指向自己。单包在技术上成立，DSH 没有任何机制要求拆开。
+
+双包的代价已经发生而非假设：离线安装必须处理两个 tarball 外加一条 profile `overrides`（直接依赖不满足传递依赖）、两个包要版本同步并为此专设打包断言、npm 上多占一个名字且每次发布跑两遍。收益侧找不到实质对应物——「功能包可被别的 bundle 复用」在本插件不存在该场景。
+
+### 20.3 不变的部分
+
+Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间**一律仍是** `composer-quick-actions`，[第 19.2 节](#192-只有-npm-包名改变)划的边界在此照旧。合并改变的是发布单元，不是任何运行时身份。
+
+### 20.4 时机与票据映射
+
+只在首次发布 `0.1.0` 之前成立；`0.1.0` 尚未发布时执行，registry 上当时只有两个包的 `0.1.0-rc.1`。由[票据 28](./issues/28-merge-into-a-single-package.md)执行，已发布的 `dsh-quick-actions-bundle@0.1.0-rc.1` 另行弃养或撤回。
