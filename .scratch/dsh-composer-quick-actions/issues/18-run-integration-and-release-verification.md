@@ -60,3 +60,18 @@ spec 第 17 节取代第 6.2 节：目录不再经自有 Remote 发布，改由 
 上一轮列的两个前置坑已闭合：管理面板用例现在自带洁净断言与残留清理（克隆污染不会再累积）；卸载核对本轮在受控服务下重做了一遍，profile 两份配置与安装前逐字一致。
 
 仍未覆盖（都需要许可或新决策）：**全部发送动作项**（单飞、确认面板、失败草稿保留、命令动作两种确认设置、queue —— 需真实模型调用许可）、重装后配置恢复、生命周期 stop/update 清理、截图基线。
+
+### 2026-09-09 — 第三轮：发送路径与其余六项完成
+
+用户明确许可真实模型调用（默认模型 GPT-5.6 Luna），上一轮列出的 **9 项全部闭合**，证据见 `verification/release-evidence.md` 第三轮一节。**票据仍为 `claimed`**——见下方剩余项。
+
+本轮交付：`send.spec.ts` + `seed-send.mjs` + `send-round.sh`（6 条发送用例，含同 tick 只发一次、queue、占用草稿）、`lifecycle.spec.ts` + `lifecycle-round.sh`（断线只读 + 失败草稿保留 + 重连后无重复注册）、`host-config.spec.ts` + `host-config-round.sh`（`dsh --patch` overlay 声明预置，不改用户文件）、`screenshots.spec.ts` + 9 张裁剪基线。第二轮的审查修复也已在真实 DSH 上复验通过。
+
+两个行为发现（记录而非判缺陷）：断线时插件不发布结果反馈（`retained` 只在 `submit()` 抛错时发布，而断线时 DSH 的 submit 既不抛也不落地）；Composer 动作控件用原生 `disabled` 而非 `aria-disabled` 表达不可用——CLAUDE.md 那条规则记的是管理面板键盘重排场景，不覆盖此处。
+
+**收口前仍缺的四项**（都不需要模型调用，需再开一次安装窗口）：
+
+1. **重装恢复**：卸载 → 重装 → 用户配置恢复（Settings 命名空间在卸载后保留、重装即回）。
+2. **预置升级/降级的完整往返**：预置移除后既有数据保留为墓碑、重新加入后恢复、行为签名换 ID 的处理——模型层已有用例，GUI 层只验了「新增」这一半。
+3. **结构化 mutation outcome 的 conflict 分支**：成功与拒绝（只读）已验，revision 冲突的 GUI 分类未验。
+4. **占位符拒绝与 Unicode code point / `trim()` 口径**在集成运行里各跑一遍（模型层已覆盖，票据要求集成层也过一遍）。
