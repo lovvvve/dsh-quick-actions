@@ -57,9 +57,17 @@ Label: `wayfinder:map`
 - [执行集成与发布验证](./issues/18-run-integration-and-release-verification.md) — 自动化证据完整，第 13.2 节行为矩阵在模型 / Host / Client 三层加真实 GUI 全部有归属。分四轮在**用户自己的实时 DSH** 上开临时安装窗口（每轮收尾卸载并逐字还原）：① 安装形态按 README 离线流程逐条执行、Catalog `base` 端到端、常驻判定、三布局、等宽误差 0.0px、窄视口与无障碍；② 规模矩阵 0/1/6/25/50 与 53 项被动超限、跨 DSH 重启持久化；③ 发送路径六条（经用户许可的真实模型调用）——确认面板与取消零发送、命令动作两种确认设置、**同 tick 重复激活只发一次**、模型运行期由官方 queue 承接、占用草稿不覆盖、断线只读与失败草稿保留、Host `Config.presets` 变化到达 Client、生命周期无重复注册、9 张裁剪截图基线；④ 重装恢复（卸载保留命名空间、重装即回）、预置往返四段（新增 → 墓碑 → 重新加入恢复偏好与文案更新 → 行为签名换 ID）、revision **conflict** 分支（DSH 的 settings 镜像跨连接实时同步，故冲突以两连接同瞬写入的真实竞态取得；失败方刷新到权威值并可显式重试）、占位符拒绝与 Unicode code point / `trim()` 口径。安装窗口本身已脚本化（`tests/gui/install.sh` + `close-window.sh`，profile 两文件 sha256 逐条校验）。三处用户可见的边缘状态反馈缺口记录在案，其中两处立为票据 25，均不阻塞票据 21；唯一未逐字执行的是「override 与 `add` 指向另一个版本」——两个包按票据 20 暂不发布，本地只有 `0.1.0`。
 - [补齐两处边缘状态的用户可见反馈](./issues/25-close-two-edge-state-ux-gaps.md) — 两处一并定案。**缺口 2 已修**：管理表单像其他三个面板一样接管开场焦点（光标进标签框）并把焦点还给打开它的控件，第一下 Escape 只退出表单、第二下才关面板；`useFocusReturn` 为嵌套面板加了「焦点已离开本面板则不抢回」的规则，`ActionForm` 按目标 `key` 重挂载。**缺口 1 不改运行时行为**：对 `dsh-client-ui-conversation@0.1.2-rc.1` 的源码取证推翻了票据 18 的成因记录——`submit()` 没有连接态检查，普通文本一律同步乐观清空，引擎据此按 spec 9.5 正常关闭单飞，文本由 DSH 自己的 `restoreFailedDrafts` 放回并伴随 DSH 的 error notice；超时判定不可达且被 9.5 禁止，连接态门禁违反第 10 节「允许执行」且比原生发送按钮（`disabled` 不含连接态）更严。行为以假 Composer 的 `holdSink`/`failHeldSinks()` 建模并用 4 条单元用例固定。`pnpm test` 496 通过；两条新增 GUI 断言留待票据 21 的安装窗口。
 
+- [执行最终人工验收](./issues/21-run-final-human-acceptance.md) — **地图目标已达成**：用户于 2026-09-09 明确回复「生产验收通过」。用户要求「你来验证」，故 spec 第 13.4 节步骤 1–8 由 Agent 在其实时 DSH 的一次性窗口里逐条驱动（新增 `tests/gui/acceptance.spec.ts` + `acceptance-round.sh`，19 张裁剪截图），第 9 步仍由用户本人说出。窗口内先在最终候选提交上重跑全部无模型调用的既有 round（13 次 profile 启动零失败零重试），票据 25 留下的两条断言首次在真实 GUI 成立。步骤 1–8 全过：三布局 × 三视口等宽误差**均为 0.00 px**、命令动作两种确认设置都由 DSH 裁决、占用草稿禁用且草稿逐字保留、刷新 / 重启 / 卸载 / 重装后配置逐项恢复、Escape 两级作用域与可访问名称符合 spec 8.3/8.4。**未花费真实模型调用**（三次真实提交都是交给 DSH 裁决的未知命令）。唯一新发现是 shell 侧栏把手压住管理表单的 13px 复选框（点开关文字与键盘均正常），按第 13.1 节不阻止发布，立为票据 26。收尾窗口已关闭，用户 profile 与开窗前字节一致。
+
 ## Not yet specified（尚未明确）
 
 <!-- 当前没有仍处于迷雾中的范围；实施、验证、打包和文档均已毕业为正式票据。 -->
+
+## Open after the destination（目标达成后新开）
+
+<!-- 地图目标已于 2026-09-09 达成。以下是验收过程中发现、不阻塞发布的后续项。 -->
+
+- [把管理面板 portal 到 body](./issues/26-portal-the-manager-panel.md) — 面板 `position: fixed; z-index: 31` 渲染在输入坞子树内，被祖先层叠上下文困住，会被 shell 里 z-index 更低的元素压住；票据 21 撞到的实例是侧栏拖拽把手盖住编辑表单的 13px 复选框。属票据 23 备注里的 portal 化候选，界面打磨，不回溯阻塞任何已关闭票据。
 
 ## Out of scope（范围外）
 

@@ -784,21 +784,22 @@ Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非�
 | `pnpm lint` | 通过 | 0 |
 | `pnpm test` | 22 文件 / 496 通过 | 0 |
 
-### 收尾时的环境状态
+### 第 13.4 节第 9 步：**已取得**（2026-09-09 16:33）
 
-窗口**保持打开**，供用户自行核对第 9 步：profile 在 `http://127.0.0.1:3080` 运行（入口 URL 带 token，只在 worktree 的 `.playwright/dsh-web.log` 里），插件已安装，命名空间是验收终态（布局 `bar`、6 项动作，含两条验收动作与一条克隆）。
+Agent 报告步骤 1–8 全部通过后，**用户本人回复「生产验收通过」**。这是本票据与 spec 第 13.4 节要求的唯一有效答复，第 9 步至此满足，Wayfinder 地图目标的最后一道门槛清除。
 
-关窗与还原（在 worktree `ticket-21-final-acceptance` 根目录执行，顺序不能反）：
+### 关窗与环境还原（16:31，由用户侧执行）
 
-```sh
-node tests/gui/seed-scale.mjs --restore   # 命名空间还原到安装前（本机原本不存在）
-sh tests/gui/close-window.sh              # 卸载 + profile 两文件 sha256 校验
-```
+用户在答复前后自行执行了 Agent 给出的两条收尾命令，Agent 随后重复执行时得到「已无可还原 / 已无可移除」，两处报错都是幂等重入而非失败。终态经独立核对：
 
-关窗前不得删除该 worktree：profile 的两处 `file:` 引用指向其中的 tarball。
+| 检查 | 结果 |
+|---|---|
+| `profiles/web/package.json`、`pnpm-workspace.yaml` | sha256 与 15:15 开窗前指纹**逐条 OK**（override 块与 bundle 依赖均已消失） |
+| `dsh-composer-quick-actions` 在两份 profile 文件中的出现次数 | **0 / 0** |
+| `<DSH_HOME>/settings.yaml` 中 `composer-quick-actions` | **0 次**（README 的手工彻底清理步骤，验收态动作随之清除） |
+| worktree `.playwright/` | 命名空间备份与 pid 文件均已消费，仅剩日志与指纹文件 |
+| 端口 3080 | 由用户自己重新启动的 DSH 提供（非本轮进程），Agent 未触碰 |
 
-### 第 13.4 节第 9 步
-
-**尚未取得。** 步骤 1–8 已由 Agent 全部执行并通过（上表），插件侧无阻断级缺陷；唯一新发现（侧栏把手压住 13px 复选框）不阻止发布，建议另开 portal 化票据。第 9 步「生产验收通过」按本票据与 spec 第 13.4 节只能由用户本人说出；在此之前本票据保持 `claimed`，Wayfinder 地图目标不得宣告完成。
+一次性窗口至此关闭：用户的实时 DSH 与开窗前字节一致，本插件不再安装其中。若日后要长期试用，按功能包 README 的本地 / 离线安装流程重新装入即可，两个 tarball 由 `tests/gui/install.sh` 的 `qa_pack` 现打现用。
 
 **票据 25 的断言之一在真实 GUI 首次成立**：`validation.spec.ts` 的「applies trim() whitespace…」用例末尾——点「编辑」后标签框已聚焦 → 按 Escape → 编辑表单消失、管理面板仍可见、焦点回到该行的「编辑」按钮——通过（2.6s）。该 spec 三条桌面用例全部通过，在两个窄视口按设计跳过（表单不随宽度变化）。
