@@ -80,7 +80,9 @@ async function faceLabels(page: Page): Promise<string[]> {
 /**
  * Toggle one action's confirmation through its label text, which is the interaction a user
  * has: the shell's sidebar width handle overlays the 13 px native box at this viewport, so
- * Playwright refuses to click the input itself (diagnosed in `switch-diagnose.spec.ts`).
+ * Playwright refuses to click the input itself. Diagnosed with a throwaway spec that is not
+ * kept; what it found is written up in the ticket 21 section of `verification/release-evidence.md`
+ * and carried forward as ticket 26.
  * Clicking the label — or Tab plus Space — toggles it, and both were checked by hand.
  */
 async function setConfirm(page: Page, label: string, on: boolean): Promise<void> {

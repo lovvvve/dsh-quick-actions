@@ -765,7 +765,7 @@ Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非�
 
 ### 本轮唯一的新发现：管理面板被 shell 的侧栏把手压住一条 40px 竖带
 
-`setChecked` 的失败查下去是真实环境的层叠问题，用 `tests/gui/switch-diagnose.spec.ts` 取证：
+`setChecked` 的失败查下去是真实环境的层叠问题。取证用的是一次性诊断 spec（在真实 GUI 上依次试点击标签文字、点击方框、Tab+空格，并对面板内每个控件做 `document.elementFromPoint` 命中测试），结论落定后即删除，不留在 `tests/gui/` 里；其结果如下，可复现判据已写进[票据 26](../issues/26-portal-the-manager-panel.md)：
 
 | 事实 | 值 |
 |---|---|
