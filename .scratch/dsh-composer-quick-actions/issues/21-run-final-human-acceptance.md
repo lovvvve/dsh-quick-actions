@@ -57,3 +57,15 @@ Agent 侧的准备工作已完成，证据在 `verification/release-evidence.md`
 **上一条评论的一处更正**：`lifecycle-round.sh` 的 `up` 半程末尾会真实发送「回复 ok」一次，「两者都不触发模型调用」只对 `down` 半程成立。本票据未取得模型调用许可，故 `send-round.sh`（6 条）与 `up` 半程均未执行；若用户许可，可在同一窗口内补跑。
 
 第 9 步仍待用户本人答复。关窗命令 `sh tests/gui/close-window.sh` 须在 worktree `ticket-21-final-acceptance` 根目录执行，且关窗前不得删除该 worktree（profile 的 `file:` 引用指向其中的 tarball）。
+
+### 2026-09-09 — 用户指示「你来验证」，步骤 1–8 已由 Agent 执行并通过
+
+新增 `tests/gui/acceptance.spec.ts` 与 `tests/gui/acceptance-round.sh` 驾驭第 13.4 节步骤 1–8（`walk` 段走步骤 2/3/4/5/8 与步骤 6 的刷新，`persist` 段做重启与卸载 / 重装各带一次重启），逐条观察与 19 张裁剪截图记在 `verification/release-evidence.md` 与 `verification/acceptance-21/`。**未花费任何真实模型调用**：三次真实提交都用未知命令 `/qa-acceptance-unknown-command`，由 DSH 自己裁决；普通文本的真实发送仍留给用户。
+
+全部通过，要点：三布局 × 三视口九种组合的等宽误差均为 0.00 px；命令动作默认确认、确认面板给出无候选菜单说明、关闭确认后一键提交、两种设置下都由 DSH 裁决；占用草稿禁用且草稿逐字保留；刷新、重启、卸载、重装后配置逐项恢复；Escape 两级作用域、Tab 顺序与可访问名称均符合 spec 8.3 / 8.4。
+
+**一处新发现，不阻止发布**：shell 的侧栏拖拽把手（`wSkVaW_widthHandle`，z-index 8、x 425–465 全高，非本插件元素）压住管理表单里 13×13 的原生复选框，精确点方框会被它截获；点开关文字与 Tab+空格均正常。成因是 `.dsh-cqa-manager`（`position: fixed; z-index: 31`）渲染在输入坞子树内、被祖先层叠上下文困住，即[票据 23](./23-adopt-dsh-ui-primitives.md) 备注里「`ManagerPanel` 的 portal 化」候选项所指的症状。按 spec 第 13.1 节判级不属阻断项，建议另开票据。
+
+`walk` 段前三次失败均为本轮 harness 断言过严（`setChecked` 净变化为零、误判保存后焦点、可访问名称未计入「命令」徽标），已逐条修正并在证据里写明，不是插件行为。
+
+窗口保持打开供用户核对；第 9 步仍只能由用户本人答复。
