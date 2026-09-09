@@ -59,3 +59,42 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 ### 2026-09-09 — 由用户发起，未开 Wayfinder 地图
 
 用户问「现在我要发布，让别人也能安装要怎么做」。按 wayfinder 的判据评估后**没有开图**：路线已清晰、无雾，整件事约一个会话加一次用户侧认证即可完成，开图属于该技能自己警告的滥用。以本票据承载。
+
+### 2026-09-10 — 现状：两个包已撤回，`dsh-quick-actions` 处于 24 小时冷却期
+
+进展与阻塞如下，本票据仍 `claimed`。
+
+**已完成**
+
+1. 改名为 `dsh-quick-actions`（spec 第 19 节）。
+2. 发布 `0.1.0-rc.1`（双包形态），并在全新 `DSH_HOME` 上验证单命令安装成立——本票据原本唯一的实质未知就此关闭。
+3. 用户在自己 profile 上安装失败，查明是 pnpm 的 `minimumReleaseAge` 策略被**其它已装插件**的新版本触发，与本插件无关；成因与三种处理写进 README。
+4. [票据 28](./28-merge-into-a-single-package.md) 合并为单包（spec 第 20 节），版本推进到 `0.1.0-rc.2`。
+5. 两份 README 重写，去掉开发过程痕迹，只保留使用者需要的内容。
+
+**当前阻塞：npm 撤回冷却**
+
+用户撤回了两个包（UTC 2026-09-09T16:44:10 与 16:44:53）。`dsh-quick-actions-bundle` 的撤回正合意——单包合并后它已作废。但 `dsh-quick-actions` 一并被撤，触发 npm 的名字冷却：
+
+```text
+[E403] 403 Forbidden - PUT https://registry.npmjs.org/dsh-quick-actions
+dsh-quick-actions cannot be republished until 24 hours have passed.
+```
+
+| 事实 | 值 |
+|---|---|
+| 解禁时间 | UTC 2026-09-10T16:44:53（本地 2026-09-11 00:45） |
+| 名字归属 | `npm owner ls` 返回 `no admin found`；冷却期同时是名字保留期，他人抢不走 |
+| 是否有绕过手段 | **没有**。这是 registry 服务端策略，`--force` 无效；唯一的外部途径是给 npm support 开工单，对自撤的新包标准答复就是等待 |
+| `0.1.0-rc.1` | **永久作废**。npm 对已撤回的「名字 + 版本」组合永久拒绝，不止 24 小时。`0.1.0-rc.2` 与将来的 `0.1.0` 不受影响 |
+
+等待期间**不要再撤回任何东西**，否则窗口从最后一次撤回重新计时。
+
+曾评估但未采纳的两条绕行：改用带 scope 的 `@lovvvve/dsh-quick-actions`（scope 是独立命名空间，可立即发布，但推翻票据 20 的无 scope 决定，且与生态命名风格不一致）；换一个无 scope 新名字（刚为现名改过 32 个文件，且名字更差）。用户选择等待。
+
+**窗口过后的剩余步骤**
+
+1. `pnpm --filter dsh-quick-actions publish --no-git-checks --access public`（需 OTP，只有一条命令）。
+2. 在全新 `DSH_HOME` 上复验单包形态的安装路径——此前那次验的是双包 rc。
+3. 验证通过后发 `0.1.0`，README 的 tarball 文件名随之更新（`docs.spec.ts` 会强制两者同步）。
+4. 去 `awesome-dsh-plugin` 提 PR 上架。

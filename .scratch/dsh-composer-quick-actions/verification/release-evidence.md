@@ -983,3 +983,16 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 - 新形态下的陌生人安装路径**未实测**。票据 27 第 4 步验的是双包 rc，结论在单包下只会更强（少了一层传递依赖），但仍应在发 `0.1.0` 之后复验。
 - 已发布的 `dsh-quick-actions-bundle@0.1.0-rc.1` 尚未弃养或撤回，须用户执行。
+
+### 发布中断：两个包被撤回，名字进入 24 小时冷却（2026-09-10）
+
+用户撤回了两个包（UTC 16:44:10 与 16:44:53）。bundle 的撤回与票据 28 的合并一致，但 `dsh-quick-actions` 一并被撤，`0.1.0-rc.2` 因此发不出去：
+
+```text
+[E403] 403 Forbidden - PUT https://registry.npmjs.org/dsh-quick-actions
+dsh-quick-actions cannot be republished until 24 hours have passed.
+```
+
+`npm view` 对两个名字都返回 404 并附 `Unpublished on ...`；`npm owner ls` 返回 `no admin found`。解禁为 UTC 2026-09-10T16:44:53（本地 2026-09-11 00:45）。这是 registry 服务端策略，客户端无绕过手段。`0.1.0-rc.1` 这个「名字 + 版本」组合永久不可再用，`0.1.0-rc.2` 与将来的 `0.1.0` 不受影响。
+
+代码侧在冷却开始前已全部就位：单包形态、`0.1.0-rc.2`、485 通过、README 重写完毕。窗口过后只需一条 publish 命令。
