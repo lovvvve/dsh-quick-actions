@@ -623,6 +623,6 @@ Settings 命名空间的删除是 README 的**手工彻底清理**步骤而非�
 
 ### 本节未覆盖（留给票据 21 的安装窗口）
 
-- `tests/gui/lifecycle.spec.ts`（`down` 半程）新增：断线激活后 `[data-quick-actions-feedback]` 计数为 0。
+- `tests/gui/lifecycle.spec.ts`（`down` 半程）新增两条：DSH 自己的 toast 出现（`body > [role="alert"]`，primitives `Toast` 的 portal，3s 保持后淡出，故先于草稿断言）；断线激活后插件 `[data-quick-actions-feedback]` 计数为 0。toast 断言若失败，说明 rejection message 为空、`onSinkSettled` 返回 `[]`——属 DSH 侧缺口。
 - `tests/gui/validation.spec.ts` 编辑段改为：标签框已聚焦 → Escape → 表单消失、面板仍在、焦点回到「编辑」。
 - 两者均不触发模型调用；`lifecycle-round.sh` 会停掉 profile，需在窗口内按其驱动执行。

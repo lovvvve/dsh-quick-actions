@@ -42,4 +42,4 @@ spec 第 13.4 节要求「除非用户另行明确同意，不得在该流程中
 
 上一条评论第 2 点里「用户在步骤 2/8 可能撞上表单 Escape 关掉整个管理面板」的预告**已失效**：[票据 25](./25-close-two-edge-state-ux-gaps.md) 让表单接管开场焦点并归还焦点，第一下 Escape 只退出表单、第二下才关面板。断线发送那一处经源码取证确认是 DSH 自己恢复草稿并给出 DSH 的错误提示，插件按 spec 9.5 不加第二条说明；步骤 8 检查错误信息时若看到的是 DSH 的 toast 而非插件的 note，这是预期。
 
-本票据开安装窗口时顺带执行票据 25 新增却尚未在真实 GUI 跑过的两条断言：`sh tests/gui/verify-round.sh validation.spec.ts`（编辑表单聚焦 → Escape → 面板仍在）与 `sh tests/gui/lifecycle-round.sh`（断线时插件无 feedback note，`down` 半程会停掉 profile）。两者都不触发模型调用。
+本票据开安装窗口时顺带执行票据 25 新增却尚未在真实 GUI 跑过的断言：`sh tests/gui/verify-round.sh validation.spec.ts`（编辑表单聚焦 → Escape → 面板仍在）与 `sh tests/gui/lifecycle-round.sh`（断线时 DSH 自己的 toast 出现、插件无 feedback note；`down` 半程会停掉 profile）。两者都不触发模型调用。若 `lifecycle` 的 toast 断言失败，按票据 25 的结论那是 DSH 侧缺口（rejection message 为空），记录即可，不回插件补反馈。

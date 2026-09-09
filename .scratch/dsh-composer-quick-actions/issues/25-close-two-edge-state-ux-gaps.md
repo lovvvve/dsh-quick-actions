@@ -39,13 +39,13 @@ Blocked by: none
 
 ## Answer（答案）
 
-两处都已定案，按票据要求拆成三个提交：缺口 2 的修复（`cc7e74d`）、缺口 1 的回归用例（`2cf9b46`）、缺口 2 的 GUI 层断言（`d7ef081`）。**缺口 2 改了发货 UI；缺口 1 不改任何运行时行为**——源码取证表明票据 18 记录的成因不成立，插件当前行为正是 spec 第 9.5 节要求的，任何插件侧补充反馈都会违反第 9.5 或第 10 节。
+两处都已定案，按票据要求拆成三个实施提交加一个文档提交：缺口 2 的修复（`cc7e74d`）、缺口 1 的回归用例（`2cf9b46`）、缺口 2 的 GUI 层断言（`d7ef081`）、本次收口文档（`b34f603`）；code-review 的后续整理另有提交，见文末。**缺口 2 改了发货 UI；缺口 1 不改任何运行时行为**——源码取证表明票据 18 记录的成因不成立，插件当前行为正是 spec 第 9.5 节要求的，任何插件侧补充反馈都会违反第 9.5 或第 10 节。
 
 ### 缺口 1：不加插件侧反馈——机制取证纠正了票据 18 的记录
 
 对 `@deepseek-ai/dsh-client-ui-conversation@0.1.2-rc.1`（`lib/client.js`）逐段读源码，得到的链路与票据 18 的描述不同：
 
-1. **`submit()` 没有任何连接态检查。** `SessionInputShell.submit()` 把 `enter` 喂给 `SubmitMachine.onEnter()`；对任何非空白普通文本它一律返回 `default-sink` + `commit-draft` 两个 effect，`run()` 同步执行两者再 `publish()`。于是 `submit()` 返回时草稿**已被乐观清空**，不论连接是否存在。
+1. **`submit()` 没有任何连接态检查。** `SessionInputShell.submit()` 把 `enter` 喂给 `SubmitMachine.onEnter()`；对任何非空白普通文本它一律返回 `default-sink` + `commit-draft` 两个 effect，`run()` 同步执行两者再 `publish()`。于是 `submit()` 返回时草稿**已被乐观清空**，不论连接是否存在。唯一的同步抛错分支是 `conversation()` 在 Client 本地服务缺失时 throw——与连接无关，引擎已按 `retained` 处理并有用例。
 2. **执行引擎不是「停在 `submitted` 观察阶段」，而是正常以成功关闭。** 引擎自己的 `publish()` 让拥有布局的 Slot entry 重渲染，其 layout effect 把最新 Input snapshot 喂进 `observe`：`draft === ''` 且 `phase === 'plain'` → 按第 9.5 节判定官方状态机已接收 → `settle(undefined)`，单飞释放、无反馈。`retained` 的两个发布点确实都不触发，但原因是**引擎已经关闭**，不是卡住。
 3. **文本回到草稿是 DSH 自己恢复的。** sink 走 `conversation.sendSession()` → `session.prompt()`（fetch RPC）；断线时 fetch 拒绝，shell 的 `settleDetachedFailure()` → `restoreFailedDrafts()` 把失败文本按提交顺序放回草稿，并以 `sink-settled { ok: false, message }` 触发 `notice(error)`——InputBar 把 error 级 notice 转成 toast。这就是 GUI 用例里「文本回到草稿」的来源，也是**用户按原生发送按钮断线时逐字相同的体验**。票据 18 的 harness 只断言了草稿文本，没有检查 DSH 的 toast，因此「没有一句话解释」这一观察对 DSH 侧并未取证。
 
@@ -63,7 +63,7 @@ Blocked by: none
 | `tests/client/composer.ts` | 假 Composer 新增 `holdSink` / `failHeldSinks()`，按上述源码建模「乐观清空 → sink 失败 → 恢复草稿」 |
 | `tests/client/execution.spec.ts` | 新增 `a send the connection cannot carry` 三条：引擎在乐观清空处关闭且无反馈；恢复草稿后仍无第二个错误、投影为 `occupied-draft`；绝不代用户重试 |
 | `tests/client/surfaces.spec.tsx` | 「断线时动作仍可执行」固定第 10 节，防止将来加连接态门禁 |
-| `tests/gui/lifecycle.spec.ts` | 注释改为真实机制，新增断言 `[data-quick-actions-feedback]` 计数为 0（**未执行**） |
+| `tests/gui/lifecycle.spec.ts` | 注释改为真实机制，新增两条断言（**未执行**）：DSH 自己的 toast 出现（primitives `Toast` 直接 portal 到 `body`，`role="alert"`，3s 后淡出，故先于草稿断言）；插件 `[data-quick-actions-feedback]` 计数为 0。前者是 code-review 提出的——没有它，「解释由 DSH 给出」只是归因而非证实 |
 
 ### 缺口 2：表单接管开场焦点，并把焦点还回去（`cc7e74d`）
 
@@ -83,5 +83,10 @@ Blocked by: none
 
 ### 留给票据 21 的两件事
 
-1. 两条新增的 GUI 断言（`lifecycle.spec.ts` 的无 feedback note、`validation.spec.ts` 的编辑表单 Escape 作用域）需要安装窗口，随人工验收一起跑；`lifecycle` 那条要走 `sh tests/gui/lifecycle-round.sh` 的 `down` 半程。
+1. 新增的 GUI 断言（`lifecycle.spec.ts` 的 DSH toast 出现 + 插件无 feedback note、`validation.spec.ts` 的编辑表单 Escape 作用域）需要安装窗口，随人工验收一起跑；`lifecycle` 那条要走 `sh tests/gui/lifecycle-round.sh` 的 `down` 半程。若 toast 断言失败，意味着 fetch rejection 的 message 为空、`onSinkSettled` 不发 notice——那是 DSH 侧的缺口，应记录而非在插件里补。
 2. 票据 21 评论里「用户在步骤 2/8 可能撞上表单 Escape 关掉面板」的预告已失效，已另加评论更正。
+
+### code-review（Standards / Spec 双轨）后的整理
+
+- Standards 轴：代码无硬性违规；采纳三处整理——`press()` 提升为 `manager.spec.tsx` 文件级辅助并替换三处旧用例的同形状写法、`ActionForm` 的 `key` 复用已算出的 `editingId`、`useFocusReturn` 参数由 `panel` 改名 `scope`（它接的是嵌套编辑上下文，不是 spec 8.3 意义上的面板）。两处流程问题不改历史（分支已推送，禁止 force-push）：`2cf9b46` 正文在两段列表间夹了两句引导散文；`claimed` 状态未单独落盘（票据在 `main` 上本无 `Status:` 行，本轮在工作树里先 claimed 后 resolved，一并提交）。
+- Spec 轴：独立核实缺口 1 的源码链路与 spec 9.5 / 10 / 9.2 的排除理由，判定「不改运行时」成立、未违反已闭合决策；采纳其实质建议——`lifecycle.spec.ts` 补 DSH toast 断言；假 Composer 的 `failHeldSinks()` 注明并强制「只建模空草稿恢复」（发货版只在 `clipboardText === ""` 或覆盖自己上次恢复时才恢复）。
