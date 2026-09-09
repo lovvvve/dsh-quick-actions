@@ -47,7 +47,13 @@ boot() {
   fi
 
   : > "$LOG"
-  setsid nohup npx --yes @deepseek-ai/dsh@latest web --no-open >>"$LOG" 2>&1 &
+  # `DSH_BOOT_PATCH` adds one overlay after every bundle layer, which is how a round can
+  # stage a Host config change without editing the user's own `cordis.patch.yml`.
+  if [ -n "${DSH_BOOT_PATCH:-}" ]; then
+    setsid nohup npx --yes @deepseek-ai/dsh@latest --profile web --patch "$DSH_BOOT_PATCH" --no-open >>"$LOG" 2>&1 &
+  else
+    setsid nohup npx --yes @deepseek-ai/dsh@latest web --no-open >>"$LOG" 2>&1 &
+  fi
   echo $! > "$PIDFILE"
 
   for _ in $(seq 1 90); do
