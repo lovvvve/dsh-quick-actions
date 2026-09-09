@@ -874,3 +874,61 @@ Agent 报告步骤 1–8 全部通过后，**用户本人回复「生产验收�
 同轮另修：`styles/index.ts` 中 portal 后失效的层叠注释、两份 README 的 external 清单与依赖表（补 `react-dom` 与早已漏写的 primitives）、`mount()` 返回渲染结果、不泄漏断言限定到 `.dsh-cqa-manager-backdrop`、重复论证收敛、CLAUDE.md 的 spec 计数。错误边界路径经论证不补同义反复的测试，理由记在票据 26 的评审评论里。
 
 一处过程教训：`命令 | tail; echo $?` 读到的是 `tail` 的退出码而非命令的。本轮曾据此差点把 `tsc` 的 3 个错误误判为通过（实际由输出文字发现）。质量门此后一律显式捕获退出码。
+
+---
+
+## 票据 27 — 发布（2026-09-10）
+
+### 改名（发布前，spec 第 19 节）
+
+包名缩短为与仓库同名。**只改 npm 包名**：Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间一律仍是 `composer-quick-actions`。议题跟踪目录与包目录名不动。
+
+| 角色 | 旧名 | 现名 |
+|---|---|---|
+| 功能包 | `dsh-composer-quick-actions` | `dsh-quick-actions` |
+| 安装 bundle | `dsh-composer-quick-actions-bundle` | `dsh-quick-actions-bundle` |
+
+改名过程有一次返工：首版用无差别 `sed`，把跟踪器目录路径 `.scratch/dsh-composer-quick-actions/` 和历史记录里的旧包名一并改掉——前者让链接指向不存在的目录，后者会让票据 20 与本文件谎称当时用的就是新名。整体回退后改为负向前瞻只替换后面不跟斜杠的出现，文件清单收窄到前瞻性文件，历史一律以追加说明处理。
+
+### `0.1.0-rc.1`：为什么先发预发布版
+
+第 4 步的未知（从 registry 装能否收敛成一条命令）只能在发布之后验证，而 npm 版本号一经发布即锁死内容、撤回仅 72 小时且名字仍被占用。故先发 rc 验证，再花掉 README 文档化的 `0.1.0`。rc 不加 `--tag`，因此成为 `latest`——文档里那条安装命令不带版本号，只有 rc 是 latest 才能验证真实路径。
+
+**发布须由用户执行**：该账号对 publish 开了 2FA，`npm login` 之外每次发布还要一次性密码，pnpm 在非交互终端下直接以 `ERR_PNPM_OTP_NON_INTERACTIVE` 拒绝。Agent 首次尝试因此失败，两个包均未发出、registry 无残留。
+
+registry 实测：两个包 `latest` 均为 `0.1.0-rc.1`，bundle 的 `dependencies` 为 `{ 'dsh-quick-actions': '0.1.0-rc.1' }`。
+
+### 第 4 步：陌生人的安装路径（全新 `DSH_HOME`，**通过**）
+
+只执行 README 的那一条命令，不加 profile `overrides`、不指任何 tarball：
+
+```sh
+dsh plugin --profile web add dsh-quick-actions-bundle
+```
+
+| 检查 | 结果 |
+|---|---|
+| 命令退出码 | 0 |
+| `pnpm-workspace.yaml` 里的 `overrides` | **不存在**——本地流程当初必需的那一步，从 registry 装完全不需要 |
+| profile `node_modules` | `dsh-quick-actions` 与 `dsh-quick-actions-bundle` 均为 `0.1.0-rc.1`，功能包作为传递依赖自动下来 |
+| Client 产物 | `node_modules/dsh-quick-actions/lib/client.js` 存在，148,716 字节 |
+| `--dump-config` | 出现 `- id: composer-quick-actions` / `name: dsh-quick-actions` |
+| 用户自己的 `~/.dsh` | 未被触碰（`DSH_HOME` 指向临时目录，收尾即删；用户 profile 中本插件出现 0 次） |
+
+**这回答了本票据唯一的实质未知：从 registry 安装确实收敛成一条命令。** 票据 17 记录的「override 加两个 tarball」是本地 tarball 流程的产物，不是安装形态本身的缺陷。
+
+顺带观察：pnpm 对刚发布不久的版本有 24 小时释放期门禁，本轮它自动把两个包加进 `minimumReleaseAgeExclude` 并继续安装；把 `minimumReleaseAgeStrict` 设为 true 的用户会收到提示而非自动放行。
+
+**本节未覆盖**：新 `DSH_HOME` 没有凭据，无法启动 GUI，故未在该环境验证界面渲染。composition row 与 `client.js` 到位是安装层的证据；界面行为由票据 18 与 21 在同一套产物上验过。
+
+### 四份 README 随发布状态更新
+
+「尚未发布，此命令会 404」的注记全部删除。同时修正一处发布后失效的说法：离线流程原写「只 `add` bundle 的 tarball 会失败，因为 pnpm 找不到未发布的功能包」——包发布后不再报错，而是**静默装上已发布版**，于是使用者会以为在试自己的构建。失败方式变了、结论没变（要试本地改动就得保留 override），四份 README 均已改写。
+
+### 质量门（`0.1.0` 上）
+
+| 门 | 结果 |
+|---|---|
+| `pnpm test` | 22 文件 / **499 通过**（打包契约新增「两个包版本必须同步」一条） |
+| `pnpm typecheck` / `pnpm lint` | 均通过（显式捕获退出码） |
+| 两个包 `publish --dry-run` | 均为 `0.1.0`，bundle 依赖解析为 `dsh-quick-actions@0.1.0` |

@@ -49,7 +49,9 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 Then restart the web profile.
 
-> **Neither package is published to any registry yet.** The names, the `0.1.0` version and the MIT license are settled, but publishing was deliberately deferred, so the command above ends in a 404 today. Use the local tarball flow below to try the plugin out.
+> That one command is the whole install: the registry resolves the bundle's dependency on the feature package, so the profile needs no `overrides` and there is no second tarball to place. Verified on a fresh `DSH_HOME`.
+>
+> The local / offline flow below is for when you have no registry access, or want to try changes that are not published.
 
 ### Local / offline install
 
@@ -63,27 +65,29 @@ The install bundle only **declares** a dependency on the feature package — it 
    pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   That gives you `dsh-quick-actions-0.1.0-rc.1.tgz` and `dsh-quick-actions-bundle-0.1.0-rc.1.tgz`.
+   That gives you `dsh-quick-actions-0.1.0.tgz` and `dsh-quick-actions-bundle-0.1.0.tgz`.
 
 2. Add one pnpm override to the profile, pointing the feature package at the **absolute path** of its tarball:
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0-rc.1.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
    ```
 
 3. Install the bundle tarball:
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0-rc.1.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
    ```
 
 4. Restart the web profile.
 
-Step 2 is **required**, not an optimization. `dsh plugin` is a pnpm forwarder, so the bundle's `dsh-quick-actions@0.1.0` dependency is resolved from the registry as usual. Until the packages are published, neither adding both tarballs in one command nor adding the feature package before the bundle works — a direct dependency does not satisfy a transitive one, and pnpm still fails with `ERR_PNPM_FETCH_404`. The override is the one reproducible way to resolve it.
+Step 2 is **required**, not an optimization. `dsh plugin` is a pnpm forwarder, so the bundle's `dsh-quick-actions@<version>` dependency is resolved from the registry as usual, and **a direct dependency does not satisfy a transitive one**: adding both tarballs in one command, or adding the feature package before the bundle, still leaves the bundle pointing somewhere other than the tarball you built.
 
-Once the packages are published this step goes away: drop the override and use the registry command above.
+Now that the packages are published, the failure mode has changed but the conclusion has not: skipping step 2 no longer fails with `ERR_PNPM_FETCH_404` — it **quietly installs the published version instead**, so you would be running the release while believing you were testing your build. Keep the override whenever you are testing local changes.
+
+If you only want the published version, skip this section entirely and use the registry command above.
 
 ### What a good install looks like
 

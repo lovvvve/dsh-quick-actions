@@ -14,16 +14,16 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 Then restart the web profile.
 
-> Neither this package nor the feature package is **published** to any registry yet, so the command above ends in a 404 today.
+> That one command is the whole install: the registry brings the feature package down as this package's dependency, so the profile needs no `overrides`. Verified on a fresh `DSH_HOME`.
 
 ## Local / offline install
 
 Because this package depends on the feature package rather than embedding it, an offline install has to make **both tarballs resolvable**:
 
-- `dsh-quick-actions-0.1.0-rc.1.tgz` — the feature package, resolved through a pnpm `overrides` entry in the profile.
-- `dsh-quick-actions-bundle-0.1.0-rc.1.tgz` — this package, the argument to `dsh plugin add`.
+- `dsh-quick-actions-0.1.0.tgz` — the feature package, resolved through a pnpm `overrides` entry in the profile.
+- `dsh-quick-actions-bundle-0.1.0.tgz` — this package, the argument to `dsh plugin add`.
 
-Adding only this package's tarball fails (pnpm looks for the unpublished feature package in the registry), and adding both tarballs in one command fails the same way. The full, reproducible procedure is in the feature package's [Local / offline install](../composer-quick-actions/README.en.md#local--offline-install) section.
+Adding only this package's tarball will not pick up the feature package you built — pnpm resolves that transitive dependency from the registry and installs the published version instead; adding both tarballs in one command behaves the same way, because a direct dependency does not satisfy a transitive one. The full, reproducible procedure is in the feature package's [Local / offline install](../composer-quick-actions/README.en.md#local--offline-install) section.
 
 ## Uninstall
 

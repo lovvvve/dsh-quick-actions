@@ -49,7 +49,9 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 然后重启 web profile。
 
-> **两个包目前尚未发布到任何 registry。** 名称、`0.1.0` 版本和 MIT 许可证都已确定，但发布本身被有意推后，所以上面这条命令现在会以 404 结束。试用请走下面的本地 tarball 流程。
+> 这一条就够了：bundle 对功能包的依赖由 registry 解析，profile 无需 `overrides`，也不必分别处理两个 tarball。已在全新 `DSH_HOME` 上实测。
+>
+> 下面的本地 / 离线流程是给没有 registry 访问、或要试用未发布改动的场景准备的。
 
 ### 本地 / 离线安装
 
@@ -63,27 +65,29 @@ dsh plugin --profile web add dsh-quick-actions-bundle
    pnpm --filter dsh-quick-actions-bundle pack --pack-destination /tmp/quick-actions
    ```
 
-   得到 `dsh-quick-actions-0.1.0-rc.1.tgz` 与 `dsh-quick-actions-bundle-0.1.0-rc.1.tgz`。
+   得到 `dsh-quick-actions-0.1.0.tgz` 与 `dsh-quick-actions-bundle-0.1.0.tgz`。
 
 2. 在 profile 的 pnpm 配置里为功能包加一条 override，指向功能包 tarball 的**绝对路径**：
 
    ```yaml
    # <DSH_HOME>/profiles/web/pnpm-workspace.yaml
    overrides:
-     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0-rc.1.tgz
+     dsh-quick-actions: file:/tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
    ```
 
 3. 安装 bundle tarball：
 
    ```sh
-   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0-rc.1.tgz
+   dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-bundle-0.1.0.tgz
    ```
 
 4. 重启 web profile。
 
-第 2 步是**必需**的，不是可选优化。`dsh plugin` 是 pnpm 的转发器，bundle 的依赖 `dsh-quick-actions@0.1.0` 会照常去 registry 解析；在包未发布之前，只把两个 tarball 一起 `add`（或先 `add` 功能包再 `add` bundle）都不行——直接依赖不会满足传递依赖，pnpm 仍然报 `ERR_PNPM_FETCH_404`。override 是唯一可复现的解析方式。
+第 2 步是**必需**的，不是可选优化。`dsh plugin` 是 pnpm 的转发器，bundle 的依赖 `dsh-quick-actions@<版本>` 会照常去 registry 解析，而**直接依赖不会满足传递依赖**：只把两个 tarball 一起 `add`、或先 `add` 功能包再 `add` bundle，都不会让 bundle 用上你打的那个功能包。override 是唯一可复现的解析方式。
 
-包发布之后这一步就不需要了：把 override 删掉，改用上面的正式安装命令即可。
+包发布之后，这条路径的失败方式变了但结论没变：跳过第 2 步不再报 `ERR_PNPM_FETCH_404`，而是**静默装上 registry 上的那个版本**——于是你以为在试自己的构建，实际跑的是已发布版。要试本地改动就必须保留 override。
+
+只想用已发布版本的话，本节整节都不需要：直接用上面的正式安装命令。
 
 ### 安装后应当看到什么
 

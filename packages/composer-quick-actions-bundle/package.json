@@ -1,6 +1,6 @@
 {
   "name": "dsh-quick-actions-bundle",
-  "version": "0.1.0-rc.1",
+  "version": "0.1.0",
   "description": "Installable DSH web-profile bundle for Composer Quick Actions",
   "license": "MIT",
   "files": [
