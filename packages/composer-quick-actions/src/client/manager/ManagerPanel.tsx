@@ -395,7 +395,12 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
             </div>
 
             {form === undefined ? null : (
+              // Keyed by target, so switching from one action's form to
+              // another's remounts it: the caret moves into the new form, and
+              // its focus return is captured against the control that opened
+              // *that* form rather than the first one.
               <ActionForm
+                key={form.target.kind === 'edit' ? `edit:${form.target.id}` : 'new'}
                 mode={form.target.kind}
                 draft={form.draft}
                 attempted={form.attempted}

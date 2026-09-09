@@ -60,7 +60,8 @@ export function useModalKeys<T extends HTMLElement>(onCancel: () => void): Modal
         // Stopped here: the composer behind this panel also listens for Escape,
         // and cancelling a Quick Action must not also clear the user's draft.
         // A nested editing context — the management form — stops Escape before
-        // it reaches this handler, so leaving the form does not close the panel.
+        // it reaches this handler, so leaving the form does not close the panel;
+        // the form takes focus on open, so that holds from its first keystroke.
         event.stopPropagation()
         onCancel()
         return
@@ -92,8 +93,16 @@ export function useModalKeys<T extends HTMLElement>(onCancel: () => void): Modal
  * An opener that has since been unmounted — an action picked from a list that
  * closed with it — is skipped rather than focused, and the caller is free to
  * offer a fallback of its own.
+ *
+ * @param panel - the closing panel's own element, for a panel nested inside
+ * another one. When the outer panel closes, React runs the outer cleanup first,
+ * the inner cleanup next, and only then removes the outer DOM: by the time the
+ * inner panel returns focus, the outer one has already handed it to *its*
+ * opener, and the inner opener is a control about to leave the document. So a
+ * nested panel returns focus only while focus is still inside it (or fell to
+ * the body); focus that has already left belongs to whoever moved it.
  */
-export function useFocusReturn(): void {
+export function useFocusReturn(panel?: MutableRefObject<HTMLElement | null>): void {
   const opener = useRef<HTMLElement | null>(null)
 
   useLayoutEffect(() => {
@@ -103,6 +112,15 @@ export function useFocusReturn(): void {
       const element = opener.current
       opener.current = null
       if (element === null || !element.isConnected) return
+      const current = document.activeElement
+      if (
+        panel?.current != null &&
+        current !== null &&
+        current !== document.body &&
+        !panel.current.contains(current)
+      ) {
+        return
+      }
       element.focus()
     }
   }, [])

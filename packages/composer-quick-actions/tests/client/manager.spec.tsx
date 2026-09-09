@@ -1133,3 +1133,131 @@ describe('when settings cannot be written', () => {
     expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
   })
 })
+
+// ---------------------------------------------------------------------------
+// The form as a nested editing context (spec 8.4, ticket 25)
+// ---------------------------------------------------------------------------
+
+describe('the form’s own focus scope', () => {
+  const STORED = {
+    userActionsById: {
+      first: { kind: 'send', label: '第一个', text: '正文一', confirm: true, enabled: true },
+      second: { kind: 'send', label: '第二个', text: '正文二', confirm: true, enabled: true },
+    },
+    actionOrder: [
+      { source: 'custom', id: 'first' },
+      { source: 'custom', id: 'second' },
+    ],
+  }
+
+  /** Press a control the way a keyboard user reaches it: focused first, then activated. */
+  function press(button: HTMLElement): void {
+    act(() => {
+      button.focus()
+    })
+    fireEvent.click(button)
+  }
+
+  it('opens with the caret in the label field, where the user is about to type', () => {
+    setup()
+    mount()
+    openManager()
+
+    press(screen.getByRole('button', { name: zh['manager.new'] }))
+
+    expect(document.activeElement).toBe(screen.getByLabelText(zh['form.label']))
+  })
+
+  it('does the same for an edit, over the stored content', () => {
+    setup({ user: STORED })
+    mount()
+    openManager()
+
+    press(control('custom:first', zh['manager.edit']))
+
+    const label = screen.getByLabelText(zh['form.label'])
+    expect(document.activeElement).toBe(label)
+    expect(label).toHaveProperty('value', '第一个')
+  })
+
+  it('makes Escape leave the form, not the panel, straight after the form opened', () => {
+    // Ticket 25: with focus still on the button outside the form, the first
+    // Escape after "new" reached the panel's own handler and closed the whole
+    // panel. The innermost editing context must be what Escape means as soon
+    // as that context exists.
+    setup()
+    mount()
+    openManager()
+    const create = screen.getByRole('button', { name: zh['manager.new'] })
+    press(create)
+
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+
+    expect(screen.queryByRole('group', { name: zh['form.title.new'] })).toBeNull()
+    expect(panel()).toBeTruthy()
+    // Focus went back to the control that opened the form, inside the panel...
+    expect(document.activeElement).toBe(create)
+    // ...so a second Escape means what it always meant: close the panel.
+    fireEvent.keyDown(document.activeElement as Element, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
+  })
+
+  it('returns focus to the row’s edit control when the form is cancelled', () => {
+    setup({ user: STORED })
+    mount()
+    openManager()
+    const edit = control('custom:first', zh['manager.edit'])
+    press(edit)
+
+    fireEvent.click(screen.getByRole('button', { name: zh['form.cancel'] }))
+
+    expect(screen.queryByRole('group', { name: zh['form.title.edit'] })).toBeNull()
+    expect(document.activeElement).toBe(edit)
+  })
+
+  it('returns focus to the row’s edit control after a save lands', async () => {
+    setup({ user: STORED })
+    mount()
+    openManager()
+    press(control('custom:first', zh['manager.edit']))
+    fireEvent.change(screen.getByLabelText(zh['form.label']), { target: { value: '改过的' } })
+
+    fireEvent.click(screen.getByRole('button', { name: zh['form.save'] }))
+    await settle()
+
+    expect(storedActions().first?.label).toBe('改过的')
+    expect(document.activeElement).toBe(control('custom:first', zh['manager.edit']))
+  })
+
+  it('moves the caret into the form again when it switches to another action', () => {
+    setup({ user: STORED })
+    mount()
+    openManager()
+    press(control('custom:first', zh['manager.edit']))
+    const second = control('custom:second', zh['manager.edit'])
+
+    press(second)
+
+    const label = screen.getByLabelText(zh['form.label'])
+    expect(document.activeElement).toBe(label)
+    expect(label).toHaveProperty('value', '第二个')
+
+    // And leaving it goes back to the control that opened *this* form.
+    fireEvent.keyDown(label, { key: 'Escape' })
+    expect(document.activeElement).toBe(second)
+  })
+
+  it('still returns focus to the management entry when the panel closes over an open form', () => {
+    setup()
+    mount()
+    const entry = screen.getByRole('button', { name: zh['manage'] })
+    press(entry)
+    press(screen.getByRole('button', { name: zh['manager.new'] }))
+    expect(document.activeElement).toBe(screen.getByLabelText(zh['form.label']))
+
+    fireEvent.click(screen.getByRole('button', { name: zh['manager.close'] }))
+
+    expect(screen.queryByRole('dialog', { name: zh['manager.title'] })).toBeNull()
+    expect(document.activeElement).toBe(entry)
+  })
+})
