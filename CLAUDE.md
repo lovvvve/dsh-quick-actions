@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. [AGENTS.md](AGENTS.md) — 沟通语言、议题跟踪、分诊标签、领域文档三条规则的入口。
 2. [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) — `.scratch/` 本地议题跟踪与 Wayfinder claim/resolve 约定。
 3. [CONTEXT.md](CONTEXT.md) — 领域词汇（Quick Action / Preset / Custom / Insert / Send / Resident Composer 等）。**写代码、命名、文案、commit 一律使用这里定义的术语**，`docs/agents/domain.md` 提到的 `docs/adr/` 目前尚不存在。
-4. [HANDOFF.md](HANDOFF.md) — 跨对话交接：哪些结论已闭合、哪些不得倒退。
+4. [map.md](.scratch/dsh-composer-quick-actions/map.md) 与 [spec.md](.scratch/dsh-composer-quick-actions/spec.md) 第 16、17 节 — 哪些结论已闭合、哪些不得倒退；本文件下方的「已闭合、不得倒退的决策」是同一批结论的速查版。
 
 ## 项目状态（先看这条）
 
@@ -119,4 +119,5 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 - 发布身份已由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案：正式采纳无 scope 的 `dsh-composer-quick-actions` / `dsh-composer-quick-actions-bundle`、初始版本 `0.1.0`、MIT（copyright holder lovvvve），**暂不发布**（不设 `publishConfig`、不 `npm publish`，试用走本地 tarball）。身份已由[票据 17](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md) 落进两个 `package.json`、`cordis.patch.yml` 与四份 README；根 `LICENSE` 由 pnpm 打包时自动带入各 tarball，无需复制。**不要**给任何包加 `publishConfig` 或执行 `npm publish`。
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。
+- Client 构建适配器是**受控依赖的构建约束，不是恶意代码沙箱**。它拒绝间接 / 计算型 `require`、动态 `import` 与未声明 external，是为了让产物可预测、不悄悄夹带第二份 React；不要据此把它扩张成通用安全模型。
 - **`@deepseek-ai/dsh-client-ui-primitives` 是 web shell 的构建期依赖**，由冻结 seed 表无条件提供（`makeRequire` 第一优先命中），磁盘上不存在该包也 require 得到；取证见 `research/client-ui-primitives-availability.md`。它必须同时出现在 `tsdown.config.ts` 的 `external` 与 `package.json` 的 `dsh.client.external`（票据 17 的契约测试做严格相等断言），devDependency **精确锁 `0.1.2-rc.1`**——`latest` dist-tag 停在陈旧的 `0.0.1-rc.1`，少 17 个导出且不发 CSS。它**没有 `forwardRef`**，`Button`/`Input`/`Pill` 都不能接 `ref`；开场焦点用 `modal.ts` 的 `useInitialFocusIn(container, selector)` 按标记属性寻址。它的裸 ESM 会 `import` 自己的 CSS Modules，所以 `vitest.config.ts` 必须把它列进 `test.server.deps.inline`，否则测试在 import 阶段就报 `Unknown file extension ".css"`。
