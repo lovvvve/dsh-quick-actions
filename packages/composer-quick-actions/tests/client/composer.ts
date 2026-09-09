@@ -48,6 +48,17 @@ export class FakeComposerInput {
    * frozen slot is already held. The call still publishes a fresh snapshot.
    */
   refuseSubmit = false
+  /**
+   * Set to keep each ordinary send's default sink open instead of accepting it
+   * at once — a connection with nothing behind it. The shipped machine has no
+   * connection check anywhere on the `enter` path: `onEnter` answers
+   * `default-sink` + `commit-draft` for any non-blank plain text, and the shell
+   * runs both synchronously, so the draft is cleared *before* the sink can fail.
+   * The failure arrives later, through {@link failHeldSinks}.
+   */
+  holdSink = false
+  /** Texts whose sink is still open, in submission order. */
+  private held: string[] = []
 
   /** The public action face a Slot entry receives. */
   readonly actions: InputActions = {
@@ -147,9 +158,23 @@ export class FakeComposerInput {
     this.patch({ phase: 'plain', draft: '', draftRev: this.state.draftRev + 1 })
   }
 
+  /**
+   * Every held sink rejects — the shell's `settleDetachedFailure` for each:
+   * nothing was sent, and `restoreFailedDrafts` rebuilds the failed texts into
+   * the draft in submission order, a blank line apart. The shipped shell also
+   * raises its own error notice here; that notice is DSH's, and the plugin
+   * neither sees nor duplicates it (spec 9.5).
+   */
+  failHeldSinks(): void {
+    const failed = this.held.splice(0)
+    if (failed.length === 0) throw new Error('fake composer: no send is held')
+    this.patch({ draft: failed.join('\n\n'), draftRev: this.state.draftRev + 1 })
+  }
+
   /** The optimistic commit that follows an accepted ordinary send. */
   private commit(text: string): void {
-    this.sends.push(text)
+    if (this.holdSink) this.held.push(text)
+    else this.sends.push(text)
     this.patch({ draft: '', draftRev: this.state.draftRev + 1, imageIds: [], occurrences: [] })
   }
 

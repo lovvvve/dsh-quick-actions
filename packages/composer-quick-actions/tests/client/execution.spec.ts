@@ -277,6 +277,59 @@ describe('the single-flight window', () => {
   })
 })
 
+describe('a send the connection cannot carry', () => {
+  // Ticket 25, gap 1. The shipped `submit()` has no connection check: for any
+  // non-blank plain text the machine answers `default-sink` + `commit-draft`
+  // and the shell runs both synchronously, so the optimistic clear happens
+  // before the sink can fail. Reading that clear, the engine closes the flight
+  // as accepted — the message *has* entered the official path — and when the
+  // sink fails later, DSH restores the draft and raises its own notice. Spec
+  // 9.5 puts that failure with DSH's feedback, so the plugin must add nothing.
+  it('closes the flight on the optimistic commit and reports nothing of its own', () => {
+    harness.sync([action()])
+    harness.input.holdSink = true
+
+    harness.act(() => harness.engine.activate(action()))
+
+    // The official machine took the text: cleared, flight released, no verdict.
+    expect(harness.input.snapshot.draft).toBe('')
+    expect(harness.state.sending).toBe(false)
+    expect(harness.state.feedback).toBeUndefined()
+  })
+
+  it('leaves the restored draft, and its explanation, to DSH', () => {
+    harness.sync([action()])
+    harness.input.holdSink = true
+    harness.act(() => harness.engine.activate(action()))
+
+    harness.act(() => harness.input.failHeldSinks())
+
+    expect(harness.input.sends).toEqual([])
+    expect(harness.input.snapshot.draft).toBe('ship it')
+    // No second error over DSH's own (spec 9.5)...
+    expect(harness.state.feedback).toBeUndefined()
+    // ...and the restored text is simply an Occupied Draft from here on, which
+    // is how the controls explain why they are unavailable now.
+    expect(harness.state.unavailable).toBe('occupied-draft')
+    expect(harness.state.sending).toBe(false)
+  })
+
+  it('never retries the send on the user’s behalf', () => {
+    harness.sync([action(), OTHER])
+    harness.input.holdSink = true
+    harness.act(() => harness.engine.activate(action()))
+    harness.act(() => harness.input.failHeldSinks())
+
+    // The user clears the restored text and the connection is back: the next
+    // send is the user's own next activation, never a replay of the failed one.
+    harness.input.holdSink = false
+    harness.act(() => harness.input.type(''))
+    harness.act(() => harness.engine.activate(OTHER))
+
+    expect(harness.input.sends).toEqual(['again'])
+  })
+})
+
 describe('confirmation', () => {
   const confirmed = action({ confirm: true })
 

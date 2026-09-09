@@ -473,6 +473,25 @@ describe('executing from a surface', () => {
     expect(screen.getByText(zh['feedback.retained'])).toBeTruthy()
   })
 
+  it('keeps the actions executable while the connection is down', () => {
+    // Spec 10: a brief disconnect keeps the last Host-confirmed snapshot on
+    // screen *and executable*; only management goes read-only. The shipped send
+    // button has no connection gate either, so a gate here would refuse what
+    // the composer beside it accepts (ticket 25).
+    setup('ribbon')
+    mount()
+    act(() => {
+      harness.connection.set('disconnected')
+    })
+
+    const control = screen.getByRole('button', { name: /继续/ })
+    expect(control).toHaveProperty('disabled', false)
+    fireEvent.click(control)
+
+    expect(harness.input.sends).toEqual(['继续'])
+    expect(document.querySelector('[data-quick-actions-feedback]')).toBeNull()
+  })
+
   it('never sends twice for two clicks in one tick', () => {
     setup('ribbon')
     mount()

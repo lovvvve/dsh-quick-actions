@@ -59,20 +59,23 @@ test.describe('while the connection is down', () => {
     await page.keyboard.press('Escape')
     await expect(managerPanel(page)).toHaveCount(0)
 
-    // Loading is two steps — `setDraft(text)` then `submit()` — and with nothing behind the
-    // connection the second cannot land. Spec section 6's conservative failure rule is that
-    // the text stays in the composer: the user loses nothing and can retry by hand.
+    // Loading is two steps — `setDraft(text)` then `submit()` — and the shipped `submit()`
+    // has no connection check: the machine answers `default-sink` + `commit-draft` and the
+    // shell runs both synchronously, so the text is cleared optimistically *before* the sink
+    // fails. Then DSH's own `restoreFailedDrafts` puts it back, and DSH raises its own error
+    // notice. Spec 9.5: the user loses nothing, and the failure of a message that entered the
+    // official path is DSH's to report.
     await page.locator(`[data-quick-action="custom:${SEND_FIXTURE}"]`).click()
 
     await expect(composerInput(page)).toHaveText(SEND_TEXT, { timeout: 30_000 })
 
-    // No feedback note is asserted here, and that is the observed behaviour rather than an
-    // oversight: `retained` is published either when `submit()` *throws* or when the next
-    // Input commit still carries the loaded draft, and with nothing behind the connection
-    // DSH's submit neither throws nor commits again — so the execution layer stays in its
-    // observation stage. Retention — the requirement of spec 9.5 — holds either way:
-    // the text is still the user's. The missing note is recorded as a finding in the
-    // ticket-18 evidence rather than asserted as if it were the contract.
+    // The plugin adds no note of its own over DSH's (spec 9.5 forbids a second error): the
+    // engine read the optimistic clear as the official machine accepting the text and closed
+    // the flight there. Pinned at the unit level in `client/execution.spec.ts` ("a send the
+    // connection cannot carry"); asserted here as well since ticket 25 (the ticket-18
+    // evidence had recorded the mechanism as the engine "stuck in its observation stage",
+    // which the shipped source does not bear out).
+    await expect(layoutCell(page).locator('[data-quick-actions-feedback]')).toHaveCount(0)
     await composerInput(page).fill('')
   })
 })
