@@ -400,7 +400,7 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
               // its focus return is captured against the control that opened
               // *that* form rather than the first one.
               <ActionForm
-                key={form.target.kind === 'edit' ? `edit:${form.target.id}` : 'new'}
+                key={editingId === undefined ? 'new' : `edit:${editingId}`}
                 mode={form.target.kind}
                 draft={form.draft}
                 attempted={form.attempted}

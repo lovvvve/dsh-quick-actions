@@ -94,15 +94,16 @@ export function useModalKeys<T extends HTMLElement>(onCancel: () => void): Modal
  * closed with it — is skipped rather than focused, and the caller is free to
  * offer a fallback of its own.
  *
- * @param panel - the closing panel's own element, for a panel nested inside
- * another one. When the outer panel closes, React runs the outer cleanup first,
- * the inner cleanup next, and only then removes the outer DOM: by the time the
- * inner panel returns focus, the outer one has already handed it to *its*
- * opener, and the inner opener is a control about to leave the document. So a
- * nested panel returns focus only while focus is still inside it (or fell to
- * the body); focus that has already left belongs to whoever moved it.
+ * @param scope - the closing context's own element, for an editing context
+ * nested inside a panel (the management form inside the management panel).
+ * When the outer panel closes, React runs the outer cleanup first, the inner
+ * cleanup next, and only then removes the outer DOM: by the time the nested
+ * context returns focus, the panel has already handed it to *its* opener, and
+ * the nested opener is a control about to leave the document. So a nested
+ * context returns focus only while focus is still inside it (or fell to the
+ * body); focus that has already left belongs to whoever moved it.
  */
-export function useFocusReturn(panel?: MutableRefObject<HTMLElement | null>): void {
+export function useFocusReturn(scope?: MutableRefObject<HTMLElement | null>): void {
   const opener = useRef<HTMLElement | null>(null)
 
   useLayoutEffect(() => {
@@ -114,10 +115,10 @@ export function useFocusReturn(panel?: MutableRefObject<HTMLElement | null>): vo
       if (element === null || !element.isConnected) return
       const current = document.activeElement
       if (
-        panel?.current != null &&
+        scope?.current != null &&
         current !== null &&
         current !== document.body &&
-        !panel.current.contains(current)
+        !scope.current.contains(current)
       ) {
         return
       }

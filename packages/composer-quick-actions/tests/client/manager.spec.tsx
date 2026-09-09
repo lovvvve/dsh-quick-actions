@@ -225,6 +225,18 @@ function blocked(element: HTMLElement): boolean {
   return element.getAttribute('aria-disabled') === 'true' && (element as HTMLButtonElement).disabled === false
 }
 
+/**
+ * Press a control the way a keyboard user reaches it: focused first, then
+ * activated. jsdom's `click` moves no focus on its own, and every focus
+ * assertion in this file depends on where the caret was when the press landed.
+ */
+function press(button: HTMLElement): void {
+  act(() => {
+    button.focus()
+  })
+  fireEvent.click(button)
+}
+
 /** The stored custom actions, failing the test rather than the assertion when absent. */
 function storedActions(): Record<string, Record<string, unknown>> {
   const actions = harness.stored?.userActionsById
@@ -427,11 +439,8 @@ describe('the management overlay', () => {
   it('returns focus to the management entry when it closes', () => {
     mount()
     const entry = screen.getByRole('button', { name: zh['manage'] })
-    act(() => {
-      entry.focus()
-    })
 
-    fireEvent.click(entry)
+    press(entry)
     expect(document.activeElement).not.toBe(entry)
 
     fireEvent.keyDown(panel(), { key: 'Escape' })
@@ -583,10 +592,7 @@ describe('managing a Preset Quick Action', () => {
     expect(blocked(up)).toBe(true)
     expect(blocked(down)).toBe(true)
 
-    act(() => {
-      up.focus()
-    })
-    fireEvent.click(up)
+    press(up)
     await settle()
 
     expect(managedKeys()).toEqual(['preset:p1', 'preset:p2', 'preset:p3'])
@@ -596,11 +602,8 @@ describe('managing a Preset Quick Action', () => {
 
   it('keeps the caret on the move control after a reorder lands', async () => {
     const down = control('preset:p1', zh['manager.moveDown'])
-    act(() => {
-      down.focus()
-    })
 
-    fireEvent.click(down)
+    press(down)
     await settle()
 
     expect(managedKeys()).toEqual(['preset:p2', 'preset:p1', 'preset:p3'])
@@ -1148,14 +1151,6 @@ describe('the form’s own focus scope', () => {
       { source: 'custom', id: 'first' },
       { source: 'custom', id: 'second' },
     ],
-  }
-
-  /** Press a control the way a keyboard user reaches it: focused first, then activated. */
-  function press(button: HTMLElement): void {
-    act(() => {
-      button.focus()
-    })
-    fireEvent.click(button)
   }
 
   it('opens with the caret in the label field, where the user is about to type', () => {

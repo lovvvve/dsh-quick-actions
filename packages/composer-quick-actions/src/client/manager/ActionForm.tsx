@@ -138,9 +138,9 @@ export function ActionForm(props: ActionFormProps): ReactElement {
   // Focus return is declared first so its layout effect captures the opener —
   // the "new" or "edit" control — before the passive effect below moves focus
   // into the form (spec 8.4). It is given the form's own element because this
-  // panel is nested in the management panel: when that one closes over an open
-  // form, focus is already on the management entry by the time the form's
-  // cleanup runs, and must stay there. The label field is the opening target:
+  // editing context is nested in the management panel: when that one closes
+  // over an open form, focus is already on the management entry by the time
+  // the form's cleanup runs, and must stay there. The label field is the opening target:
   // it is the first field, and it is what the user is about to type into. It is
   // addressed by marker rather than by ref for the same reason every other
   // panel is: the one focus mechanism lives in `modal.ts`, whatever control

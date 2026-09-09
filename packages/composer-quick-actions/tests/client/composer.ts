@@ -164,10 +164,17 @@ export class FakeComposerInput {
    * the draft in submission order, a blank line apart. The shipped shell also
    * raises its own error notice here; that notice is DSH's, and the plugin
    * neither sees nor duplicates it (spec 9.5).
+   *
+   * Only the empty-draft case is modelled. The shipped shell restores into an
+   * empty draft, or over a restoration of its own the user has not touched; a
+   * user who typed something new before the failure keeps what they typed and
+   * the failed records wait. A test that needs that branch has to model it
+   * rather than lean on this one.
    */
   failHeldSinks(): void {
     const failed = this.held.splice(0)
     if (failed.length === 0) throw new Error('fake composer: no send is held')
+    if (this.state.draft !== '') throw new Error('fake composer: restoring over a typed draft is not modelled')
     this.patch({ draft: failed.join('\n\n'), draftRev: this.state.draftRev + 1 })
   }
 
