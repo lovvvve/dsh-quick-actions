@@ -87,7 +87,7 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**01 至 26 全部 resolved**，地图目标已达成；当前 frontier 是[票据 27 发布到 npm 并在插件市场上架](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md)（已认领）。票据 26 把管理面板改经 `createPortal` 挂到 `document.body`；**只做了管理面板**，两个锚定 popover（`ActionPanel` / `ConfirmPanel`）仍在 dock 子树内、带着同一个层叠根因，只是尚无用户可见症状——要动它们须先解决锚定定位改用视口坐标的问题，且应另开票据。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**01 至 26 与 28 全部 resolved**，地图目标已达成；当前 frontier 是[票据 27 发布到 npm 并在插件市场上架](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md)（已认领，被 npm 撤回冷却阻塞，详见其末条评论）。票据 26 把管理面板改经 `createPortal` 挂到 `document.body`；**只做了管理面板**，两个锚定 popover（`ActionPanel` / `ConfirmPanel`）仍在 dock 子树内、带着同一个层叠根因，只是尚无用户可见症状——要动它们须先解决锚定定位改用视口坐标的问题，且应另开票据。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -115,8 +115,8 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 - 现有 GUI 是 `http://127.0.0.1:3080`（非本项目启动）。`pnpm watch:client` **不等于** DSH GUI HMR；同一 DSH checkout 的 watcher 与页面加载关系必须实测。
 - Client `cordis_inspect_query` 只能由有活动 GUI 页面的前台父会话执行，后台子代理会无限等待。Host Inspect 和读已打包源码在子代理里安全。
 - 必须交付持久化功能包；不得改成进程内 dynamic Cordis Plugin 来充数。
-- 发布身份的形状由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案（无 scope、初始版本 `0.1.0`、MIT，copyright holder lovvvve；已排除 `@deepseek-ai` 与 `@dsh-plugins`），由[票据 17](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md) 落进两个 `package.json`、`cordis.patch.yml` 与四份 README；根 `LICENSE` 由 pnpm 打包时自动带入各 tarball，无需复制。**包名现为 `dsh-quick-actions` 与 `dsh-quick-actions-bundle`**——[票据 27](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md) 在首次发布前把票据 20 定的 `dsh-composer-quick-actions*` 缩短为与仓库同名（spec 第 19 节）。**改的只有 npm 包名**：Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间一律仍是 `composer-quick-actions`，它们是另一条身份轴，其中 Settings 那两个发布后就是用户数据。
-- 在票据 27 resolved 之前**不要执行 `npm publish`**；两个包也始终不设 `publishConfig`（无 scope 的包默认就是 public）。
+- 发布身份的形状由[票据 20](.scratch/dsh-composer-quick-actions/issues/20-choose-publishing-identity-and-license.md) 定案（无 scope、初始版本 `0.1.0`、MIT，copyright holder lovvvve；已排除 `@deepseek-ai` 与 `@dsh-plugins`），由[票据 17](.scratch/dsh-composer-quick-actions/issues/17-finish-install-bundle-and-release-docs.md) 落进两个 `package.json`、`cordis.patch.yml` 与四份 README；根 `LICENSE` 由 pnpm 打包时自动带入各 tarball，无需复制。**现在只发布一个包，名为 `dsh-quick-actions`**：[票据 27](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md) 在首次发布前把票据 20 定的名字缩短为与仓库同名（spec 第 19 节），[票据 28](.scratch/dsh-composer-quick-actions/issues/28-merge-into-a-single-package.md) 又把安装 bundle 并了回来（spec 第 20 节）。**改的只有 npm 发布单元与名字**：Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间一律仍是 `composer-quick-actions`，它们是另一条身份轴，其中 Settings 那两个发布后就是用户数据。
+- **发布正在票据 27 中进行，但被 npm 的撤回冷却挡住**：两个包曾发出 `0.1.0-rc.1`，随后被撤回，`dsh-quick-actions` 这个名字在 UTC 2026-09-10T16:44:53（本地 2026-09-11 00:45）之前不能再发布。窗口过后只需一条 `pnpm --filter dsh-quick-actions publish`（需 OTP）。**等待期间不要再撤回任何东西**，否则窗口从最后一次撤回重新计时；`0.1.0-rc.1` 这个「名字 + 版本」组合已永久作废。包始终不设 `publishConfig`（无 scope 的包默认就是 public）。
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。
 - Client 构建适配器是**受控依赖的构建约束，不是恶意代码沙箱**。它拒绝间接 / 计算型 `require`、动态 `import` 与未声明 external，是为了让产物可预测、不悄悄夹带第二份 React；不要据此把它扩张成通用安全模型。
