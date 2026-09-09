@@ -14,4 +14,4 @@
 
 ### 领域文档
 
-这是一个使用根目录下的 `CONTEXT.md` 和 `docs/adr/` 的单上下文仓库。参见 `docs/agents/domain.md`。
+这是一个单上下文仓库：领域词汇在根目录的 `CONTEXT.md`，不可逆决策记在 spec、票据 `## Answer` 与地图里而**不是** `docs/adr/`。参见 `docs/agents/domain.md`。

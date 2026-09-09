@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 1. [AGENTS.md](AGENTS.md) — 沟通语言、议题跟踪、分诊标签、领域文档三条规则的入口。
 2. [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) — `.scratch/` 本地议题跟踪与 Wayfinder claim/resolve 约定。
-3. [CONTEXT.md](CONTEXT.md) — 领域词汇（Quick Action / Preset / Custom / Insert / Send / Resident Composer 等）。**写代码、命名、文案、commit 一律使用这里定义的术语**，`docs/agents/domain.md` 提到的 `docs/adr/` 目前尚不存在。
+3. [CONTEXT.md](CONTEXT.md) — 领域词汇（Quick Action / Preset / Custom / Insert / Send / Resident Composer 等）。**写代码、命名、文案、commit 一律使用这里定义的术语**。本仓库不用 `docs/adr/`，不可逆决策的归属见 [docs/agents/domain.md](docs/agents/domain.md)。
 4. [map.md](.scratch/dsh-composer-quick-actions/map.md) 与 [spec.md](.scratch/dsh-composer-quick-actions/spec.md) 第 16、17 节 — 哪些结论已闭合、哪些不得倒退；本文件下方的「已闭合、不得倒退的决策」是同一批结论的速查版。
 
 ## 项目状态（先看这条）
