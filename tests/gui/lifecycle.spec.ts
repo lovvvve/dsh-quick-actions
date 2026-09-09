@@ -67,7 +67,12 @@ test.describe('while the connection is down', () => {
     // official path is DSH's to report.
     await page.locator(`[data-quick-action="custom:${SEND_FIXTURE}"]`).click()
 
-    await expect(composerInput(page)).toHaveText(SEND_TEXT, { timeout: 30_000 })
+    // The explanation the user gets is DSH's own: `sink-settled { ok: false, message }` raises
+    // an error notice, and the InputBar shows it as the primitives `Toast` — a portal straight
+    // under `body` with `role="alert"`, held 3s then faded. It lands in the same dispatch as
+    // the restore, so it is asserted first; the restored draft is still there afterwards.
+    await expect(page.locator('body > [role="alert"]')).toBeVisible({ timeout: 30_000 })
+    await expect(composerInput(page)).toHaveText(SEND_TEXT)
 
     // The plugin adds no note of its own over DSH's (spec 9.5 forbids a second error): the
     // engine read the optimistic clear as the official machine accepting the text and closed
