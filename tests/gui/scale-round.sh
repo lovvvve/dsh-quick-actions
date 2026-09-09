@@ -17,12 +17,24 @@ LOG=.playwright/dsh-web.log
 mkdir -p .playwright
 
 boot() {
-  pkill -f "npm exec @deepseek-ai/dsh@latest web" 2>/dev/null
-  sleep 2
+  # The launcher runs through npx, so the process that actually holds the socket is a
+  # grandchild: kill the whole pattern and then wait for the port itself to close, or the
+  # next boot dies with EADDRINUSE and never prints an entry url.
+  pkill -f "dsh@latest web" 2>/dev/null
+  pkill -f "_npx/.*dsh.* web" 2>/dev/null
+  for _ in $(seq 1 30); do
+    if [ "$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://127.0.0.1:3080/)" = "000" ]; then break; fi
+    sleep 1
+  done
   : > "$LOG"
   nohup npx --yes @deepseek-ai/dsh@latest web --no-open >>"$LOG" 2>&1 &
   for _ in $(seq 1 90); do
-    if grep -q "dsh web: http" "$LOG" 2>/dev/null; then return 0; fi
+    if grep -q "dsh web: http" "$LOG" 2>/dev/null; then
+      # The url is printed before the app is ready to serve its first client load, and a
+      # cold first mount is what makes the first test of a boot need a retry.
+      sleep 8
+      return 0
+    fi
     sleep 1
   done
   echo "server never printed its entry url; see $LOG" >&2

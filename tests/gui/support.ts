@@ -76,6 +76,8 @@ export async function dismissShellOverlays(page: Page): Promise<void> {
   })
 }
 
+let knownLeaf: number | undefined
+
 /**
  * Quick actions render at the Resident Composer, and DSH's hero screen — what an empty
  * session shows — deliberately does not mount `conversation.composer.dock`. Reaching the
@@ -106,13 +108,23 @@ export async function openResidentComposer(page: Page): Promise<void> {
     .filter(row => row.leaf)
     .map(row => row.index))
 
-  for (const index of leaves.slice(0, 8)) {
+  // Trying each leaf costs a full mount wait, and four misses exhaust a test's budget. The
+  // row that worked once is tried first for the rest of the run: sessions with history do
+  // not become sessions without it.
+  const ordered = knownLeaf === undefined
+    ? leaves.slice(0, 8)
+    : [knownLeaf, ...leaves.filter(index => index !== knownLeaf)].slice(0, 8)
+
+  for (const index of ordered) {
     await rows.nth(index).click()
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
     try {
       // The surface mounts only after the controller has read the catalog and settings,
       // so an immediate count would race the first render.
-      await layoutCell(page).first().waitFor({ state: 'visible', timeout: 12_000 })
+      // A profile that has just booted mounts the first surface slowly: the web app is
+      // loading its module table while this waits, so the budget is generous.
+      await layoutCell(page).first().waitFor({ state: 'visible', timeout: 25_000 })
+      knownLeaf = index
       if (requested !== null) await page.setViewportSize(requested)
       await expect(layoutCell(page)).toBeVisible()
       await dismissShellOverlays(page)

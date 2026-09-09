@@ -23,7 +23,9 @@ export default defineConfig({
   // which would fail twice.
   retries: 1,
   workers: 1,
-  timeout: 60_000,
+  // Entering a session costs a page load plus the plugin's first mount, and a freshly
+  // booted profile is slower still.
+  timeout: 90_000,
   use: {
     baseURL: process.env.DSH_GUI_URL ?? 'http://127.0.0.1:3080',
     screenshot: 'off',
