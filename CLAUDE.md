@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目状态（先看这条）
 
-**首版已通过最终人工验收**（票据 21，用户于 2026-09-09 回复「生产验收通过」），Wayfinder 地图目标达成。按票据 20 的决定**仍不发布**：不设 `publishConfig`、不 `npm publish`，试用走本地 tarball。后续项只有票据 26（把管理面板 portal 到 body，界面打磨，不阻塞任何已闭合结论）。以下现状描述保留，作为改动这个仓库时的地形图。
+**首版已通过最终人工验收**（票据 21，用户于 2026-09-09 回复「生产验收通过」），Wayfinder 地图目标达成。按票据 20 的决定**仍不发布**：不设 `publishConfig`、不 `npm publish`，试用走本地 tarball。票据 26 也已 resolved（管理面板改经 `createPortal` 挂到 `document.body`）。**当前没有开放票据。** 以下现状描述保留，作为改动这个仓库时的地形图。
 
 `packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。自动化与发布验证已完成（票据 18：四轮真实 GUI，`tests/gui/` 下 13 个 spec + 7 个 round 驱动 + 脚本化的安装窗口，证据在 `verification/release-evidence.md`）。票据 18 发现的两处边缘状态 UX 缺口已由票据 25 定案：管理表单现在接管开场焦点并归还焦点（Escape 两级退出）；断线发送经源码取证确认由 DSH 自己恢复草稿并给出提示，插件按 spec 9.5 不加第二条说明。最终人工验收已完成（票据 21：步骤 1–8 由 Agent 在用户实时 DSH 的一次性窗口里驱动，`tests/gui/acceptance.spec.ts` + `acceptance-round.sh` + 19 张截图，第 9 步由用户本人答复）。
 
@@ -88,7 +88,7 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 - [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**16、17、18、20、21、22、23、24 与 25 全部 resolved**，地图目标已达成。当前 frontier 是 [26 把管理面板 portal 到 body](.scratch/dsh-composer-quick-actions/issues/26-portal-the-manager-panel.md)——票据 21 验收时发现面板被输入坞的祖先层叠上下文困住，会被 shell 里 z-index 更低的元素压住；属界面打磨，按 spec 第 13.1 节不阻止发布，也不回溯推翻任何已闭合结论。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**16、17、18、20、21、22、23、24、25 与 26 全部 resolved，当前没有开放票据**，地图目标已达成。票据 26 把管理面板改经 `createPortal` 挂到 `document.body`；**只做了管理面板**，两个锚定 popover（`ActionPanel` / `ConfirmPanel`）仍在 dock 子树内、带着同一个层叠根因，只是尚无用户可见症状——要动它们须先解决锚定定位改用视口坐标的问题，且应另开票据。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。

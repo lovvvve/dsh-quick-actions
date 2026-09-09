@@ -803,3 +803,59 @@ Agent 报告步骤 1–8 全部通过后，**用户本人回复「生产验收�
 一次性窗口至此关闭：用户的实时 DSH 与开窗前字节一致，本插件不再安装其中。若日后要长期试用，按功能包 README 的本地 / 离线安装流程重新装入即可，两个 tarball 由 `tests/gui/install.sh` 的 `qa_pack` 现打现用。
 
 **票据 25 的断言之一在真实 GUI 首次成立**：`validation.spec.ts` 的「applies trim() whitespace…」用例末尾——点「编辑」后标签框已聚焦 → 按 Escape → 编辑表单消失、管理面板仍可见、焦点回到该行的「编辑」按钮——通过（2.6s）。该 spec 三条桌面用例全部通过，在两个窄视口按设计跳过（表单不随宽度变化）。
+
+---
+
+## 票据 26 — 把管理面板 portal 到 body（2026-09-09）
+
+用户定案「只 portal 管理面板」，两个锚定 popover 不动。票据 26 的评论记了收窄理由与仍未修的同根因部分。
+
+### 环境
+
+| 项 | 值 |
+|---|---|
+| 工作方式 | `git worktree`（分支 `ticket-26-portal-manager-panel`，自 `922686f`），`pnpm install --offline` 7.2s |
+| DSH 运行时 | `npx --yes @deepseek-ai/dsh@latest` → 0.1.2-rc.1 |
+| GUI 通道 | `http://127.0.0.1:3080`，两次临时安装窗口，均在退出时卸载并校验 profile 指纹 |
+
+### 改动
+
+| 文件 | 改动 |
+|---|---|
+| `src/client/manager/ManagerPanel.tsx` | 返回值改为 `createPortal(<>backdrop + panel</>, document.body)`；注释写明 z-index 只在同一层叠上下文内有效、backdrop 必须同行、为何以 `document.body` 为目标而不自建容器（React 自己插拔，无节点可泄漏），以及为何两个锚定 popover 不在本次范围 |
+| `src/client/modal.ts` | 文件头「没有面板经 portal 渲染」的说法已过时，改为说明 portal 只搬 DOM 节点不搬 React 树：事件仍冒泡到 dock，Tab 顺序变成文档末尾，反而离草稿更远，两个 hook 均不受影响 |
+| `tsdown.config.ts` / `package.json` | `react-dom` 加入 `external` 与 `dsh.client.external`（打包契约要求产物 `require` 面与声明清单严格相等），并加进 `peerDependencies` (`^18.3.1`) |
+
+`react-dom` 是 shell 冻结 seed 表里的条目（`"react-dom": n6`，与 shell 共用同一实例，官方 primitives 自己也从它 `import { createPortal }`），因此 require 它不会引入第二份渲染器；`tests/release/packaging.spec.ts` 的 `BROWSER_SEEDS` 已含该键。
+
+### 单元层（TDD）
+
+先写红灯：`manager.spec.tsx` 新增两条。
+
+| 用例 | 红灯时 | 绿灯后 |
+|---|---|---|
+| 面板渲染在 `document.body`，不在 dock 子树内 | 失败：`container.contains(dialog)` 为 `true` | 通过：dialog 与 backdrop 的 `parentElement` 都是 `document.body` |
+| 关闭与卸载都把 portal 一并撤下 | 通过（改动前后都成立，作为回归钉住 spec 7.3 的不泄漏） | 通过 |
+
+| 门 | 结果 |
+|---|---|
+| `pnpm test` | 22 文件 / **498 通过**（票据 21 收口时 496，新增 2） |
+| `pnpm typecheck` | 两遍均通过 |
+| `pnpm lint` | 通过 |
+
+### GUI 层：`tests/gui/stacking.spec.ts`
+
+新增一条机制无关的断言：遍历管理面板内每个 `button` / `input` / `textarea`，对其中心做 `document.elementFromPoint`，命中不属于面板的元素即失败。刻意不点名那个把手，将来换成别的覆盖物同样能抓到；末尾另断言面板的 `parentElement` 是 `BODY`。
+
+**第一轮（16:57–17:05）暴露的是 harness 判据缺陷，不是产品缺陷。** 三视口全失败，报告显示某控件被**面板自己的 backdrop** 盖住：面板是 `max-height` + `overflow-y: auto` 的滚动容器，折叠线以下的控件虽有布局矩形却被裁剪，那个像素本就属于面板背后的东西。同一轮的常规套件（种入 3 条预置、不开表单，面板不溢出）**43 通过 0 失败**，正好反证这一点。判据改为先 `scrollIntoView({block: 'center'})` 再取矩形，并跳过滚动后仍落在面板可视框外的控件——这同时让底部那个 13px 复选框第一次真正被测到。
+
+**第二轮（17:06–17:10）三视口全部通过**：desktop 53.7s、tablet-768 52.4s、narrow-360 54.8s，种子为 3 条预置加 1 条自定义动作并打开编辑表单，即票据 21 失手的那个场景。
+
+### 环境还原
+
+两轮各自开窗关窗，`close-window.sh` 均报 `package.json: OK` / `pnpm-workspace.yaml: OK` 与「the window is closed and the profile is byte-identical to how it was found」；命名空间按「安装前不存在」还原。
+
+### 本节未覆盖
+
+- **`ActionPanel` 与 `ConfirmPanel` 仍在 dock 子树内**，带着同一个根因，只是票据 21 与本轮都未观察到用户可见症状。它们的锚定定位依赖 `.dsh-cqa-anchor` 的相对定位，portal 需要改用视口坐标重算，属另一次改动。
+- 视觉基线未重拍：`screenshots.spec.ts` 只拍布局 cell，不含管理面板，portal 不影响它；面板样式全是扁平选择器，没有根植于 dock 的后代规则。

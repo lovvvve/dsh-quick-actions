@@ -65,9 +65,9 @@ Label: `wayfinder:map`
 
 ## Open after the destination（目标达成后新开）
 
-<!-- 地图目标已于 2026-09-09 达成。以下是验收过程中发现、不阻塞发布的后续项。 -->
+<!-- 地图目标已于 2026-09-09 达成。以下是验收过程中发现、不阻塞发布的后续项。当前没有开放项。 -->
 
-- [把管理面板 portal 到 body](./issues/26-portal-the-manager-panel.md) — 面板 `position: fixed; z-index: 31` 渲染在输入坞子树内，被祖先层叠上下文困住，会被 shell 里 z-index 更低的元素压住；票据 21 撞到的实例是侧栏拖拽把手盖住编辑表单的 13px 复选框。属票据 23 备注里的 portal 化候选，界面打磨，不回溯阻塞任何已关闭票据。
+- [把管理面板 portal 到 body](./issues/26-portal-the-manager-panel.md) — **已 resolved**。`ManagerPanel` 与其 backdrop 经 `createPortal` 渲染到 `document.body`，`z-index: 31` 从此在页面自身的层叠上下文里排序；以 body 为目标而非自建容器，dispose 不泄漏由构造保证。`react-dom` 是 shell 冻结 seed 表条目，加进 `external` / `dsh.client.external` / peer 三处后不引入第二份渲染器。焦点与 Escape 两级作用域无回退（portal 只搬 DOM 不搬 React 树）。`pnpm test` 498 通过；新增机制无关的 `tests/gui/stacking.spec.ts`（遍历面板控件做 `elementFromPoint`），第二轮三视口全过，场景正是票据 21 失手的编辑表单。**按用户定案只做管理面板**：两个锚定 popover 仍在 dock 子树内、带着同一根因，未观察到用户可见症状，不得记成已解决。
 
 ## Out of scope（范围外）
 
