@@ -98,3 +98,23 @@ dsh-quick-actions cannot be republished until 24 hours have passed.
 2. 在全新 `DSH_HOME` 上复验单包形态的安装路径——此前那次验的是双包 rc。
 3. 验证通过后发 `0.1.0`，README 的 tarball 文件名随之更新（`docs.spec.ts` 会强制两者同步）。
 4. 去 `awesome-dsh-plugin` 提 PR 上架。
+
+### 2026-09-10 — 上架要求已查清，条目已备好
+
+读了策展仓库的 `contributing.md` 与其校验脚本 `scripts/check-submission.mjs`，条目存档在 [`verification/market-entry.yml`](../verification/market-entry.yml)，提交时改名为 `data/plugins/lovvvve__dsh-quick-actions--packages-composer-quick-actions.yml`。
+
+**上架与 npm 是两条独立通道。** 指南写明 npm 发布只影响可发现性、**不影响上架资格**，所以 PR 不必等 npm 冷却窗口。但市场访客点安装走的是 npm，包不在会直接失败，因此仍应先发包再提 PR。
+
+**monorepo 是本条目的关键约束。** 校验脚本会扫描仓库树里最多 40 个 `package.json` 找 `dsh.bundle`，但对「URL 指向仓库根而 bundle 在子包」的提交会拒绝并给出更正后的子包 URL。我们的 `dsh.bundle` 在 `packages/composer-quick-actions/package.json`，根 manifest 是私有 workspace 根，因此必须用子包形式：URL 指向子目录，`name` 加 `#<子目录名>` 后缀。后缀取子目录名而非包名，是照真实条目 `314857493/dsh-vision#vision-route` 反推；文件名的 `--packages-...` 段同样照搬其 monorepo 命名。
+
+资格逐条核对：
+
+| 要求 | 状态 |
+|---|---|
+| 子包 manifest 声明 `dsh.bundle` | 通过（票据 28 合并后正是指南给的结构） |
+| 仓库至少 1 天 | 通过（首次提交 2026-09-04） |
+| 真实可用代码、非占位、非纯元包 | 通过 |
+| 未归档、在维护 | 通过 |
+| 仓库带 `dsh-plugin` GitHub topic | **未完成，须用户在 GitHub 上添加**；本机无 `gh`，Agent 无法代劳 |
+
+其它约束：一个 PR 最多三个条目；不得手改生成的 README；不得改动无关条目；描述须准确、无夸饰语，含 `: ` 时要加引号（本条目两条描述均不含）。`category` 取 `ui`，在其 23 个枚举值内。
