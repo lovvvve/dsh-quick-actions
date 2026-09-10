@@ -11,7 +11,7 @@
  *
  * Spec 9.5 asks for a window that runs from the first activation until the
  * official submission stage ends, judged only from the published Input snapshot
- * `{ draft, imageIds, draftRev, phase, claim?, occurrences, queue }`, with the
+ * `{ draft, attachmentIds, draftRev, phase, claim?, occurrences, queue }`, with the
  * hard acceptance criterion that it never produces a duplicate send.
  *
  * The mutex itself is this module's own: {@link QuickActionSessionEngine.activate}

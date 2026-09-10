@@ -2,7 +2,7 @@
  * A controlled stand-in for one DSH Session's input machine.
  *
  * It reproduces the behaviours the Quick Action execution layer actually depends
- * on, transcribed from `@deepseek-ai/dsh-client-ui-conversation` 0.1.2-rc.1
+ * on, transcribed from `@deepseek-ai/dsh-client-ui-conversation` 0.1.5-rc.1
  * (`lib/client.js`): the `SubmitMachine.onEnter` / `onAdjudicated` transitions,
  * `SessionInputShell.setDraft`'s identical-text no-op and single revision bump,
  * the `commit-draft` optimistic clear that follows an accepted ordinary send,
@@ -16,7 +16,7 @@ import type { InputActions, InputState, SessionSnapshot } from '../../src/client
 
 const EMPTY: InputState = {
   draft: '',
-  imageIds: [],
+  attachmentIds: [],
   draftRev: 0,
   phase: 'plain',
   occurrences: [],
@@ -90,9 +90,13 @@ export class FakeComposerInput {
     this.patch({ draft, draftRev: this.state.draftRev + 1 })
   }
 
-  /** Attach a draft image, so occupancy can be tested through every public field. */
-  attachImage(id = 'image-1'): void {
-    this.patch({ imageIds: [...this.state.imageIds, id] })
+  /**
+   * Attach one draft attachment, so occupancy can be tested through every public
+   * field. Since 0.1.5-rc.1 the field admits any attachment kind, not just
+   * images, which is why neither the method nor the id says image.
+   */
+  attach(id = 'attachment-1'): void {
+    this.patch({ attachmentIds: [...this.state.attachmentIds, id] })
   }
 
   /** Insert a reference chip occurrence. */
@@ -182,7 +186,7 @@ export class FakeComposerInput {
   private commit(text: string): void {
     if (this.holdSink) this.held.push(text)
     else this.sends.push(text)
-    this.patch({ draft: '', draftRev: this.state.draftRev + 1, imageIds: [], occurrences: [] })
+    this.patch({ draft: '', draftRev: this.state.draftRev + 1, attachmentIds: [], occurrences: [] })
   }
 
   private patch(next: Partial<InputState>): void {

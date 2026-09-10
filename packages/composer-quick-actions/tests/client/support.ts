@@ -4,7 +4,9 @@
  * `ctx.connection`'s observable state.
  *
  * It reproduces the behaviours the controller actually depends on, taken from
- * `@deepseek-ai/dsh-client-ui-settings` 0.1.2-rc.1: one document read shared by
+ * `@deepseek-ai/dsh-client-ui-settings` 0.1.5-rc.1 — whose `lib/` is byte-identical
+ * to the 0.1.2-rc.1 this was first written against, so the contract rename of
+ * ticket 29 left this transport untouched: one document read shared by
  * every bound namespace, a snapshot carrying the resolved value alongside the
  * composition `base` and the raw `user` section, revision-fenced writes that
  * fold their answer back in, and a recovery read after a refused write.

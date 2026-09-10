@@ -11,7 +11,7 @@ import type { ComposerBlock, InputState, SessionSnapshot } from '../dsh.js'
 
 /** Why no Quick Action may execute in this Composer right now (spec 3, 9.2). */
 export type QuickActionUnavailableReason =
-  /** The draft holds text, an image or a reference chip (Occupied Draft). */
+  /** The draft holds text, an attachment or a reference chip (Occupied Draft). */
   | 'occupied-draft'
   /** The input machine is mid-adjudication, mid-submit, or in command mode. */
   | 'composer-busy'
@@ -29,12 +29,13 @@ export type QuickActionUnavailableReason =
  * whitespace included, so the raw string is compared against `''` and never
  * trimmed — any attachment, and any rich reference.
  *
- * The public snapshot exposes exactly `{ draft, imageIds, draftRev, phase,
+ * The public snapshot exposes exactly `{ draft, attachmentIds, draftRev, phase,
  * claim?, occurrences, queue }`. Occupancy reads three of them:
  *
  * - `draft` — the clipboard-text projection of the whole document;
- * - `imageIds` — the ordered draft images, the only attachment kind this DSH
- *   release admits into a draft, and the only public attachment field there is;
+ * - `attachmentIds` — the ordered draft attachments, and the only public
+ *   attachment field there is. Since 0.1.5-rc.1 it admits any attachment kind,
+ *   not just images;
  * - `occurrences` — the reference chips. They are already expanded inside
  *   `draft`, so this test is redundant today; it is kept because a future chip
  *   whose clipboard projection is empty must still count as content the send
@@ -46,7 +47,7 @@ export type QuickActionUnavailableReason =
  * send to join.
  */
 export function isOccupiedDraft(input: InputState): boolean {
-  return input.draft !== '' || input.imageIds.length > 0 || input.occurrences.length > 0
+  return input.draft !== '' || input.attachmentIds.length > 0 || input.occurrences.length > 0
 }
 
 /**

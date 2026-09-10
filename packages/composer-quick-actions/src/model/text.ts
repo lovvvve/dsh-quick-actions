@@ -12,9 +12,12 @@
  *
  * Source: `REFERENCE_PLACEHOLDER_RE` in `@deepseek-ai/dsh-client-ui-conversation`
  * (`lib/client.js`, input machine), applied by `setDraft` before it rebuilds the
- * draft. Verified identical in 0.1.1-rc.2 and 0.1.2-rc.1; `lib/types/client/input/machine.d.ts`
- * publishes the tail of it as `PLACEHOLDER = "\uFFFC"`. Re-check this range when the
- * supported DSH range moves.
+ * draft. Verified identical in 0.1.1-rc.2, 0.1.2-rc.1 and 0.1.5-rc.1 — the release
+ * that renamed `imageIds` left this range untouched (ticket 29). Its tail is
+ * published as a named constant, which 0.1.5-rc.1 moved and renamed:
+ * `PLACEHOLDER = "\uFFFC"` in `lib/types/client/input/machine.d.ts` became
+ * `ATOMIC_CHAR = "\uFFFC"` in `lib/types/client/input/editor/projection.d.ts`.
+ * Re-check this range when the supported DSH range moves.
  */
 const RESERVED_REFERENCE_PLACEHOLDER = /[\u{E100}-\u{E11D}\u{FFFC}]/u
 

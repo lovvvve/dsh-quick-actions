@@ -3,7 +3,7 @@
  * consume, declared structurally and no wider than this plugin actually reads.
  *
  * Every shape here is transcribed from a published declaration of the target
- * DSH release (0.1.2-rc.1) rather than guessed:
+ * DSH release (0.1.5-rc.1) rather than guessed:
  *
  * - `InputState`, `InputActions`, `Occurrence`
  *   → `@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/input.d.ts`
@@ -34,7 +34,7 @@ export type { ComponentType }
 // Input machine (the public currency)
 // ---------------------------------------------------------------------------
 
-/** Browser-runtime identity of one unsent image draft. */
+/** Browser-runtime identity of one unsent attachment draft. */
 export type DraftAttachmentId = string
 
 /**
@@ -61,8 +61,8 @@ export interface InputQueueRow {
 export interface InputState {
   /** Clipboard-text projection of the editor document (chips expanded). */
   readonly draft: string
-  /** Ordered runtime-only image ids. */
-  readonly imageIds: readonly DraftAttachmentId[]
+  /** Ordered runtime-only attachment ids. */
+  readonly attachmentIds: readonly DraftAttachmentId[]
   /** Monotonic editor revision; bumps once per content-changing editor commit. */
   readonly draftRev: number
   /** Submit-plane phase; `plain` is the only phase that accepts a new submission. */
@@ -71,7 +71,7 @@ export interface InputState {
   readonly claim?: {
     readonly token: string
     readonly hint?: string
-    readonly images?: boolean
+    readonly attachments?: boolean
   }
   /** Reference chips currently in the draft, sorted by offset. */
   readonly occurrences: readonly InputOccurrence[]
@@ -83,8 +83,9 @@ export interface InputState {
  * The public input action face handed to every session-scope Slot component.
  *
  * Only the two members spec 9.4 allows are declared. The shipped object also
- * carries `addImages`, `removeImage` and `pruneImages`; leaving them out is
- * deliberate — this plugin owns no draft attachment and must never touch one.
+ * carries `addAttachments`, `removeAttachment` and `pruneAttachments`; leaving
+ * them out is deliberate — this plugin owns no draft attachment and must never
+ * touch one.
  */
 export interface InputActions {
   /** Replace the whole draft. */

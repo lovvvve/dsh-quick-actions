@@ -5,3 +5,37 @@ packages:
 # tsdown/vitest require esbuild's reviewed native binary install step.
 allowBuilds:
   esbuild: true
+
+# pnpm 11 holds freshly published versions back by default. The DSH 0.1.5-rc.1
+# line is younger than that hold and this workspace must build against it
+# (ticket 29: 0.1.5-rc.1 renamed the Input contract field this plugin reads), so
+# each package of that line is exempted by exact version. Delete this whole
+# block once the DSH floor moves to a line old enough to install unaided —
+# leaving it in place would keep these exact versions exempt forever.
+minimumReleaseAgeExclude:
+  - '@deepseek-ai/dsh-brand@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-client-connection@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-client-locale@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-client-ui-conversation@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-client-ui-renderer@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-client-ui-settings@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-credentials@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-invariants@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-llm@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-scope@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-session@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-settings@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-timeout@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-typert-protocol@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-util-crypto@0.1.5-rc.1'
+  - '@deepseek-ai/dsh-util-values@0.1.5-rc.1'
+
+# DSH publishes its packages with peer ranges that pin the whole line
+# (`^0.1.5-rc.1`), but its `latest` dist-tag still points at 0.0.1-rc.1, so
+# pnpm's auto-installed peers fall back to the previous line and leave the
+# dev tree a 0.1.2/0.1.5 mix. Pinning the transitive members keeps every DSH
+# declaration this workspace typechecks against on one line (ticket 29).
+overrides:
+  '@deepseek-ai/dsh-invariants': 0.1.5-rc.1
+  '@deepseek-ai/dsh-scope': 0.1.5-rc.1
+  '@deepseek-ai/dsh-session': 0.1.5-rc.1

@@ -81,7 +81,7 @@ beforeEach(() => {
 })
 
 describe('draft occupancy', () => {
-  const empty: InputState = { draft: '', imageIds: [], draftRev: 0, phase: 'plain', occurrences: [], queue: [] }
+  const empty: InputState = { draft: '', attachmentIds: [], draftRev: 0, phase: 'plain', occurrences: [], queue: [] }
 
   it('counts any text, pure whitespace included', () => {
     expect(isOccupiedDraft({ ...empty, draft: ' ' })).toBe(true)
@@ -90,7 +90,7 @@ describe('draft occupancy', () => {
   })
 
   it('counts every public attachment field', () => {
-    expect(isOccupiedDraft({ ...empty, imageIds: ['img'] })).toBe(true)
+    expect(isOccupiedDraft({ ...empty, attachmentIds: ['a1'] })).toBe(true)
     expect(isOccupiedDraft({ ...empty, occurrences: [{ occurrenceId: 1, source: 'file', ref: 'a' }] })).toBe(true)
   })
 
@@ -141,8 +141,8 @@ describe('one send', () => {
     expect(harness.state.feedback).toEqual({ kind: 'state-changed' })
   })
 
-  it('refuses to run while a draft image is attached', () => {
-    harness.act(() => harness.input.attachImage())
+  it('refuses to run while a draft attachment is present', () => {
+    harness.act(() => harness.input.attach())
     harness.sync([action()])
 
     harness.act(() => harness.engine.activate(action()))
