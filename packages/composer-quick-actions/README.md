@@ -100,9 +100,10 @@ pnpm 有一条供应链策略：拒绝发布时间在冷却窗口内（默认 24
         label: 跑测试
         text: 把测试跑一遍，把失败项贴出来。
         icon: ✅
-      - id: compact
-        label: 压缩上下文
-        text: /compact
+      - id: add-tests
+        label: 补测试
+        text: 给刚才的改动补上测试，先写失败用例。
+        confirm: false
 ```
 
 字段规则：

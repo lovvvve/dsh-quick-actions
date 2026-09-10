@@ -12,7 +12,7 @@
 import { randomUUID } from 'node:crypto'
 import { restoreNamespace, seedNamespace } from './settings-namespace.mjs'
 
-const PRESETS = ['summarize-thread', 'explain-last-change', 'compact-context']
+const PRESETS = ['approve', 'continue', 'summarize', 'explain', 'compact-context']
 
 function seed(target) {
   const shown = PRESETS.slice(0, Math.min(target, PRESETS.length))

@@ -5,7 +5,7 @@
 //
 // Both fixtures carry fixed ids so a spec can address them by ref key, and the packaged
 // presets are hidden so only these two render: an assertion that counts messages must not
-// risk activating `压缩上下文`, whose text is the real `/compact` command.
+// risk activating `压缩`, whose text is the real `/compact` command.
 //
 // The normal action's text is deliberately the cheapest useful prompt — every activation
 // of it is a real model turn on the user's account.
@@ -13,7 +13,7 @@ import { restoreNamespace, seedNamespace } from './settings-namespace.mjs'
 
 export const SEND_FIXTURE = '11111111-1111-4111-8111-111111111111'
 export const COMMAND_FIXTURE = '22222222-2222-4222-8222-222222222222'
-const PRESETS = ['summarize-thread', 'explain-last-change', 'compact-context']
+const PRESETS = ['approve', 'continue', 'summarize', 'explain', 'compact-context']
 
 function seed() {
   seedNamespace({

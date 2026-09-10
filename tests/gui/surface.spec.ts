@@ -16,14 +16,14 @@ test.describe('quick actions surface', () => {
   test('renders the packaged preset catalog', async ({ page }) => {
     // Presets reach the Client through the read-only catalog namespace's composition
     // `base` layer, so their presence here is the end-to-end proof of that path.
-    await expect(actionFaces(page)).toHaveCount(3)
+    await expect(actionFaces(page)).toHaveCount(5)
 
     const names = await actionFaces(page).evaluateAll(
       elements => elements.map(element => (element.textContent ?? '').replace(/\s+/g, '')),
     )
-    expect(names.join('|')).toContain('总结对话')
-    expect(names.join('|')).toContain('解释改动')
-    expect(names.join('|')).toContain('压缩上下文')
+    for (const label of ['确认', '继续', '总结', '解释', '压缩']) {
+      expect(names.join('|')).toContain(label)
+    }
   })
 
   test('renders the ribbon layout with a manage entry', async ({ page }) => {

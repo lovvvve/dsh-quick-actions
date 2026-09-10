@@ -100,9 +100,10 @@ Put `config` on the plugin's row:
         label: Run tests
         text: Run the test suite and paste the failures.
         icon: ✅
-      - id: compact
-        label: Compact context
-        text: /compact
+      - id: add-tests
+        label: Add tests
+        text: Add tests for that change, failing ones first.
+        confirm: false
 ```
 
 Field rules:

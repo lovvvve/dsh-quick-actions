@@ -42,6 +42,15 @@ const COMMAND_LABEL = '验收命令动作'
 const COMMAND_TEXT = '/qa-acceptance-unknown-command'
 const OCCUPYING_DRAFT = '占用草稿：用户正在输入的内容'
 
+/**
+ * The packaged catalog, as declared in `src/host/presets.ts`. Every count below derives
+ * from it: this walk creates two actions and clones one preset, and hiding or disabling
+ * changes what the surface renders without changing the total.
+ */
+const PACKAGED = 5
+const AFTER_CREATE = PACKAGED + 2
+const AFTER_CLONE = AFTER_CREATE + 1
+
 function note(message: string): void {
   console.log(`ACCEPT: ${message}`)
 }
@@ -107,7 +116,7 @@ test.describe('final acceptance walk', () => {
   test('steps 2, 3, 4, 5, 8 and the refresh of step 6', async ({ page }) => {
     await openResidentComposer(page)
     await ensureLayout(page, 'ribbon')
-    await expect(actionFaces(page)).toHaveCount(3)
+    await expect(actionFaces(page)).toHaveCount(PACKAGED)
     note(`步骤 1：安装后的 Resident Composer 上有 ${await actionFaces(page).count()} 条随包预置：${(await faceLabels(page)).join(' | ')}`)
 
     // ---- Step 2: create, edit, reorder, disable, hide, clone ----------------------------
@@ -141,7 +150,7 @@ test.describe('final acceptance walk', () => {
     await expect(newForm).toHaveCount(0)
     await expect(row(page, COMMAND_LABEL)).toHaveCount(1)
     await expect(row(page, COMMAND_LABEL).getByText('命令', { exact: true })).toBeVisible()
-    await expect(count(page)).toContainText('共 5 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CREATE} / 50 项`)
 
     // Edit: the label changes, the text stays.
     await row(page, NORMAL_LABEL).getByRole('button', { name: '编辑' }).click()
@@ -170,10 +179,10 @@ test.describe('final acceptance walk', () => {
     // Disable and enable: the face leaves the surface and comes back.
     await row(page, NORMAL_LABEL_EDITED).getByRole('button', { name: '停用' }).click()
     await expect(row(page, NORMAL_LABEL_EDITED).getByText('已停用', { exact: true })).toBeVisible()
-    await expect(count(page)).toContainText('共 5 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CREATE} / 50 项`)
     await closeManager(page)
     await expect(face(page, NORMAL_LABEL_EDITED)).toHaveCount(0)
-    await expect(actionFaces(page)).toHaveCount(4)
+    await expect(actionFaces(page)).toHaveCount(AFTER_CREATE - 1)
     await openManager(page)
     await row(page, NORMAL_LABEL_EDITED).getByRole('button', { name: '启用' }).click()
     await expect(row(page, NORMAL_LABEL_EDITED).getByText('已停用', { exact: true })).toHaveCount(0)
@@ -187,7 +196,7 @@ test.describe('final acceptance walk', () => {
     const presetLabel = (await preset.locator('.dsh-cqa-label').textContent()) ?? ''
     await preset.getByRole('button', { name: '隐藏' }).click()
     await expect(preset).toHaveAttribute('data-quick-action-hidden', '')
-    await expect(count(page)).toContainText('共 5 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CREATE} / 50 项`)
     await closeManager(page)
     await expect(face(page, presetLabel)).toHaveCount(0)
     await openManager(page)
@@ -203,11 +212,11 @@ test.describe('final acceptance walk', () => {
     const clone = managerPanel(page).locator('[data-quick-action^="custom:"]', { hasText: '克隆自预置' })
     await expect(clone).toHaveCount(1)
     await expect(clone.getByRole('button', { name: '编辑' })).toBeVisible()
-    await expect(count(page)).toContainText('共 6 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CLONE} / 50 项`)
     await shot(managerPanel(page), 'manager-desktop')
     await closeManager(page)
-    await expect(actionFaces(page)).toHaveCount(6)
-    note('步骤 2：克隆——预置克隆为带「克隆自预置」标记的可编辑自定义动作，共 6 / 50 项')
+    await expect(actionFaces(page)).toHaveCount(AFTER_CLONE)
+    note(`步骤 2：克隆——预置克隆为带「克隆自预置」标记的可编辑自定义动作，共 ${AFTER_CLONE} / 50 项`)
 
     // ---- Step 3: three layouts, equal width, three viewports ----------------------------
     for (const layout of ['ribbon', 'bar', 'launcher'] as const) {
@@ -238,7 +247,7 @@ test.describe('final acceptance walk', () => {
           await expect(panel).toHaveRole('dialog')
           await expect(page.locator('[data-quick-actions-search]')).toBeFocused()
           await expect(page.locator('[data-quick-actions-search]')).toHaveAccessibleName('搜索快捷动作')
-          await expect(panel.locator('[data-quick-action]')).toHaveCount(6)
+          await expect(panel.locator('[data-quick-action]')).toHaveCount(AFTER_CLONE)
           await shot(panel, `launcher-panel-${width}`)
           await page.keyboard.press('Escape')
           await expect(panel).toHaveCount(0)
@@ -382,7 +391,7 @@ test.describe('final acceptance walk', () => {
     await expect(row(page, NORMAL_LABEL_EDITED)).toHaveCount(1)
     await expect(row(page, COMMAND_LABEL)).toHaveCount(1)
     await expect(clone).toHaveCount(1)
-    await expect(count(page)).toContainText('共 6 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CLONE} / 50 项`)
     await closeManager(page)
     const stored = storedNamespace()
     expect(stored.layout).toBe('bar')
@@ -402,10 +411,10 @@ test.describe('after a DSH restart', () => {
     await openManager(page)
     await expect(row(page, NORMAL_LABEL_EDITED)).toHaveCount(1)
     await expect(row(page, COMMAND_LABEL)).toHaveCount(1)
-    await expect(count(page)).toContainText('共 6 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CLONE} / 50 项`)
     await shot(managerPanel(page), 'manager-after-restart')
     await closeManager(page)
-    note('步骤 6：重启 DSH 后布局 bar、两条自定义动作与克隆均恢复，共 6 / 50 项')
+    note(`步骤 6：重启 DSH 后布局 bar、两条自定义动作与克隆均恢复，共 ${AFTER_CLONE} / 50 项`)
   })
 })
 
@@ -436,7 +445,7 @@ test.describe('after the reinstall', () => {
     await openManager(page)
     await expect(row(page, NORMAL_LABEL_EDITED)).toHaveCount(1)
     await expect(row(page, COMMAND_LABEL)).toHaveCount(1)
-    await expect(count(page)).toContainText('共 6 / 50 项')
+    await expect(count(page)).toContainText(`共 ${AFTER_CLONE} / 50 项`)
     await closeManager(page)
     note('步骤 7：重新安装并重启后布局与全部 6 项动作恢复')
   })

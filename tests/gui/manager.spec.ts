@@ -47,7 +47,7 @@ test.describe('quick actions management', () => {
     // An accessible name is a hard gate of spec section 13.3.
     await expect(managerPanel(page)).toHaveAttribute('aria-labelledby', /.+/)
     // Presets are read-only but reorderable, hideable and clonable.
-    await expect(page.locator('[data-quick-actions-clone]')).toHaveCount(3)
+    await expect(page.locator('[data-quick-actions-clone]')).toHaveCount(5)
   })
 
   test('closes on Escape and returns focus to the manage entry', async ({ page }) => {

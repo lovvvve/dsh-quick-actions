@@ -204,14 +204,14 @@ export async function ensureLayout(page: Page, layout: 'ribbon' | 'bar' | 'launc
 }
 
 /**
- * The packaged catalog is three presets. Specs that count actions depend on that, so they
+ * The packaged catalog is five presets. Specs that count actions depend on that, so they
  * state it rather than discovering it as an off-by-one somewhere else.
  *
  * Only meaningful under `ribbon`: `bar` folds what does not fit into "more" and `launcher`
  * renders no faces at all, so callers set the layout first.
  */
 export async function expectPackagedProjection(page: Page): Promise<void> {
-  await expect(actionFaces(page), 'projection is not the packaged catalog').toHaveCount(3)
+  await expect(actionFaces(page), 'projection is not the packaged catalog').toHaveCount(5)
 }
 
 /**
