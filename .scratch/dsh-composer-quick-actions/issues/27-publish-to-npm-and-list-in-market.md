@@ -41,7 +41,7 @@ dsh plugin --profile web add dsh-quick-actions-bundle
 
 1. **（HITL）** 发布本身要用户来跑。已实测：`npm login` 不够——该账号对 publish 开了 2FA，pnpm 在非交互终端下以 `ERR_PNPM_OTP_NON_INTERACTIVE` 拒绝，两个包均未发出、registry 无残留。Agent 无法代跑，也不应经对话传递一次性密码。用户在交互终端执行，或自行附 `--otp=<code>`。
 2. `pnpm --filter dsh-quick-actions publish --dry-run` 核对将要上传的内容，再正式发布。**功能包必须先发**——bundle 依赖它。
-3. 发布 bundle 包。
+3. ~~发布 bundle 包。~~ **已作废**：[票据 28](./28-merge-into-a-single-package.md) 把安装 bundle 并回功能包，不再有第二个包要发。
 4. **在全新 `DSH_HOME` 里实测陌生人的安装路径**：只用那条官方命令，不加 profile `overrides`、不指 tarball。本地流程当初需要 override 加两个 tarball（票据 17），从 registry 装能否收敛成一条命令**尚无人验证**，这是本票据唯一的实质未知。
 5. 删掉四份 README 里的「尚未发布」注记，正式安装一节改为可直接执行。
 6. 去 `awesome-dsh-plugin` 提 PR 上架，按其条目格式填写。
@@ -118,3 +118,27 @@ dsh-quick-actions cannot be republished until 24 hours have passed.
 | 仓库带 `dsh-plugin` GitHub topic | **未完成，须用户在 GitHub 上添加**；本机无 `gh`，Agent 无法代劳 |
 
 其它约束：一个 PR 最多三个条目；不得手改生成的 README；不得改动无关条目；描述须准确、无夸饰语，含 `: ` 时要加引号（本条目两条描述均不含）。`category` 取 `ui`，在其 23 个枚举值内。
+
+### 2026-09-10 — 市场 PR 已提交；待办逐条对账
+
+**PR：[awesome-dsh-plugin#4762](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4762)**（OPEN、MERGEABLE，1 文件 6 行新增）。条目存档在 [`verification/market-entry.yml`](../verification/market-entry.yml)，提交时命名为 `data/plugins/lovvvve__dsh-quick-actions--packages-composer-quick-actions.yml`。
+
+提交前用策展仓库自带的 `scripts/check-submission.mjs` 预检过。**直接跑会失败**：脚本在没有 PR 上下文时把全部 3432 条都当成新增，撞上「一个 PR 最多 3 条」的限制而退出 1。它支持 `--base <sha>`，用上游 `main` 的 sha 限定范围后得到 `checking 1 entry` → `ok` → `all checked entries pass`。
+
+前置动作也一并完成：给 `lovvvve/dsh-quick-actions` 加了 `dsh-plugin` topic（CI 硬性检查项，此前为空），仓库描述改为一句话说明。`gh` 此前未安装，已免 root 装进 `~/.local/bin`；认证由用户经设备流完成，token 在其 keyring 中。
+
+**CI 有一个 check 失败，与本条目无关。** `Submission gate` 通过；失败的是 `build-site`，报三个条目推导不出添加日期，全部属于 `wwweljf/dsh-plugins`，日志里不含本条目。属该仓库既有问题，等维护者处理。
+
+#### 待办对账
+
+| 项 | 状态 |
+|---|---|
+| 1、2 发布 | **未完成**，被 npm 撤回冷却挡到本地 2026-09-11 00:45 |
+| 3 发布 bundle 包 | **已作废**（票据 28 合并为单包） |
+| 4 全新 `DSH_HOME` 实测 | **部分完成**：`0.1.0-rc.1` 已验证单命令安装成立，但那是双包形态；单包下需在发布后复验 |
+| 5 README 去掉「尚未发布」注记 | 完成，两份 README 均无此说法 |
+| 6 市场 PR | 完成，见上 |
+
+#### 验收标准对账
+
+反转已落到票据 20、地图与 `CLAUDE.md` 三处；PR 链接已记录（本条）。仍缺两项：**单包形态在全新 `DSH_HOME` 上的安装复验**，以及**发布本身**。
