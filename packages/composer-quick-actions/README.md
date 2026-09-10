@@ -20,15 +20,22 @@
 
 | 项目 | 值 |
 |---|---|
-| 验证基线 | DSH 核心包 `0.1.2-rc.1`。桌面端 `dsh --version` 打印的是依赖集标签，与核心包版本不是同一个数字 |
-| DSH peer | `>=0.1.2-rc.1`，不设上界 |
+| 验证基线 | DSH 核心包 `0.1.5-rc.1`。桌面端 `dsh --version` 打印的是依赖集标签，与核心包版本不是同一个数字 |
+| DSH peer | `>=0.1.5-rc.1` |
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
 | React 与 React DOM（浏览器侧） | `^18.3.1`，由 web shell 的模块表提供，不从 profile 安装 |
-| DSH UI primitives（浏览器侧） | `>=0.1.2-rc.1`，同样由模块表提供 |
+| DSH UI primitives（浏览器侧） | `>=0.1.5-rc.1`，同样由模块表提供 |
 | 平台 | 只支持 `web` profile |
 
 安装与运行都不检测 DSH 能力，因此不存在随版本变化的功能分档：要么整个插件能装能跑，要么装不上。
+
+下界取的是本插件读取其 Input 契约的那个 DSH 版本。**不要在更低版本上使用**：`0.1.5-rc.1` 把公开快照里的 `imageIds` 改名为 `attachmentIds`，本插件按新名读取。
+
+上界不设，但**这不等于向后兼容有保障**，两点需要知道：
+
+- **rc 阶段会破坏公开契约。** `0.1.2-rc.1` 到 `0.1.5-rc.1` 之间，被本插件用作唯一发送判据的那个字段就被改了名，升级 DSH 后整个快捷动作区域会显示错误边界。每次 DSH 升级都可能需要本插件跟一版；升级后若该区域出错，多半又是契约变更，请提 issue。
+- **`>=0.1.5-rc.1` 在 semver 里匹配不到下一个预发布版本。** 预发布版本只满足「主次修订号完全相同」的比较符，因此 `0.1.6-rc.1` 不满足 `>=0.1.5-rc.1`；而 DSH 至今发布的每个版本都是预发布。DSH 一旦发出新的 rc，包管理器就会报未满足的 peer 依赖，即使插件本身没问题。这是 semver 对预发布的规定，不是本插件挑版本——`dsh plugin add` 装得上就可以继续用，出错时按上一条判断。（下面「装好之后」里那条 `Issues with peer dependencies found` 说的是另一个原因，两者会一起出现。）
 
 ## 安装
 
@@ -43,7 +50,7 @@ dsh plugin --profile web add dsh-quick-actions
 ```sh
 mkdir -p /tmp/quick-actions
 pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.2.tgz
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.3.tgz
 ```
 
 上面的 `--filter` 形式在仓库任意位置都能用；如果你已经在包目录里，`pnpm pack --pack-destination /tmp/quick-actions` 即可。

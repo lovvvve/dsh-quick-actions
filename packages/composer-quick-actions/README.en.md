@@ -20,15 +20,22 @@ This release has **no insert action** (insert at the selection, keep the editing
 
 | Item | Value |
 |---|---|
-| Verified baseline | DSH core packages at `0.1.2-rc.1`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
-| DSH peers | `>=0.1.2-rc.1`, with no upper bound |
+| Verified baseline | DSH core packages at `0.1.5-rc.1`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
+| DSH peers | `>=0.1.5-rc.1` |
 | Cordis | `^4.0.2` |
 | Schemastery | `^3.18.2` |
 | React and React DOM (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile |
-| DSH UI primitives (browser side) | `>=0.1.2-rc.1`, also supplied by the module table |
+| DSH UI primitives (browser side) | `>=0.1.5-rc.1`, also supplied by the module table |
 | Platform | `web` profile only |
 
 Nothing is capability-detected at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
+
+The floor is the DSH release whose Input contract this plugin reads. **Do not run it against anything older**: `0.1.5-rc.1` renamed `imageIds` to `attachmentIds` in the published snapshot, and this plugin reads the new name.
+
+No upper bound is declared, but **that is not a promise of forward compatibility**. Two things to know:
+
+- **The rc line does break published contracts.** Between `0.1.2-rc.1` and `0.1.5-rc.1`, the very field this plugin uses as its only send precondition was renamed, and the whole Quick Actions area rendered an error boundary after the upgrade. Every DSH upgrade may need a follow-up release of this plugin; if the area shows an error after one, suspect another contract change and please open an issue.
+- **`>=0.1.5-rc.1` does not match the next prerelease under semver.** A prerelease version only satisfies a comparator with the same major.minor.patch, so `0.1.6-rc.1` does not satisfy `>=0.1.5-rc.1` — and every DSH version published so far is a prerelease. The moment DSH ships a new rc, package managers report an unmet peer dependency even when the plugin is fine. That is semver's rule for prereleases rather than this plugin being picky: if `dsh plugin add` installs it, keep using it, and judge breakage by the point above. (The `Issues with peer dependencies found` note under "What a good install looks like" below has a different cause; the two show up together.)
 
 ## Install
 
@@ -43,7 +50,7 @@ Then restart the web profile. One package is the whole thing: it carries `dsh.bu
 ```sh
 mkdir -p /tmp/quick-actions
 pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.2.tgz
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.3.tgz
 ```
 
 The `--filter` form works from anywhere in the repository; from the package directory itself, `pnpm pack --pack-destination /tmp/quick-actions` is the same thing.

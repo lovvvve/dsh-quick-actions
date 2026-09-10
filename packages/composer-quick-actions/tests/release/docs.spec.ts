@@ -16,9 +16,25 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { featureDir, releasedVersion } from './support.js'
+import { featureDir, manifest, releasedVersion } from './support.js'
 
 const version = releasedVersion()
+
+/**
+ * The declared DSH floor and the bare version inside it, both taken from the
+ * manifest so a floor bump fails here and names the readmes that still carry the
+ * old one. The floor range is what the readmes must print as the peer
+ * requirement; the bare version is what they must print as the baseline the
+ * release was verified against.
+ */
+const dshFloorRange = manifest(featureDir).peerDependencies?.['@deepseek-ai/dsh-client-ui-conversation']
+if (dshFloorRange === undefined) throw new Error('the manifest declares no DSH peer floor')
+const dshFloor = dshFloorRange.replace(/^[>=^~\s]+/, '')
+
+/** Quote a literal for use inside a `RegExp` source. */
+function escapeRegExp(literal: string): string {
+  return literal.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`)
+}
 
 // Ticket 28 folded the second package back in, so the two readmes of the one package are
 // the whole documented surface.
@@ -46,8 +62,7 @@ const REQUIRED_IN_FEATURE_DOCS: readonly (readonly [string, readonly string[]])[
   ['the dev build and watch commands', ['pnpm build', 'pnpm watch:client']],
   ['the GUI HMR prerequisite', ['HMR']],
   ['the future insert-action effort', ['insertText']],
-  ['the compatibility baseline it was verified against', ['0.1.2-rc.1']],
-  ['the peer floor as declared', ['>=0.1.2-rc.1']],
+  ['the peer floor as declared', [dshFloorRange]],
   ['the full manual cleanup path', ['pnpm-workspace.yaml']],
 ]
 
@@ -72,6 +87,17 @@ describe('feature readme coverage', () => {
       })
     }
   }
+
+  it('gives the verified baseline its own compatibility row in both languages', () => {
+    // The peer floor prints the baseline version as a substring of its own
+    // range, so a bare `toContain(dshFloor)` cannot tell the two rows apart and
+    // passes even with the baseline row deleted. Anchor on the row itself: its
+    // label and the version have to share one table line.
+    const row = (label: string) =>
+      new RegExp(String.raw`^\|\s*` + label + String.raw`\s*\|[^|\n]*` + escapeRegExp(dshFloor), 'm')
+    expect(docs['feature README.md']).toMatch(row('验证基线'))
+    expect(docs['feature README.en.md']).toMatch(row('Verified baseline'))
+  })
 
   it('documents upgrade and downgrade in both languages', () => {
     expect(docs['feature README.md']).toContain('升级')
