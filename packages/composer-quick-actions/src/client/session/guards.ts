@@ -25,6 +25,28 @@ export type QuickActionUnavailableReason =
   | 'sending'
 
 /**
+ * Whether one published list field carries content, read totally.
+ *
+ * A field that is absent or not an array counts as content. The snapshot is the
+ * only evidence this guard has, and DSH has renamed a field of it out from
+ * under this plugin once already (`imageIds` → `attachmentIds` in 0.1.5-rc.1,
+ * ticket 29). If that happens again, a Quick Action must go inert rather than
+ * load a draft whose remaining content this guard can no longer see — an action
+ * that fired blind would submit its own text *plus* whatever the user had
+ * attached.
+ *
+ * This is not the compatibility fallback spec 21.3 rules out: no superseded
+ * field name is ever read, and nothing degrades to a working state. The only
+ * thing it buys is that an unreadable snapshot reports `occupied-draft` instead
+ * of throwing through `derive → publish → observe` and taking the whole surface
+ * down with it.
+ */
+function holdsContent(field: readonly unknown[] | undefined): boolean {
+  if (!Array.isArray(field)) return true
+  return field.length > 0
+}
+
+/**
  * Whether the draft is occupied (spec 9.2). Occupancy is any text — pure
  * whitespace included, so the raw string is compared against `''` and never
  * trimmed — any attachment, and any rich reference.
@@ -32,7 +54,9 @@ export type QuickActionUnavailableReason =
  * The public snapshot exposes exactly `{ draft, attachmentIds, draftRev, phase,
  * claim?, occurrences, queue }`. Occupancy reads three of them:
  *
- * - `draft` — the clipboard-text projection of the whole document;
+ * - `draft` — the clipboard-text projection of the whole document. Compared
+ *   against `''`, so a snapshot without it is occupied for the same reason
+ *   {@link holdsContent} gives;
  * - `attachmentIds` — the ordered draft attachments, and the only public
  *   attachment field there is. Since 0.1.5-rc.1 it admits any attachment kind,
  *   not just images;
@@ -47,7 +71,7 @@ export type QuickActionUnavailableReason =
  * send to join.
  */
 export function isOccupiedDraft(input: InputState): boolean {
-  return input.draft !== '' || input.attachmentIds.length > 0 || input.occurrences.length > 0
+  return input.draft !== '' || holdsContent(input.attachmentIds) || holdsContent(input.occurrences)
 }
 
 /**

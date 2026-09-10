@@ -94,6 +94,20 @@ describe('draft occupancy', () => {
     expect(isOccupiedDraft({ ...empty, occurrences: [{ occurrenceId: 1, source: 'file', ref: 'a' }] })).toBe(true)
   })
 
+  it('treats a list field the snapshot no longer carries as occupied', () => {
+    // Ticket 29: DSH renamed `imageIds` to `attachmentIds` between two rcs and
+    // the raw `.length` read threw, taking the whole surface into its error
+    // boundary. The guard is total now — a field it cannot read is content, so
+    // the next rename makes actions unavailable instead of crashing them, and
+    // never lets a send carry away attachments this guard cannot see.
+    const renamed = { ...empty, attachmentIds: undefined } as unknown as InputState
+    expect(isOccupiedDraft(renamed)).toBe(true)
+    expect(composerGate(renamed, fakeSession(), undefined)).toBe('occupied-draft')
+
+    const retyped = { ...empty, occurrences: { length: 0 } } as unknown as InputState
+    expect(isOccupiedDraft(retyped)).toBe(true)
+  })
+
   it('does not count the transient queue: a send may join a running turn', () => {
     expect(isOccupiedDraft({ ...empty, queue: [{ placement: 'queued' }] })).toBe(false)
     expect(
