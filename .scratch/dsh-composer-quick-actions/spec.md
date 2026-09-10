@@ -737,3 +737,63 @@ Cordis 装载条目 id、两个 Settings 命名空间与本地化命名空间**�
 ### 20.4 时机与票据映射
 
 只在首次发布 `0.1.0` 之前成立；`0.1.0` 尚未发布时执行，registry 上当时只有两个包的 `0.1.0-rc.1`。由[票据 28](./issues/28-merge-into-a-single-package.md)执行，已发布的 `dsh-quick-actions-bundle@0.1.0-rc.1` 另行弃养或撤回。
+
+---
+
+## 21. DSH 0.1.5-rc.1 的 Input 契约改名
+
+### 21.1 事实
+
+DSH 在 `0.1.2-rc.1` 与 `0.1.5-rc.1` 之间把 Input 契约里成体系的「image」词汇整体换成了「attachment」——附件不再限于图片，多出一条文件通路。取证为两个版本 `@deepseek-ai/dsh-client-ui-conversation` 的 `lib/types/client/contract/input.d.ts` 逐行 diff，新版客户端产物里 `imageIds` 出现 0 次。
+
+改名清单（左旧右新，**这是全部**，不是节选）：
+
+| 位置 | `0.1.2-rc.1` | `0.1.5-rc.1` |
+|---|---|---|
+| `InputState` | `imageIds` | **`attachmentIds`** |
+| `InputState.claim` / `CommandClaim` | `images?: boolean` | `attachments?: boolean` |
+| `CommandClaim.submit` 第三参 | `images: readonly SubmitImageAttachment[]` | `attachments: readonly SubmitAttachment[]` |
+| `SessionInput` / `InputActions` | `addImages` / `removeImage` / `pruneImages` | `addAttachments` / `removeAttachment` / `pruneAttachments` |
+| `InputTriggerController.adjudicate` 信封 | `{ images: number }` | `{ attachments: number }` |
+
+同批的非改名变化：
+
+- `SubmitImageAttachment` 接口变成联合类型 `SubmitAttachment`，除原有的 `{ type: 'image', mediaType, data, name? }` 外新增 `{ type: 'file', receiptId }`；配套新增 `DraftAttachmentSerializationResult`。
+- `SessionInput.removeAttachment` 的返回类型由 `void` 变为 `boolean`（`InputActions` 上的同名成员仍为 `void`）。
+- `DraftAttachmentId` **没有改名**，两版同名，只有文档注释从「image draft」改为「attachment draft」。
+
+其中只有前两行触及本插件：`attachmentIds` 是第 9.5 节的单飞判据字段，`claim.attachments` 在 `src/client/dsh.ts` 里被声明但不读取。附件动词与命令提交路径本插件一概不碰（第 9.4 节）。
+
+### 21.2 对本规格的影响
+
+第 9.5 节与第 16.4 节把公开快照逐字列为单飞判据的唯一来源，其中含 `imageIds`。**那些列举中的该字段一律读作 `attachmentIds`**；两节正文保留原文，作为当时契约的记录。判据本身不变——仍是「只用公开快照、硬标准是不产生重复发送」。
+
+### 21.3 只支持新契约
+
+不保留 `attachmentIds ?? imageIds` 之类的回退：本插件尚未发布、无任何用户，为不存在的旧版使用者留一个永久废弃字段不划算。DSH peer 下界因此从 `>=0.1.2-rc.1` 提到 **`>=0.1.5-rc.1`**，验证基线同步为该版本。
+
+### 21.4 两条被证伪的判断
+
+**其一：rc 阶段不破坏公开契约。** 此前 README 把「不设 peer 上界」的理由写成「DSH 仍在 0.x rc 阶段」，隐含前提就是这一条。**该前提已被证伪**：被本规格钉死为单飞唯一判据的字段在两个 rc 之间被改名。上界仍不设，但文档须如实说明每次 DSH 升级都可能需要本插件跟一版，不得再把不设上界描述成安全的。
+
+**其二：`>=x` 形式的下界能覆盖后续版本。** node-semver 规定预发布版本只满足「主次修订号三元组完全相同」的比较符，因此 `0.1.6-rc.1` 与 `0.2.0-rc.1` **都不满足** `>=0.1.5-rc.1`；而 DSH 至今发布的每个版本都是预发布。DSH 一发出新的 rc，包管理器就会对全部七个 DSH peer 报未满足，即使插件本身可用。
+
+**这不改变 peer 的写法**：semver 里没有「匹配未来所有预发布」的干净表达，放宽成 `*` 会连真正不兼容的版本一起接受，代价更大。保留 `>=0.1.5-rc.1`，由两份 README 说明这一现象及其判断方法（装得上就能用，出错时按其一那条判断）。
+
+### 21.5 开发树的版本线由 `overrides` 钉住
+
+DSH 各包的 peer 范围锁整条线（`^0.1.5-rc.1`），但其 `latest` dist-tag 仍停在 `0.0.1-rc.1`，pnpm 自动安装的传递 peer 因此回落到上一条线，把开发树变成 0.1.2/0.1.5 混装。仅声明 devDependency 不收敛（每个被显式声明的包，其自身的 peer 又落回旧线）。因此在 `pnpm-workspace.yaml` 用 `overrides` 钉住 `dsh-invariants` / `dsh-scope` / `dsh-session` 三个传递成员，使 `pnpm peers check` 干净、`tsc` 看到的每份 DSH 声明都来自同一条线。
+
+`minimumReleaseAgeExclude` 是同一件事的另一面：pnpm 11 默认扣住新发布的版本，0.1.5-rc.1 线比该阈值年轻，必须逐个按精确版本豁免。两处都在下界再次上移时应一并重写。
+
+**唯一的例外是 `@deepseek-ai/dsh-client-ui-primitives`，其 devDependency 留在 `0.1.2-rc.1`。** `0.1.5-rc.1` 的 tarball 把整个 `dependencies` 段删空了，而 `lib/index.js` 仍 `import clsx` 并动态 import `@shikijs/langs/*`——作为独立包它装出来就解析不了，`pnpm test` 在 import 阶段即失败。运行时不受影响：该包由 web shell 的 seed 表以构建期已求值的冻结命名空间提供（第 18 节与 `research/client-ui-primitives-availability.md`），从不走 npm 解析。两版 `Button` / `Input` / `Pill` 的 `.d.ts` 逐字相同，因此类型面无损失。peer 范围仍声明 `>=0.1.5-rc.1`——那描述的是用户运行的 DSH，与本仓库拿哪一版做类型源是两件事。
+
+### 21.6 契约漂移的止损
+
+本次事故能发到用户手里，是因为 `src/client/dsh.ts` 手写契约、假 Composer 又从这份手写类型构造，两侧同步移动，任何改名都不会让测试变红。`tests/client/contract.spec.ts` 用 `expectTypeOf` 把手写的 `InputState` / `InputActions` 对已发布声明做可赋值性断言（方向为「已发布的必须能满足声明的」，因此允许本插件只声明更窄的一部分），使同类改名在 `pnpm typecheck` 阶段即失败。
+
+同时 `isOccupiedDraft` 改为总读：缺失或非数组的列表字段判为「占用」，下一次改名的后果从整个表面崩溃降级为动作不可用。这与第 21.3 节禁止的兼容回退不同——不读任何旧字段名，也不让任何东西降级到「能用」。
+
+### 21.7 票据映射
+
+由[票据 29](./issues/29-follow-dsh-input-contract-change.md)执行。
