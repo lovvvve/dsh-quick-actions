@@ -76,7 +76,7 @@ DSH peer 下界随之从 `>=0.1.2-rc.1` 提到 **`>=0.1.5-rc.1`**。
 
 ### 2026-09-10 — 待办 1–6 完成，code-review 追加了五处
 
-`/code-review` 的 15 条发现里有 9 条成立并已修。原始待办之外新增的部分：
+`/code-review` 报了 14 条，逐条核验后全部处理：13 条直接修掉，剩下 1 条（peer 下界的 semver 语义）按用户定案保留形状、只改文档。原始待办之外新增的部分：
 
 **改名不止一处。** 逐行 diff 两版 `contract/input.d.ts` 后确认 0.1.5-rc.1 是整套 image → attachment 词汇替换，不是「其余字段不变」：`claim.images` → `claim.attachments`（本插件声明了但不读）、`addImages`/`removeImage`/`pruneImages` → `addAttachments`/`removeAttachment`/`pruneAttachments`、`CommandClaim.submit` 第三参、`adjudicate` 信封的 `{images:number}`；`SubmitImageAttachment` 变成含 `{type:'file'}` 分支的联合 `SubmitAttachment`。`DraftAttachmentId` **没有**改名。完整清单进了 spec 第 21.1 节。
 
