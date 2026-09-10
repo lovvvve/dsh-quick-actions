@@ -12,7 +12,7 @@
     "test": "vitest run",
     "typecheck": "tsc -b && tsc -p tsconfig.test.json",
     "lint": "oxlint . --deny-warnings",
-    "watch:client": "pnpm --filter dsh-composer-quick-actions run watch:client",
+    "watch:client": "pnpm --filter dsh-quick-actions run watch:client",
     "verify:gui": "playwright test"
   },
   "devDependencies": {
