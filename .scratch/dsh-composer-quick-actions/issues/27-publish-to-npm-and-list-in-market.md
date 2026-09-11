@@ -142,3 +142,29 @@ dsh-quick-actions cannot be republished until 24 hours have passed.
 #### 验收标准对账
 
 反转已落到票据 20、地图与 `CLAUDE.md` 三处；PR 链接已记录（本条）。仍缺两项：**单包形态在全新 `DSH_HOME` 上的安装复验**，以及**发布本身**。
+
+### 2026-09-11 — `0.1.0-rc.3` 已发布；单包形态的陌生人安装路径复验通过
+
+票据 29 修好并由用户在实时 DSH 上验证后，本票据解除阻塞。冷却窗口已过（解禁 UTC 2026-09-10T16:44:53）。
+
+**发布过程有一次假失败，值得记下。** 用户执行发布时 pnpm 报 `[E409] Failed to save packument`，堆栈显示已过 `withOtpHandling`——即认证与 2FA 都成功，失败在 registry 写入。**但包其实发出去了**：
+
+| 时刻（UTC） | packument 状态 |
+|---|---|
+| 2026-09-11T04:29:41 | `_rev: 3`，仍是墓碑（只记 `0.1.0-rc.1` 已撤回，无 `versions`）——这是 409 那一次 |
+| 2026-09-11T04:31:05 | `created` 被重写，墓碑被全新 packument 取代 |
+| 2026-09-11T04:31:06 | `_rev: 4`，`versions` 含 `0.1.0-rc.3`，`dist-tags.latest` 指向它 |
+
+结论：**对一个被完整撤回的包名，首次重新发布会报 409，但随后仍会落库。** 遇到这个错误不要立刻重发，先查 `curl -s https://registry.npmjs.org/<name>` 的 `versions`——`npm view` 在墓碑阶段只会回 404，看不出真相。盲目重试可能造成重复发布或写坏状态。
+
+**发布内容已核验**：把 registry 上的 tarball 下载回来，与当前 HEAD 重新 `pnpm pack` 的产物**逐字节一致**；`lib/client.js` 含 5 处 `attachmentIds` 与 10 处总读的 `Array.isArray`，即票据 29 的修复确在其中。`unpackedSize` 599.6 kB，`deps: none`，MIT。
+
+**待办 4 关闭（本票据最后一项实质未知）。** 在全新 `DSH_HOME=/tmp/fresh-dsh` 上只跑那一条官方命令，不加 profile `overrides`、不指 tarball、不加任何标志：
+
+```sh
+DSH_HOME=/tmp/fresh-dsh dsh plugin --profile web add dsh-quick-actions
+```
+
+结果：`dsh: initialized profile web`（profile 自动创建）→ `+ dsh-quick-actions 0.1.0-rc.3` → `Done in 806ms`。`--dump-config` 能看到 `- id: composer-quick-actions` / `name: dsh-quick-actions`。profile 的 `package.json` 只有这一个依赖条目、**无 `overrides`**，`dsh.profile.bundles` 里也有它。单包形态因此确认收敛成一条命令，双包时代那条 `overrides` 彻底不需要了。
+
+顺带澄清一个本可以写错的推断：包发布不到一小时，本以为 pnpm 的 24 小时 `minimumReleaseAge` 会挡住陌生人的首次安装。**实测不会**——pnpm 在非 strict 默认下对直接 `add` 的目标自动写一条 `minimumReleaseAgeExclude: [dsh-quick-actions@0.1.0-rc.3]` 而非报错。README 那节「被点名的包一个都不是本插件」的说法因此仍然准确，不用改。
