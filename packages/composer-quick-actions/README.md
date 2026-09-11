@@ -50,7 +50,7 @@ dsh plugin --profile web add dsh-quick-actions
 ```sh
 mkdir -p /tmp/quick-actions
 pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.3.tgz
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
 ```
 
 上面的 `--filter` 形式在仓库任意位置都能用；如果你已经在包目录里，`pnpm pack --pack-destination /tmp/quick-actions` 即可。
