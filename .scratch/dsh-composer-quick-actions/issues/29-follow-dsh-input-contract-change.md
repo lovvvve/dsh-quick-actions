@@ -2,7 +2,7 @@
 
 Type: task
 Mode: AFK
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Question（问题）
@@ -65,6 +65,46 @@ DSH peer 下界随之从 `>=0.1.2-rc.1` 提到 **`>=0.1.5-rc.1`**。
 ### 验收
 
 真实浏览器里五个按钮正常显示、无错误边界；`pnpm test` / `typecheck` / `lint` 通过；文档不再声称 `0.1.2-rc.1` 是验证基线。
+
+## Answer（结论）
+
+**只支持新契约，字段改名跟到底，并加两道闸门防止同类事故重演。**
+
+### 根因与范围
+
+DSH 在 `0.1.2-rc.1` → `0.1.5-rc.1` 之间把 Input 契约里成体系的 image 词汇整体换成 attachment，附件不再限于图片。`isOccupiedDraft` 读 `input.imageIds.length`，新版上拿到 `undefined` 即抛 `TypeError`，经 `derive → publish → observe → SessionSurface` 打垮整个快捷动作区域。
+
+原始判断「其余字段不变」**不成立**。逐行 diff 两版 `contract/input.d.ts` 得到的完整清单见 [spec 第 21.1 节](../spec.md)：除 `imageIds` → `attachmentIds`，还有 `claim.images` → `claim.attachments`、`addImages`/`removeImage`/`pruneImages` → `addAttachments`/`removeAttachment`/`pruneAttachments`、`CommandClaim.submit` 第三参、`adjudicate` 信封；`SubmitImageAttachment` 变成含 `{type:'file'}` 分支的联合 `SubmitAttachment`。`DraftAttachmentId` 未改名。触及本插件的只有前两条。
+
+### 落地
+
+- 源码与测试全面改名，DSH peer 下界提到 `>=0.1.5-rc.1`。
+- 开发树用 `pnpm-workspace.yaml` 的 `overrides` 钉住 `dsh-invariants`/`dsh-scope`/`dsh-session`：DSH 各包 peer 锁整条线而 `latest` dist-tag 停在 `0.0.1-rc.1`，pnpm 自动安装的传递 peer 会回落旧线；只加 devDependency 不收敛（被声明的包其自身的 peer 又落回去）。`minimumReleaseAgeExclude` 同步补齐（spec 第 21.5 节）。
+- `@deepseek-ai/dsh-client-ui-primitives` 是唯一不跟版本线的：其 `0.1.5-rc.1` tarball 删空了 `dependencies` 而产物仍 `import clsx` 并动态 import `@shikijs/langs/*`，装出来解析不了。运行时不受影响（shell seed 表给的是冻结命名空间），两版所用控件声明逐字相同，故 devDependency 留在 `0.1.2-rc.1`。
+
+### 两条被证伪的判断（spec 第 21.4 节）
+
+1. **rc 阶段不破坏公开契约**——被本次改名直接证伪。两份 README 不再把「不设上界」说成安全，改说每次 DSH 升级都可能需要本插件跟一版。
+2. **`>=x-rc.n` 能覆盖后续预发布**——node-semver 只让预发布匹配同三元组比较符，实测 `0.1.6-rc.1` 与 `0.2.0-rc.1` 都不满足 `>=0.1.5-rc.1`，而 DSH 至今全是预发布。用户定案**维持这个形状**（放宽成 `*` 会连真正不兼容的版本一起接受），只在 README 说明包管理器会在下个 rc 报未满足 peer。
+
+### 两道闸门（用户拍板都做）
+
+- **`isOccupiedDraft` 改为总读**：缺失或非数组的列表字段判为「占用」。下次改名的后果从表面崩溃降级为动作不可用，且绝不让 send 带走这条 guard 看不见的附件。这不是第 21.3 节禁止的兼容回退——不读任何旧字段名，也没有东西降级到「能用」。
+- **`tests/client/contract.spec.ts`**：用 `expectTypeOf` 把手写的 `InputState`/`InputActions` 对已发布声明做可赋值性断言。本次事故能发出去，正是因为手写契约与假 Composer 同步移动、测试永远绿。**只在 typecheck 第二遍生效**；按相对路径深引 `lib/types/client/contract/input.js`，走 `./client` 入口会与本插件的窄 `ConversationLike` 增强撞 TS2717。
+
+两道闸门都做过反向验证：去掉总读时新用例复现线上同一条 `TypeError`；把字段改回 `imageIds` 时 `pnpm typecheck` 报 TS2344。
+
+### 一并修掉的取证失真（`/code-review` 报了 14 条）
+
+`packaging.spec.ts` 的 `BROWSER_SEEDS` 原是 0.1.2 的表却被改标成 0.1.5，已从 0.1.5-rc.1 的 web shell 重新读出（多出 `@deepseek-ai/dsh-client-ui-dockkit`）；`docs.spec.ts` 的「验证基线」断言是「peer 下界」断言的子串、删掉整行也不会红，改为按表格行锚定且版本从清单读取；四处过期的版本背书更新。
+
+### 验证
+
+`pnpm typecheck` / `lint` / `test`（23 文件 486 用例）全绿，`pnpm peers check` 干净。**用户于 2026-09-11 在自己的实时 DSH（web profile，本地 tarball 安装）上确认验证通过**，快捷动作区域正常渲染，无错误边界。
+
+### 已知边界
+
+peer 下界的 semver 预发布语义是**刻意保留**的形状，不要改成 `*` 或试图「修好」。DSH 修好 primitives 的依赖声明之前，不要再把它提到 0.1.5-rc.1。
 
 ## Comments（评论）
 
