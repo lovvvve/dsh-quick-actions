@@ -119,3 +119,54 @@ if (!linked) return { npm: null, version: null, checkedAt: today }
 ```sh
 dsh plugin --profile web add dsh-quick-actions
 ```
+
+## Comments（评论）
+
+### 2026-09-13 — `0.1.0-rc.4` 已发布，映射判定已确证会成立
+
+用户完成发布（本机 npm token 曾以 401 失效，用户重新登录后执行）。**先发 rc 而非 `0.1.0`**：本票据的链路只能在发布之后验证，而版本号一经发布即锁死内容。
+
+**packument 有落库滞后，不要据此判断失败。** 用户报告发完时 `versions` 里还没有 rc.4，轮询 `registry.npmjs.org/dsh-quick-actions/0.1.0-rc.4`：
+
+| 本地时刻 | HTTP |
+|---|---|
+| 12:28:56 | 404 |
+| 12:29:06 | 404 |
+| 12:29:16 | 404 |
+| 12:29:27 | **200** |
+
+约 30–60 秒。这和票据 27 记的 409 假失败是同一类现象的两种表现：**registry 的写入与读端一致性有延迟，发布后立刻查不到不等于没发出去**。
+
+**发布内容核对**（直接读 registry，不是读本地）：
+
+| 字段 | 值 |
+|---|---|
+| `dist-tags.latest` | `0.1.0-rc.4` |
+| `repository.url` | `git+https://github.com/lovvvve/dsh-quick-actions.git` |
+| `repository.directory` | `packages/composer-quick-actions` |
+| `homepage` / `bugs` | 均在 |
+| `fileCount` / `unpackedSize` | 48 / 599,918 B |
+| `dependencies` | 无 |
+| `dsh.bundle.patch` | `./cordis.patch.yml` |
+
+`latest` 指向 rc.4 这点是关键——`probe-npm.mjs` 读的正是 `versions[dist-tags.latest].repository`，而不是 packument 顶层那份（顶层可能保留首次发布时的元数据）。
+
+**按 `probe-npm.mjs` 原样逻辑本地复跑**（取 raw HEAD 的包名 → 取 registry packument → 比对 `repoField.includes(repo)`）：
+
+```text
+repo = lovvvve/dsh-quick-actions | sub = packages/composer-quick-actions
+raw HEAD package.json name = dsh-quick-actions version = 0.1.0-rc.4
+dist-tags.latest = 0.1.0-rc.4
+repoField = "git+https://github.com/lovvvve/dsh-quick-actions.git"
+==> linked: { npm: "dsh-quick-actions", version: "0.1.0-rc.4" }
+```
+
+**翻转时机已查清，只能等。** 读 `awesome-dsh-plugin` 的 `.github/workflows/build-site.yml`：
+
+- 触发有三种：`schedule`（cron `23 2 * * *` UTC = 本地 10:23）、`workflow_dispatch`、`push` 到 main。
+- **push 构建不 probe**——第 140 行 `if [ "${{ github.event_name }}" != "push" ] || [ ! -s data/npm-map.json ]` 明确跳过，注释说明是为了不让每天几十次推送各打 134 次 npm 请求。所以别指望别人提 PR 顺带把我们带上。
+- 只有 schedule 与 dispatch 会设 `PROBE_ALL=1` 强制全量重探。我们不是该仓库的维护者，dispatch 不可用。
+
+因此预期翻转在**本地 2026-09-14 10:23** 那次 nightly。该 workflow 自己的注释警告这条 cron 「routinely delayed hours into the busy part of the day」，且 `concurrency.cancel-in-progress` 会让一次 merge 把跑到一半的 probe 取消（举了 2026-08-27、08-28 两次实例），所以可能要多等一晚。
+
+**验收观测点**：`curl -s https://awesome-dsh-plugin.com/plugins.json`，本条目的 `npm` 变成 `dsh-quick-actions`、`install` 串从 `github:` 变成 npm 形式。届时再从市场 UI 点一次安装即闭环。当前仍是 `npm: null`。
