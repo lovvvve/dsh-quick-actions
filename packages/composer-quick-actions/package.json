@@ -3,6 +3,13 @@
   "version": "0.1.0",
   "description": "Persistent Quick Actions for the DSH message composer",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lovvvve/dsh-quick-actions.git",
+    "directory": "packages/composer-quick-actions"
+  },
+  "homepage": "https://github.com/lovvvve/dsh-quick-actions/tree/main/packages/composer-quick-actions#readme",
+  "bugs": "https://github.com/lovvvve/dsh-quick-actions/issues",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/types/index.d.ts",

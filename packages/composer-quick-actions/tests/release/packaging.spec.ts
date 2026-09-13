@@ -38,6 +38,14 @@ import {
 
 const feature = manifest(featureDir)
 
+/**
+ * The repository the plugin market lists this plugin under, as the curated catalog
+ * spells it (`data/plugins/lovvvve__dsh-quick-actions--packages-composer-quick-actions.yml`).
+ * The published manifest has to name it, or the catalog cannot tell that the npm
+ * package and the listed repository are the same thing.
+ */
+const LISTED_REPO = 'lovvvve/dsh-quick-actions'
+
 /** Read one declared string list, so a malformed manifest fails as a bad manifest. */
 function stringList(value: unknown, subject: string): readonly string[] {
   if (!Array.isArray(value) || value.some((entry) => typeof entry !== 'string')) {
@@ -194,6 +202,28 @@ describe('release identity', () => {
 
   it('declares no publishConfig, because unscoped packages are public by default', () => {
     expect(feature.publishConfig).toBeUndefined()
+  })
+
+  it('points the published manifest back at the repository the market lists', () => {
+    // Ticket 30: the plugin market resolves an entry to an npm install only when the
+    // curated catalog has linked the package to the listed repository, and it links
+    // them by reading THIS field off the registry manifest of `dist-tags.latest`
+    // (`awesome-dsh-plugin/scripts/probe-npm.mjs`: `repoField.includes(repo)`). The
+    // first publish carried no `repository`, the link never formed, and the catalog
+    // fell back to `github:lovvvve/dsh-quick-actions#path:/packages/composer-quick-actions`
+    // — a source install this repository cannot satisfy, because `lib/` is a build
+    // output and a devDependency is `workspace:*`. So every market install died in
+    // pnpm's blocked git-prepare. The field is a release contract, not metadata.
+    const repository = feature.repository
+    if (typeof repository !== 'object' || repository === null) {
+      throw new Error('the feature manifest declares no repository object')
+    }
+    const { url, directory } = repository as { url?: unknown; directory?: unknown }
+    expect(typeof url === 'string' && url.includes(LISTED_REPO)).toBe(true)
+    // The listing is a monorepo subpath entry, so the manifest has to say which one.
+    expect(directory).toBe(relative(repoRoot, featureDir))
+    // The tarball is what the registry serves and what the probe reads back.
+    expect(packedFeature.manifest.repository).toEqual(repository)
   })
 
   it('ships the MIT text, carried in from the workspace root by pnpm', () => {

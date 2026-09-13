@@ -21,6 +21,7 @@ export interface Manifest {
   readonly name?: unknown
   readonly version?: unknown
   readonly license?: unknown
+  readonly repository?: unknown
   readonly publishConfig?: unknown
   readonly files?: unknown
   readonly exports?: Record<string, unknown>
