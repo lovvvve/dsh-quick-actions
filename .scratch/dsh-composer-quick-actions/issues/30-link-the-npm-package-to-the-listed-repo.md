@@ -100,11 +100,13 @@ if (!linked) return { npm: null, version: null, checkedAt: today }
 
 ## 剩余步骤（HITL）
 
-1. **用户发布带该字段的版本。** `0.1.0` 已由票据 29 的 `🔖 release: 0.1.0` 提交备好且尚未发布，本次改动叠在其上，因此不需要额外的版本号。发布需要 OTP，Agent 无法代跑：
+1. **用户发布带该字段的版本。** 票据 29 曾把版本推到 `0.1.0`，但用户定案**先发 `0.1.0-rc.4`**——本票据的链路（registry 的 `repository` → 策展仓库的自动映射 → 市场改走 npm）只能在发布之后验证，而 npm 的版本号一经发布即锁死内容，不该拿 `0.1.0` 去试。rc.4 是下一个可用号：rc.1 已被撤回而永久作废，rc.2 从未发出，rc.3 在架上。发布需要 OTP，Agent 无法代跑：
 
    ```sh
    pnpm --filter dsh-quick-actions publish --no-git-checks
    ```
+
+   `--dry-run` 已核对过将要上传的是 `dsh-quick-actions@0.1.0-rc.4`。
 
    注意票据 27 记下的坑：对刚被撤回过的包名，首次重发可能报 `[E409] Failed to save packument` 但**其实已经发出去了**；遇到先查 `curl -s https://registry.npmjs.org/dsh-quick-actions` 的 `versions`，不要盲目重发。
 

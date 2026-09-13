@@ -1,16 +1,21 @@
 # DSH Plugins
 
-DSH 持久化插件的 pnpm workspace。当前项目包含消息编辑器快捷动作功能包、它的安装 bundle，以及用于生成 DSH lazy-CJS Client 产物的本地构建适配器。
+DSH 持久化插件的 pnpm workspace。当前项目包含消息编辑器快捷动作功能包，以及用于生成 DSH lazy-CJS Client 产物的本地构建适配器。
 
 ## 工作区
 
 | 路径 | 包名 | 角色 |
 |---|---|---|
-| `packages/composer-quick-actions` | `dsh-composer-quick-actions` | Host/Client 双面功能包（[README](packages/composer-quick-actions/README.md) · [English](packages/composer-quick-actions/README.en.md)） |
-| `packages/composer-quick-actions-bundle` | `dsh-composer-quick-actions-bundle` | 面向 DSH `web` profile 的安装 bundle（[README](packages/composer-quick-actions-bundle/README.md) · [English](packages/composer-quick-actions-bundle/README.en.md)） |
+| `packages/composer-quick-actions` | `dsh-quick-actions` | **唯一发布的包**：Host/Client 双面实现，自带安装 bundle 的 `dsh.bundle.patch`（[README](packages/composer-quick-actions/README.md) · [English](packages/composer-quick-actions/README.en.md)） |
 | `tools/dsh-client-bundle` | `@dsh-plugins/dsh-client-bundle` | 私有构建适配器（不发布）：Client bundle 构建与真实产物 / watch 契约测试 |
 
-两个发布包的版本为 `0.1.0`、许可证 MIT。**目前尚未发布**到任何 registry：试用请按功能包 README 的本地 tarball 流程安装。
+发布包 `dsh-quick-actions` 已在 npm 上，许可证 MIT，安装只需一条命令：
+
+```sh
+dsh plugin --profile web add dsh-quick-actions
+```
+
+包目录名与两个 Settings 命名空间仍是 `composer-quick-actions`——它们是另一条身份轴，其中 Settings 那两个发布后即用户数据，改名须写迁移。
 
 ## 命令
 
