@@ -1,6 +1,6 @@
 {
   "name": "dsh-quick-actions",
-  "version": "0.1.0",
+  "version": "0.1.0-rc.4",
   "description": "Persistent Quick Actions for the DSH message composer",
   "license": "MIT",
   "repository": {

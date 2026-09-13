@@ -50,7 +50,7 @@ Then restart the web profile. One package is the whole thing: it carries `dsh.bu
 ```sh
 mkdir -p /tmp/quick-actions
 pnpm --filter dsh-quick-actions pack --pack-destination /tmp/quick-actions
-dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0.tgz
+dsh plugin --profile web add /tmp/quick-actions/dsh-quick-actions-0.1.0-rc.4.tgz
 ```
 
 The `--filter` form works from anywhere in the repository; from the package directory itself, `pnpm pack --pack-destination /tmp/quick-actions` is the same thing.
