@@ -2,7 +2,7 @@
 
 Type: bug
 Mode: HITL
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Question（问题）
@@ -170,3 +170,43 @@ repoField = "git+https://github.com/lovvvve/dsh-quick-actions.git"
 因此预期翻转在**本地 2026-09-14 10:23** 那次 nightly。该 workflow 自己的注释警告这条 cron 「routinely delayed hours into the busy part of the day」，且 `concurrency.cancel-in-progress` 会让一次 merge 把跑到一半的 probe 取消（举了 2026-08-27、08-28 两次实例），所以可能要多等一晚。
 
 **验收观测点**：`curl -s https://awesome-dsh-plugin.com/plugins.json`，本条目的 `npm` 变成 `dsh-quick-actions`、`install` 串从 `github:` 变成 npm 形式。届时再从市场 UI 点一次安装即闭环。当前仍是 `npm: null`。
+
+### 2026-09-16 — 订正：映射翻转发生在 09-13 的 nightly，不是 09-14
+
+上一条评论按 cron 名义时刻（`23 2 * * *` UTC = 本地 10:23）推断翻转会在本地 2026-09-14 10:23。**这个推算不成立**——上游 `build-site.yml` 的 schedule run 从不准点：
+
+| 触发 | 开始 (UTC) | 结束 (UTC) | 结果 |
+|---|---|---|---|
+| schedule | 2026-09-13T07:31:24Z | 2026-09-13T08:52:15Z | success |
+| schedule | 2026-09-14T07:58:09Z | 2026-09-14T09:19:58Z | success |
+
+名义 02:23Z 的 cron 实际延迟 5 小时以上，正是该 workflow 自注的「routinely delayed hours into the busy part of the day」。**这次延迟反而帮了忙**：rc.4 发布于 `2026-09-13T04:29:19.851Z`（registry packument 的 `time` 字段），而 09-13 那次 run 在 07:31Z 才启动，正好跨过发布时刻，当天就把映射翻了。
+
+09-14 的市场安装成功于 01:30Z，早于当天 nightly 的 07:58Z，只有 09-13 那次能解释。其他触发已排除：09-13..09-14 区间内 `build-site.yml` 只有这两次 schedule run，没有 `workflow_dispatch`；push 构建按第 140 行条件在 `npm-map.json` 非空时跳过 probe。
+
+所以「可能要多等一晚」的担心没有发生，实际比预计早了近一天。**口径教训**：估算这条 nightly 要按 run 的实际开始时刻，不能按 cron 名义时刻。
+
+## Answer（答案）
+
+**三段失败链已全断，市场安装闭环。** 根因修复（发布 manifest 补 `repository`）→ `probe-npm.mjs` 的反查成立 → 策展目录自动映射翻转 → `installTargetFor` 改走 npm 分支 → 安装不再需要 prepare、不再撞 pnpm 的构建脚本拦截，那个结构上点不通的「放行构建脚本并重试」按钮也不再会被走到。「修那条 GitHub 源路径」按本票据原判断仍然不做。
+
+### 闭环取证（2026-09-16 复核）
+
+| 环节 | 证据 |
+|---|---|
+| registry 反查 | `dist-tags.latest = 0.1.0-rc.4`（发布于 `2026-09-13T04:29:19.851Z`）；该版本 manifest 的 `repository.url` = `git+https://github.com/lovvvve/dsh-quick-actions.git`、`directory` = `packages/composer-quick-actions` |
+| 目录映射 | `plugins.json` 本条目 `npm: "dsh-quick-actions"`、`version: "0.1.0-rc.4"`、`install: "dsh plugin --profile web add dsh-quick-actions"`（原为 `npm: null` + `github:` 串） |
+| 市场 UI 安装成功 | `~/.dsh/profiles/web/.dsh-market/log.ndjson`：`2026-09-14T01:30:12.736Z info install "dsh-quick-actions exit=0 hot=true"`，紧邻 `hot-mount "dsh-quick-actions: live"` |
+| 该日志确属市场路由 | 由 `dshmarket@1.46.1` 的 `routes.ts:4491` 发出，其 `target` 来自安装路由 `routes.ts:4263` 的 `installTargetFor(entry)`；命令行 `dsh plugin add` 不经这条 HTTP 路由 |
+| 走的是 npm 分支 | `installTargetFor`（`sources.ts:330`）优先级 `npm` > `tarball` > `github:`；日志里 target 是**裸包名**，故 `entry.npm` 当时已非 null。对比 09-13 的五次失败，target 全是 `github:lovvvve/dsh-quick-actions#path:/packages/composer-quick-actions` |
+| profile 落地 | `~/.dsh/profiles/web/package.json` 为 `"dsh-quick-actions": "0.1.0-rc.4"`（registry 精确版本，不是 git spec），`dsh.profile.bundles` 含该条目 |
+| 插件启用态 | profile 的 `cordis.patch.yml` 只有 `webserver` 一行、无 disable 行；插件靠自带的 `dsh.bundle.patch` 加载，本就不需要 profile patch 行 |
+
+安装日志紧邻一条 `a too-young release blocks pnpm's lockfile verification (#39) — retrying once with --config.minimumReleaseAge=0` 警告。`minimumReleaseAge` 只对 registry 包有意义，git 依赖不涉及——这是走 npm 的又一条旁证。
+
+### 已知边界
+
+- 本次闭环是**事后从日志复原**的，不是现场驱动的：安装由用户于 2026-09-14 自己在市场 UI 点成，当时没有回到本票据记录。对已装包重复点一次安装是 no-op / update，产生不了更强证据，故未重跑。
+- 翻转时刻比上一条评论的预计早了近一天，订正见上方 2026-09-16 评论；结论不受影响。
+- rc.4 仍是预发布版。`0.1.0` 正式版何时发、上架条目的后续维护，归[票据 27](./27-publish-to-npm-and-list-in-market.md)。
+- 打包契约里的 `repository` 断言（见上方「变更」一节）是防回归的唯一闸门。它一旦被删，失效方式仍是本票据这一种：发布之后才在第三方通道上暴露，本仓库任何测试都不会响。
