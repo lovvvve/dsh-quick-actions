@@ -2,7 +2,7 @@
 
 Type: task
 Mode: HITL
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Question（问题）
@@ -207,3 +207,75 @@ pnpm --filter dsh-quick-actions publish --no-git-checks
 2. 策展目录里本条目的 `version` 会在下一次 nightly 重探时从 `0.1.0-rc.4` 更到 `0.1.0`。估这个时间按 run 的**实际开始时刻**，不是 cron 名义时刻（票据 30 订正的口径）。
 
 **验收对账**：本票据 `## 验收` 的四条——全新 `DSH_HOME` 实测（2026-09-11 以 rc.3 单包形态通过）、四份 README 不再声称未发布、反转已落到票据 20/地图/`CLAUDE.md`、市场 PR 已提交（[#4762](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4762) 已于 2026-09-11 合入）——**此前已全部满足**。`0.1.0` 落库即可 resolve。
+
+### 2026-09-16 — `0.1.0` 已发布并验证
+
+用户于本地 16:46 执行发布（主检出 `lib/` 在 16:46:38 被 `prepack` 重建）。
+
+**落库滞后比此前记录的更久。** 轮询 `registry.npmjs.org/dsh-quick-actions/0.1.0`：
+
+| 本地时刻 | HTTP |
+|---|---|
+| 16:48:46 | 404 |
+| 16:48:56 | 404 |
+| 16:49:07 | 404 |
+| 16:49:17 | **200** |
+
+registry 记的发布时刻是 `2026-09-16T08:49:13.857Z`。从 `prepack` 到可读约 **2.5 分钟**，比[票据 30](./30-link-the-npm-package-to-the-listed-repo.md) 记的 30–60 秒更久。**结论不变但幅度要放宽**：发布后查不到就是查不到，别据此判断失败、更别重发。
+
+**registry 内容核验**：
+
+| 字段 | 值 |
+|---|---|
+| `dist-tags.latest` | `0.1.0` |
+| `versions` | `0.1.0`、`0.1.0-rc.3`、`0.1.0-rc.4` |
+| `repository` | `git+https://github.com/lovvvve/dsh-quick-actions.git` + `directory: packages/composer-quick-actions` |
+| `license` / `dependencies` / `publishConfig` | MIT / none / none |
+| `dsh.bundle` | `{"patch":"./cordis.patch.yml"}` |
+| `fileCount` / `unpackedSize` | 48 / 599,903 B |
+| `shasum` | `fad55a3f7d86d8a9891b0e2a5e9dd901370bf2ca` |
+
+把 registry 的 tarball 下载回来与本地 `pnpm pack` 的产物比对：**逐字节一致**，sha1 也与 registry 声明的一致。npm 上的就是本票据验证过的那个包。
+
+**待办 4 复验（全新 `DSH_HOME`，只用一条官方命令，不加 overrides、不指 tarball）**，两次都通过：
+
+| 条件 | 装到 | profile 里的 spec | overrides | `--dump-config` |
+|---|---|---|---|---|
+| 无标志（默认） | `0.1.0-rc.4` | `"0.1.0-rc.4"`（精确） | 无 | `- id: composer-quick-actions` / `name: dsh-quick-actions` |
+| `--config.minimumReleaseAge=0` | `0.1.0` | `"^0.1.0"`（caret） | 无 | 同上 |
+
+两次都是 `dsh: initialized profile web`（profile 自动创建）→ 单条依赖 → 装载行可见。**单命令安装路径成立**。
+
+**订正 2026-09-11 评论里关于 `minimumReleaseAge` 的判断。** 那条写的是「实测不会挡住陌生人的首次安装——pnpm 会自动写 `minimumReleaseAgeExclude` 而非报错」。**该结论只在没有更旧的合格版本时成立**：当时 rc.1 已撤回、rc.3 是唯一版本，pnpm 别无选择只能豁免它。现在 rc.4 在架且已满 24 小时，pnpm 就**静默退回 rc.4**，既不报错也不写豁免（已核对新 profile 的 `pnpm-workspace.yaml`，没有 `minimumReleaseAgeExclude`）。
+
+后果是一个 **24 小时的过渡窗口**：在 `2026-09-17T08:49Z` 之前，陌生人执行那条官方命令会装到 `0.1.0-rc.4` 而不是 `0.1.0`。两个版本都能用，窗口过后自动收敛，无需任何动作。README 现有的 `minimumReleaseAge` 一节讲的是**安装被拦下报错**的情形，与此处「静默选旧版」是不同表现，故未改动 README。
+
+## Answer（答案）
+
+**`dsh-quick-actions@0.1.0` 已发布，发现与安装两条通道都打通，本票据的全部实质未知已关闭。**
+
+### 四条验收标准对账
+
+| 验收项 | 状态 |
+|---|---|
+| 第 4 步在全新 `DSH_HOME` 上通过 | **通过**。2026-09-11 以 rc.3（单包形态）首次验证，2026-09-16 以 `0.1.0` 复验；一条命令、profile 自动创建、无 `overrides`、装载行可见。双包时代那条 profile `overrides` 彻底不需要 |
+| 四份 README 不再声称未发布 | **通过**。「正式安装」一节可直接执行；`docs.spec.ts` 强制 README 的 tarball 名与包版本同步 |
+| 反转落到票据 20、地图与 `CLAUDE.md` 三处 | **通过** |
+| 市场 PR 已提交 | **通过**。[awesome-dsh-plugin#4762](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4762) 于 2026-09-11 合入 |
+
+### 发布轨迹
+
+`0.1.0-rc.1`（双包，已撤回、永久作废）→ 撤回冷却 24 小时 → `0.1.0-rc.3`（单包，验证单命令安装）→ `0.1.0-rc.4`（补 `repository`，打通市场安装，见票据 30）→ **`0.1.0`**。先发 rc 再发正式版是用户定案：这条链路只能在发布之后验证，而版本号一经发布即锁死内容。
+
+### 三条值得带走的 registry 行为
+
+1. **对被完整撤回的包名，首次重新发布会报 `[E409] Failed to save packument`，但包其实会落库**（2026-09-11 实测）。
+2. **packument 落库有滞后**，实测 30 秒到 2.5 分钟不等；`npm view` 在滞后期会误报 404。**这两条合起来的操作准则：发布后报错先查 `curl -s https://registry.npmjs.org/<name>` 的 `versions`，不要盲目重发。**
+3. **pnpm 的 `minimumReleaseAge` 有两种表现**：目标是唯一可选版本时豁免并安装；存在更旧的合格版本时**静默退回旧版**。后者不报错，容易被误读成「发布没生效」。
+
+### 已知边界
+
+- **24 小时过渡窗口**：`2026-09-17T08:49Z` 之前从 npm 装到的是 `0.1.0-rc.4`。自动收敛，无需动作。
+- 策展目录里本条目的 `version` 会在下一次 nightly 重探时从 `0.1.0-rc.4` 更到 `0.1.0`；估时按 run 的实际开始时刻，不是 cron 名义时刻（票据 30 订正的口径）。
+- 上架条目的后续维护（描述、分类、失效链接）不由本仓库控制，策展仓库的 `plugins.json` 是唯一事实源。
+- 本票据不承诺版本节奏。DSH 的 peer 下界写成 `>=x-rc.n` 覆盖不到后续预发布（spec 第 21.4 节，刻意保留），因此 DSH 每发一个新 rc 都可能需要本插件跟一版。
