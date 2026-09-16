@@ -168,3 +168,42 @@ DSH_HOME=/tmp/fresh-dsh dsh plugin --profile web add dsh-quick-actions
 结果：`dsh: initialized profile web`（profile 自动创建）→ `+ dsh-quick-actions 0.1.0-rc.3` → `Done in 806ms`。`--dump-config` 能看到 `- id: composer-quick-actions` / `name: dsh-quick-actions`。profile 的 `package.json` 只有这一个依赖条目、**无 `overrides`**，`dsh.profile.bundles` 里也有它。单包形态因此确认收敛成一条命令，双包时代那条 `overrides` 彻底不需要了。
 
 顺带澄清一个本可以写错的推断：包发布不到一小时，本以为 pnpm 的 24 小时 `minimumReleaseAge` 会挡住陌生人的首次安装。**实测不会**——pnpm 在非 strict 默认下对直接 `add` 的目标自动写一条 `minimumReleaseAgeExclude: [dsh-quick-actions@0.1.0-rc.3]` 而非报错。README 那节「被点名的包一个都不是本插件」的说法因此仍然准确，不用改。
+
+### 2026-09-16 — `0.1.0` 已备好，只差用户执行发布
+
+票据 30 闭合后本票据再无阻塞项。已把版本推到首个正式版并跑完全部可自动化的验证，**剩下的唯一动作是需要 OTP 的那条发布命令**。
+
+**改动**（3 个文件，commit `🔖 release: 0.1.0`）：`packages/composer-quick-actions/package.json` 版本 `0.1.0-rc.4` → `0.1.0`；两份 README 的本地 tarball 文件名同步为 `dsh-quick-actions-0.1.0.tgz`（`docs.spec.ts` 第 125–130 行强制 README 只能出现当前版本的 tarball 名）。
+
+**验证**（全部在隔离 worktree 里跑，未触碰主工作区）：
+
+| 检查 | 结果 |
+|---|---|
+| `pnpm typecheck` | exit=0（两遍都过） |
+| `pnpm lint` | exit=0 |
+| `pnpm test` | exit=0，23 文件 / 487 用例全过 |
+| `pnpm peers check` | `No peer dependency issues found` |
+| 单跑两个发布契约 spec | `docs.spec.ts` + `packaging.spec.ts`，74 用例全过 |
+| `publish --dry-run` | `📦 dsh-quick-actions@0.1.0 → https://registry.npmjs.org/` |
+
+**打包内容核对**（与票据 30 记录的 rc.4 registry 数据对比）：
+
+| 项 | rc.4 | 0.1.0 |
+|---|---|---|
+| 文件数 | 48 | 48 |
+| 解包大小 | 599,918 B | 599,903 B |
+
+差 **15 字节**，正好是版本串 `0.1.0-rc.4` → `0.1.0` 少 5 字符 × 3 处出现（`package.json` 与两份 README 的 tarball 名），没有意外增删。packed manifest 复核：MIT、`repository`（含 `directory`）/`homepage`/`bugs` 齐全（票据 30 的修复保住了）、`dependencies: none`、无 `publishConfig`、`dsh.bundle.patch` 在。
+
+**剩余一步（HITL，Agent 不可代跑——需 OTP，且不应经对话传递一次性密码）**：
+
+```sh
+pnpm --filter dsh-quick-actions publish --no-git-checks
+```
+
+发布后两件事：
+
+1. **若报 `[E409] Failed to save packument` 不要立刻重发**——按 2026-09-11 评论记的坑，先 `curl -s https://registry.npmjs.org/dsh-quick-actions` 查 `versions`；packument 落库有 30–60 秒滞后（票据 30 实测），`npm view` 在滞后期会误报 404。
+2. 策展目录里本条目的 `version` 会在下一次 nightly 重探时从 `0.1.0-rc.4` 更到 `0.1.0`。估这个时间按 run 的**实际开始时刻**，不是 cron 名义时刻（票据 30 订正的口径）。
+
+**验收对账**：本票据 `## 验收` 的四条——全新 `DSH_HOME` 实测（2026-09-11 以 rc.3 单包形态通过）、四份 README 不再声称未发布、反转已落到票据 20/地图/`CLAUDE.md`、市场 PR 已提交（[#4762](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/4762) 已于 2026-09-11 合入）——**此前已全部满足**。`0.1.0` 落库即可 resolve。
