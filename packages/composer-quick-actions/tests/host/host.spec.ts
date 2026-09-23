@@ -228,6 +228,21 @@ describe('the composition entry', () => {
     expect(settings.writes).toHaveLength(1)
   })
 
+  it('canonicalizes once per boot, never in reaction to a later document update', async () => {
+    // Ticket 31 smoke on DSH 0.1.7-alpha.2: the legacy import lands after this
+    // rewrite read, and DSH announces it from inside an HMR write transaction —
+    // a rewrite started from there is refused as nested. Such a section waits
+    // for the next boot; projections and planners normalize it meanwhile.
+    const settings = new FakeSettings()
+    const { ctx } = fakeContext(settings)
+    apply(ctx, resolved({ presets }))
+    await flush()
+    settings.user = structuredClone(drifted)
+    await flush()
+    expect(settings.writes).toHaveLength(0)
+    expect(await startQuickActionsHost({ presets }).canonicalize(settings)).toMatchObject({ status: 'rewritten' })
+  })
+
   it('runs, and writes nothing, without the settings service', async () => {
     const { ctx, warn, error } = fakeContext(undefined)
     expect(() => apply(ctx, resolved({ presets }))).not.toThrow()
