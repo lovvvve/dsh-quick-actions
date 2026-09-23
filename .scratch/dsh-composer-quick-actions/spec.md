@@ -9,7 +9,7 @@
 
 本规格定义首版 Composer Quick Actions（消息编辑器快捷动作）的产品行为、数据契约、Host/Client 边界、兼容策略、打包方式与发布门槛。实现、测试、安装包和中英文文档必须共同满足本规格。
 
-文中的“必须”“不得”是发布硬要求。决策票据保留研究和取舍过程；本文件汇总其当前有效结论。较早票据中的“旧版插入动作显示为禁用”“首版等待正式上游版本”“能力自适应的兼容性抑制插入动作”“斜杠命令型发送动作一律无效”等内容均已被取代。第 15 节记录规格首轮收尾时的决定与票据映射；**第 16 节记录首版范围收缩（移除插入动作）与斜杠命令处置，它优先于正文其余部分及第 15 节中与之冲突的表述；第 17 节记录 Catalog Remote 改走 Settings base 层，它优先于正文其余部分及第 15、16 节中与之冲突的表述**。正文其余部分不得重新打开已关闭决策。
+文中的“必须”“不得”是发布硬要求。决策票据保留研究和取舍过程；本文件汇总其当前有效结论。较早票据中的“旧版插入动作显示为禁用”“首版等待正式上游版本”“能力自适应的兼容性抑制插入动作”“斜杠命令型发送动作一律无效”等内容均已被取代。第 15 节记录规格首轮收尾时的决定与票据映射；**第 16 节记录首版范围收缩（移除插入动作）与斜杠命令处置，它优先于正文其余部分及第 15 节中与之冲突的表述；第 17 节记录 Catalog Remote 改走 Settings base 层，它优先于正文其余部分及第 15、16 节中与之冲突的表述；第 22 节记录 DSH 0.1.7 的 Settings 表单模型，它优先于正文其余部分及第 15、16、17 节中与之冲突的表述**。正文其余部分不得重新打开已关闭决策。
 
 ## 2. 目标与范围
 
@@ -797,3 +797,89 @@ DSH 各包的 peer 范围锁整条线（`^0.1.5-rc.1`），但其 `latest` dist-
 ### 21.7 票据映射
 
 由[票据 29](./issues/29-follow-dsh-input-contract-change.md)执行。
+
+## 22. DSH 0.1.7 的 Settings 表单模型
+
+**本节优先于正文其余部分以及第 15、16、17 节中与之冲突的表述。** 取证见 [`research/dsh-0.1.7-settings-host.md`](./research/dsh-0.1.7-settings-host.md) 与 [`research/dsh-0.1.7-client-contracts.md`](./research/dsh-0.1.7-client-contracts.md)。
+
+### 22.1 事实
+
+DSH `0.1.7-alpha.1`（上游提交 `601d6761e4`，#4587）把 Settings 从「插件自注册命名空间 + `<DSH_HOME>/settings.yaml`」重写为「插件 Config 即表单」：
+
+| | `0.1.5` / `0.1.6` 线 | `0.1.7-alpha.1` 起 |
+|---|---|---|
+| Host 服务 | `SettingsProvider.register(ns, schema, { base, applies })` | `SettingsForms`，**无 `register`** |
+| 命名空间 | 插件任意注册，可以有多个 | **= profile 装载条目 id**，一个条目一个 |
+| 可读写字段 | 注册 schema 的全部字段 | 插件导出的 `Config` 里标了 `.volatile()` 的字段；非 volatile 字段既读不到也写不进 |
+| 落盘位置 | `<DSH_HOME>/settings.yaml`，所有 profile 共用 | **active profile 的 `cordis.patch.yml`** 里该 id 那一行的 `config` |
+| `applies` / 声明式 `base` | 有 | `applies` 恒为 `'live'`；`base` 只是「profile 层以下各层的解析值」，插件无法声明 |
+| Client 服务 | `ctx.settingsScope.bind({ namespace, decode })` | **`ctx.configForms.get(entryId)`**，无 `decode`；写入返回 `Promise<boolean>`，拒绝与冲突同为 `false` |
+| 旧文档 | — | 全部条目就绪后把 `settings.yaml` 改名为 `settings.yaml.imported`，按「section 名 = 条目 id」逐节 `update` 导入；**只尝试一次**，任一顶层键不是 volatile 字段即整节失败 |
+
+旧版插件在新线上 Host 抛 `TypeError: settings.register is not a function`、条目不激活；Client 的 `inject` 含 `settingsScope`，永远等不到依赖。
+
+### 22.2 用户状态即 Config
+
+插件导出 schemastery `Config`，全部字段 volatile：
+
+```ts
+Config = z.object({
+  presets:         z.any().default([]).volatile(),
+  schemaVersion:   z.number().default(1).volatile(),
+  layout:          z.string().default('ribbon').volatile(),
+  userActionsById: z.any().default({}).volatile(),
+  actionOrder:     z.any().default([]).volatile(),
+  presetStateById: z.any().default({}).volatile(),
+})
+```
+
+- 五个用户状态字段**原样作为顶层 volatile 字段**，与第 4.2 节的持久化 section 逐键相同。这是让 DSH 的一次性旧文档导入能落地的唯一形状：套一层（例如 `state: z.any()`）会让导入必然失败。
+- 集合字段保持 `any`，理由同原注册 schema：严格 schema 会拒绝高版本写出的数据（第 5.3 节）。校验与迁移权威仍在共享模型。
+- 第 4.2 节「唯一持久化命名空间为 `composer-quick-actions`」**仍然成立**，且它现在同时就是装载条目 id（第 19.2 节的两条身份轴在这里重合，不能再各自改名）。
+- `settings` 改为可选依赖：Host 顶层不再 `inject: ['settings']`，而在 `ctx.inject(['settings'], …)` 子插件里以**本条目的 fiber** 调 `configure({ auto: false }, ctx.fiber)`（插件自带管理面板，不要 DSH 自动生成页），并在 `loader.await()` 之后做第 6.3 节的启动规范化——表单只在条目 fiber ACTIVE 时才被 describe。
+- 规范化重写与 Client 写入一律用 `mutate` 逐字段 `set` 这五个路径，**从不写 `presets`**：同一行的 `config` 还承载作者预置，整段 `replace` 会把它重置为继承值。「无存储」判定改为 profile 层是否设置了五个状态字段中的任何一个，只有 `presets` 的 profile 不算有存储。
+
+### 22.3 目录不再有自己的命名空间
+
+第 17 节的只读命名空间 `composer-quick-actions-catalog` **作废**：一个条目只有一个表单，插件也无法再声明 `base`。
+
+- 作者预置 `presets` 声明为 volatile 字段，仅为让 Client 能读到——非 volatile 字段到不了浏览器。插件从不写它；它仍按第 5.1 节写在 profile patch 该行的 `config.presets`。
+- 内置清单 `BUILT_IN_PRESETS` 移入共享模型。**Client 用 `buildPresetCatalog({ builtins, configured: value.presets })` 自行重建目录**，与 Host 加载时校验的是同一份清单、同一套规则，revision 也由同一函数得出。
+- Client 读 `value`，不读 `base`：作者预置写在 profile 层，恰好是 `base` 排除的那一层。第 17.2 节「Client 只读 `base`」随之作废；「用户不得编辑作者定义」的保障改由「本插件从不写 `presets`、管理面板不暴露它」承担。任何能编辑 profile patch 的人本来就是作者。
+- 目录仍是全有或全无：`presets` 不是列表、或任一条不合法，Client 报 `undecodable` 目录错误，绝不截断（第 5.1、10 节）。
+- `presets` 变为 live：profile 运行期间编辑即时生效。Host 只在加载时校验；运行期写出的无效目录由 Client 显示为目录错误，下次启动时插件加载失败。第 5.1 节「Host 配置变化在重启后生效」相应放宽为「在重启时被校验」。
+- 目录 RPC 仍为 0（第 17.3 节的收益保留），随共享 describe mirror 刷新。
+
+### 22.4 写入结果判定
+
+`ConfigForm.mutate` 返回的布尔值把拒绝与冲突合成同一个 `false`，因此第 16.4 节 / 票据 14 的「写后权威快照判定」**原样保留**：控制器不读返回值，按写后快照区分成功 / `conflict` / `refused`。
+
+传输故障（写入 reject）后不再主动回读：mirror 的公开 face 只有 `ensure()`（仅在不持有文档时读取），`load()` 从来不在契约上。未落地的写保留最后一次确认的快照；若写其实已落地，Host 的 `settings/document-updated` 广播或重连会刷新 mirror。
+
+### 22.5 同批的其余契约变化
+
+| 契约项 | 变化 | 处置 |
+|---|---|---|
+| `@deepseek-ai/dsh-client-ui-primitives` 的 `IconSearchOutline16` | 删除，改为 `IconSearchOutlineRegular` / `Medium`；shell seed 表不再提供旧名 | 搜索框图标改为内联官方 artwork，不再依赖会改名的图标导出 |
+| `InputState.queue` 行 | 由含 `placement` 的行换成下一轮的 `UserMessage[]` | 本插件从不读行内容，声明为 `unknown` |
+| `InputState.claim` | 新增必有字段 `name` | 无需改动（声明更窄） |
+| `InputActions` | 新公开 `captureInsertion` / `insertText` | 首版不用；记为未来插入动作 effort 的现成入口 |
+| primitives tarball | `0.1.7-alpha.2` 仍无 `dependencies` | 开发树继续锁 `0.1.2-rc.1`（第 21.5 节的例外不变） |
+
+`tests/client/contract.spec.ts` 新增对 `ConfigForm` 与 mirror face 的 `expectTypeOf` 断言，与第 21.6 节的 Input 契约闸门同一原则。
+
+### 22.6 只支持新模型
+
+同第 21.3 节：**不做双栈**。DSH peer 下界提到 **`>=0.1.7-alpha.2`**，开发树版本线与 `minimumReleaseAgeExclude` 随之整体上移（同日发布的 Cordis 4.0.4 系成员一并豁免）。`0.1.5` / `0.1.6` 线的用户继续使用本插件 `0.1.0`。
+
+由此产生一个发布约束：DSH `latest` dist-tag 仍停在 `0.1.5` 线，本插件若以 `latest` 发布新版，`dsh plugin add` 会把它装到 `0.1.5` 线上并在那里失效。在 DSH 把 `0.1.7` 推上 `latest` 之前，新版应发到非 `latest` 的 dist-tag（例如 `next`）。
+
+### 22.7 旧数据迁移
+
+DSH 的一次性导入要求**导入那一刻跑着的就是本版插件**。先升 DSH、插件仍是 `0.1.0` 的用户（本次报告者即是），导入必然失败，数据原样留在 `settings.yaml.imported`；README 给出手工迁移步骤（把该 section 的五个字段原样复制到 profile patch 该行的 `config`）。插件不自行读取 `settings.yaml.imported`：那是 Harness home 下 DSH 自己的文件，Host 从不越过 Settings 触达存储（第 6.1 节）。
+
+导入成功时，被导入的 section 要到**下一次启动**才被第 6.3 节规范化：DSH 的导入与插件的启动重写都挂在 `loader.await()` 之后，导入落盘晚于重写读取。这是接受的取舍——每个投影与规划器本就先规范化再使用，用户可见行为不受影响。**不得**改为监听 `settings/document-updated` 触发重写：DSH 在自己的 HMR 写事务里同步派发该事件，事务标记经 `AsyncLocalStorage` 随所有后续异步延续传播，从中发起的任何写入都会以 `HMR transactions cannot be nested` 被拒（票据 31 冒烟实测）。
+
+### 22.8 票据映射
+
+由[票据 31](./issues/31-follow-dsh-settings-forms.md)执行。`tests/gui/` 的 round 驱动整体按 `settings.yaml` 布局编写（`settings-namespace.mjs` 等），且唯一的 GUI 通道仍运行 `0.1.5` 线，本票据内既无法改写也无法运行，另立票据跟进。
