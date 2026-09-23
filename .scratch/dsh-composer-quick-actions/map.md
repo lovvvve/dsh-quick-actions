@@ -77,6 +77,10 @@ Label: `wayfinder:map`
 
 - [把管理面板 portal 到 body](./issues/26-portal-the-manager-panel.md) — **已 resolved**。`ManagerPanel` 与其 backdrop 经 `createPortal` 渲染到 `document.body`，`z-index: 31` 从此在页面自身的层叠上下文里排序；以 body 为目标而非自建容器，dispose 不泄漏由构造保证。`react-dom` 是 shell 冻结 seed 表条目，加进 `external` / `dsh.client.external` / peer 三处后不引入第二份渲染器。焦点与 Escape 两级作用域无回退（portal 只搬 DOM 不搬 React 树）。`pnpm test` 498 通过；新增机制无关的 `tests/gui/stacking.spec.ts`（遍历面板控件做 `elementFromPoint`），第二轮三视口全过，场景正是票据 21 失手的编辑表单。**按用户定案只做管理面板**：两个锚定 popover 仍在 dock 子树内、带着同一根因，未观察到用户可见症状，不得记成已解决。
 
+- [适配 DSH 0.1.7 的 Settings 模型重写](./issues/31-follow-dsh-settings-forms.md) — **已 resolved**。DSH `0.1.7-alpha.1` 删掉 `settings.register` 与 Client `settingsScope`，`0.1.0` 在其上 Host 激活失败。定案**只支持新模型**（[spec 第 22 节](./spec.md)）：用户状态即全 volatile 的插件 `Config`，五个状态字段保持顶层逐键不变以让 DSH 的一次性 `settings.yaml` 导入落地；目录命名空间作废，Client 用共享模型从内置清单加 `value.presets` 重建目录；peer 下界 `>=0.1.7-alpha.2`。真实 DSH `0.1.7-alpha.2` 无界面冒烟通过（激活、表单识别、旧文档导入、volatile 写入）；导入晚于启动重写，接受「下次启动规范化」——改用 `document-updated` 触发会撞上 DSH 的 HMR 事务嵌套拒绝。Client 半边的真实 GUI 验证留给票据 32。
+
+- [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — 开放，被 31 阻塞已解除；前置条件是 3080 通道切到 DSH `0.1.7` 线，由用户决定。
+
 ## Out of scope（范围外）
 
 - 当前 DSH 进程重启后即消失的临时动态插件。

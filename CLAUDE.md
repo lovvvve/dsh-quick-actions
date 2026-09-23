@@ -9,11 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 1. [AGENTS.md](AGENTS.md) — 沟通语言、议题跟踪、分诊标签、领域文档三条规则的入口。
 2. [docs/agents/issue-tracker.md](docs/agents/issue-tracker.md) — `.scratch/` 本地议题跟踪与 Wayfinder claim/resolve 约定。
 3. [CONTEXT.md](CONTEXT.md) — 领域词汇（Quick Action / Preset / Custom / Insert / Send / Resident Composer 等）。**写代码、命名、文案、commit 一律使用这里定义的术语**。本仓库不用 `docs/adr/`，不可逆决策的归属见 [docs/agents/domain.md](docs/agents/domain.md)。
-4. [map.md](.scratch/dsh-composer-quick-actions/map.md) 与 [spec.md](.scratch/dsh-composer-quick-actions/spec.md) 第 16、17 节 — 哪些结论已闭合、哪些不得倒退；本文件下方的「已闭合、不得倒退的决策」是同一批结论的速查版。
+4. [map.md](.scratch/dsh-composer-quick-actions/map.md) 与 [spec.md](.scratch/dsh-composer-quick-actions/spec.md) 第 16、17、22 节 — 哪些结论已闭合、哪些不得倒退；本文件下方的「已闭合、不得倒退的决策」是同一批结论的速查版。
 
 ## 项目状态（先看这条）
 
-**首版已通过最终人工验收**（票据 21，用户于 2026-09-09 回复「生产验收通过」），Wayfinder 地图目标达成。票据 26 也已 resolved（管理面板改经 `createPortal` 挂到 `document.body`）。**包已经发布出去了**：[票据 27](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md) 推翻票据 20 的「暂不发布」，**`dsh-quick-actions@0.1.0` 已发布**（2026-09-16），条目已在插件市场上架、从市场点安装已验通（[票据 30](.scratch/dsh-composer-quick-actions/issues/30-link-the-npm-package-to-the-listed-repo.md)）。**30 张票据全部 resolved，没有开放票据。**以下现状描述保留，作为改动这个仓库时的地形图。
+**首版已通过最终人工验收**（票据 21，用户于 2026-09-09 回复「生产验收通过」），Wayfinder 地图目标达成。票据 26 也已 resolved（管理面板改经 `createPortal` 挂到 `document.body`）。**包已经发布出去了**：[票据 27](.scratch/dsh-composer-quick-actions/issues/27-publish-to-npm-and-list-in-market.md) 推翻票据 20 的「暂不发布」，**`dsh-quick-actions@0.1.0` 已发布**（2026-09-16），条目已在插件市场上架、从市场点安装已验通（[票据 30](.scratch/dsh-composer-quick-actions/issues/30-link-the-npm-package-to-the-listed-repo.md)）。**[票据 31](.scratch/dsh-composer-quick-actions/issues/31-follow-dsh-settings-forms.md) 已把插件改到 DSH 0.1.7 的 Settings 表单模型（spec 第 22 节，尚未发版）；唯一开放的是[票据 32](.scratch/dsh-composer-quick-actions/issues/32-port-the-gui-rounds-to-profile-backed-settings.md)（GUI 驱动移植，等 3080 通道切到 0.1.7 线）。**以下现状描述保留，作为改动这个仓库时的地形图。
 
 `packages/composer-quick-actions` 已有共享领域模型 `src/model/`（票据 12）、Host `src/host/`（票据 13：配置合并、两个 Settings 命名空间、规范重写）、Client 控制器 `src/client/controller.ts`（票据 14）、Composer 界面 + 动作执行 `src/client/{index.tsx,dsh.ts,session/,surfaces/}`（票据 15：两个 dock Slot 注册、Resident Composer 信标、三种布局、单飞发送与确认流程），管理面板 + 共享可搜索动作面板 + 自定义动作表单 `src/client/{manager/,modal.ts}`（票据 16：独立注册的管理 overlay、B/C 共用的可搜索面板、表单校验与命令发送动作警示），以及安装形态与发布文档（票据 17：两个包的发布身份、`dsh.client` 声明、peer range、只发声明的打包修复、四份中英文 README）。界面的叶子控件已换成官方 primitives（票据 23：`Button` / `Pill` / `Input` + 官方图标，容器仍自绘）。构建适配器的发布路径已改为从内存原子发布，watch 关闭不再遗留 scratch（票据 22）。自动化与发布验证已完成（票据 18：四轮真实 GUI，`tests/gui/` 下的 spec 与 round 驱动 + 脚本化的安装窗口，证据在 `verification/release-evidence.md`；票据 21 与 26 之后该目录共 15 个 spec）。票据 18 发现的两处边缘状态 UX 缺口已由票据 25 定案：管理表单现在接管开场焦点并归还焦点（Escape 两级退出）；断线发送经源码取证确认由 DSH 自己恢复草稿并给出提示，插件按 spec 9.5 不加第二条说明。最终人工验收已完成（票据 21：步骤 1–8 由 Agent 在用户实时 DSH 的一次性窗口里驱动，`tests/gui/acceptance.spec.ts` + `acceptance-round.sh` + 19 张截图，第 9 步由用户本人答复）。
 
@@ -66,8 +66,8 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 一个包同时被两侧加载，两侧都导出 Cordis 的 `inject` + `apply(ctx)`，但走完全不同的构建管线（见 `tsdown.config.ts` 导出的数组：`host` 配置 + `dshClientBundle(...)`）：
 
-- **Host**：Node ESM，`lib/index.js` / `lib/types.js`。拥有两个 Settings namespace（持久化的 `composer-quick-actions` 落在 `<DSH_HOME>/settings.yaml`；只读目录 `composer-quick-actions-catalog` 只发 composition `base`，不写用户层）、预置目录校验与合并。**Host 独占校验与迁移权威。** 不存在自有 Catalog Remote。
-- **Client**：browser-only 单文件 `lib/client.js`。经 `ctx.settingsScope` 读写 Host 权威状态（每次修改携带预期 revision），目录只读命名空间的 `base` 层；`remote.settings` 由 `settingsScope` 内部持有，插件不直接注入。注册 `conversation.input.dock`（布局 + 管理 overlay 两个 cell）与 `conversation.composer.dock`（常驻信标 + `bar` 布局）Slots。Client 不直接写文件、不用浏览器存储作权威源、不做迁移。
+- **Host**：Node ESM，`lib/index.js` / `lib/types.js`。导出全 volatile 的 schemastery `Config`——自 DSH 0.1.7 起它**就是** Settings 表单（ns = 装载条目 id `composer-quick-actions`，落在 active profile 的 `cordis.patch.yml` 该行 `config`），五个用户状态字段 + 作者 `presets`；`settings` 只作可选注入（`configure({auto:false})` + loader 就绪后的规范化重写，只 `mutate` 五个状态字段、从不写 `presets`）。预置目录校验与合并。**Host 独占校验与迁移权威。** 不存在自有 Catalog Remote，也不再有目录命名空间（spec 第 22 节）。
+- **Client**：browser-only 单文件 `lib/client.js`。经 `ctx.configForms.get('composer-quick-actions')` 读写 Host 权威状态（每次修改携带预期 revision，结果按写后快照判定），并用共享模型从「`BUILT_IN_PRESETS` + 表单 `value.presets`」自行重建目录。注册 `conversation.input.dock`（布局 + 管理 overlay 两个 cell）与 `conversation.composer.dock`（常驻信标 + `bar` 布局）Slots。Client 不直接写文件、不用浏览器存储作权威源、不做迁移。
 
 规范源码边界见 spec 第 14 节：`src/model/`（纯 JSON 领域模型，Host/Client 共享）、`src/host/`、`src/client/{controller.ts,surfaces/,manager/,session/}`、`src/locales/`、`src/styles/`。内部 controller、构建适配器实现不得成为公共导出。
 
@@ -85,9 +85,9 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 
 `.scratch/dsh-composer-quick-actions/` 是本项目的议题跟踪器：
 
-- [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，**第 17 节记录目录改走 Settings base 层且优先级最高**。正文其余部分不得重开已关闭决策。
+- [`spec.md`](.scratch/dsh-composer-quick-actions/spec.md) 是 **baseline，冲突时以它为准**。第 1 节说明规范解释，第 14 节给出源码边界 → 票据映射，第 15 节记录首轮收尾决策，第 16 节记录首版范围收缩，第 17 节记录目录改走 Settings base 层，**第 22 节记录 DSH 0.1.7 的 Settings 表单模型且优先级最高（它作废了第 17 节的目录命名空间）**。正文其余部分不得重开已关闭决策。
 - [`map.md`](.scratch/dsh-composer-quick-actions/map.md) 是 Wayfinder 地图，`Decisions so far` 只放已关闭票据索引。
-- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**01 至 30 全部 resolved，当前没有开放票据**，地图目标已达成；新工作须先立票据，不要直接动手。票据 26 把管理面板改经 `createPortal` 挂到 `document.body`；**只做了管理面板**，两个锚定 popover（`ActionPanel` / `ConfirmPanel`）仍在 dock 子树内、带着同一个层叠根因，只是尚无用户可见症状——要动它们须先解决锚定定位改用视口坐标的问题，且应另开票据。
+- `issues/NN-*.md`：开工前把 `Status:` 设为 `claimed`，完成时追加 `## Answer` 并设 `resolved`，再回填地图。frontier = 开放、未阻塞、未认领中编号最小者。**01 至 31 全部 resolved，开放的只有 32**，地图目标已达成；新工作须先立票据，不要直接动手。票据 26 把管理面板改经 `createPortal` 挂到 `document.body`；**只做了管理面板**，两个锚定 popover（`ActionPanel` / `ConfirmPanel`）仍在 dock 子树内、带着同一个层叠根因，只是尚无用户可见症状——要动它们须先解决锚定定位改用视口坐标的问题，且应另开票据。
 - `research/`、`core/` 保存证据，不要重跑已完成的研究或原型迭代。
 
 每轮只领取并解决一张票据；后续领域行为用 TDD 实施。
@@ -100,7 +100,8 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 - **数据契约保留 `kind`，首版恒为 `'send'`**。它不是配置项——预置作者不声明、表单无选择器、用户改不了，规范化统一写出。保留标签是为了 v2 加插入动作时不升 `schemaVersion`、不改写既有用户数据。非 `'send'` 值：Config 里是作者错误（加载失败），已存储数据里是降级场景（保留为墓碑，不显示不计数不改写）。
 - **发送只有一条装载路径**：`setDraft(text)` → `submit()`。
 - **`/` 开头文本是合法的命令发送动作**，确认默认开启但用户可关闭。**规范化绝不能依据文本改写 `confirm`**——默认只在创建/克隆时初始化，放进规范化会毁掉用户选择并破坏幂等。表单警示不锁定，确认面板启用时须说明不会出现 DSH 原生候选菜单。**不要**恢复票据 06 的"斜杠命令一律配置无效"，也不要恢复强制确认。不得自制候选菜单或驱动 `inputTriggers`。
-- **不发布自有 Catalog Remote**。已发布的 typert 生成器要求 `@Remote` 符号来自 `<root>/packages/` 下已注册的 workspace 包，第三方包做不到；目录改由只读 Settings 命名空间 `composer-quick-actions-catalog` 的 composition `base` 层承载，Client 读 `base` 不读 `value`（spec 第 17 节，取证见 `research/catalog-remote-assembly.md`）。不要重新尝试生成式 Remote。
+- **不发布自有 Catalog Remote**。已发布的 typert 生成器要求 `@Remote` 符号来自 `<root>/packages/` 下已注册的 workspace 包，第三方包做不到（取证见 `research/catalog-remote-assembly.md`）。不要重新尝试生成式 Remote。spec 第 17 节的替代方案（只读命名空间 `composer-quick-actions-catalog` 的 `base` 层）已被 DSH 0.1.7 的 Settings 重写废掉，目录现由 Client 自行重建（spec 第 22.3 节）。
+- **只支持 DSH 0.1.7 的 Settings 表单模型，不做双栈**（[票据 31](.scratch/dsh-composer-quick-actions/issues/31-follow-dsh-settings-forms.md)，spec 第 22 节）。`Config` 的五个状态字段必须保持**顶层、逐键与旧 section 相同**——DSH 的一次性 `settings.yaml` 导入按顶层键匹配，套一层就整节失败。`0.1.5`/`0.1.6` 线用户留在插件 `0.1.0`；DSH `latest` 仍停在 `0.1.5` 线期间，新版不要发到 npm `latest`。
 - **GUI 验证只有一个通道**（现有 `http://127.0.0.1:3080`）。不要再创建隔离检出、应用核心补丁或起第二个服务器。
 - **`SettingsScope` 的结构化写入结果由插件自己判定，不改 DSH 核心**。spec 第 15 节决定 4 的「扩展 `SettingsScope`」已被第 16.4 节的「首版不新增任何 DSH 核心接口 / 没有剩余的核心契约依赖」取代；已发布的 `mutate` 返回 `void`，控制器改用写后权威快照区分成功 / `conflict` / `refused`（票据 14 `## Answer` 记有已知边界）。不要重新提出改 `@deepseek-ai/dsh-client-ui-settings`。
 - 官方上游合并已列为首版范围外，**不要**用"等待官方发布"重新阻塞产品。
@@ -120,7 +121,7 @@ sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 - 只提交自己负责的文件或 hunks，不要 `git add .`、`reset` 或 `clean`——本仓库常有其他会话的未提交产物。
 - 审查子代理禁止在主工作区跑 install/typecheck（会刷新 gitignored 产物），用隔离临时归档。
 - **整个 DSH 开发树由 `pnpm-workspace.yaml` 的 `overrides` 钉在同一条版本线上**（票据 29，spec 第 21.5 节）。DSH 各包的 peer 锁整条线而 `latest` dist-tag 停在 `0.0.1-rc.1`，pnpm 自动安装的传递 peer 会回落到旧线并让 `pnpm peers check` 报未满足；只加 devDependency 不收敛。同一版本线还必须逐个写进 `minimumReleaseAgeExclude`（pnpm 11 默认扣住新发布版本）。改 peer 下界时这两处一起改，改完跑 `pnpm peers check` 确认干净。**注意 pnpm 会缓存判断**：只改 `pnpm-workspace.yaml` 时 `pnpm install` 会打印「Already up to date」而不重新解析，需先删掉 `node_modules/.pnpm-workspace-state-v1.json`。
-- **`tests/client/contract.spec.ts` 是防契约漂移的唯一闸门**（票据 29）。`src/client/dsh.ts` 手写 DSH 契约、假 Composer 又从这份手写类型构造，两侧同步移动，DSH 改名不会让任何测试变红——`imageIds` → `attachmentIds` 就是这么发到用户手里的。该 spec 用 `expectTypeOf` 对已发布声明做可赋值性断言，**只在 typecheck 第二遍生效**。它按相对路径深引 `lib/types/client/contract/input.js` 而不走包的 `./client` 入口，因为后者会把 Cordis `Context` 的完整 `conversation` 增强带进程序，与本插件的窄 `ConversationLike` 增强撞 TS2717。
+- **`tests/client/contract.spec.ts` 是防契约漂移的唯一闸门**（票据 29；票据 31 起也钉 `controller.ts` 手写的 `ConfigForm` 与 mirror face）。`src/client/dsh.ts` 手写 DSH 契约、假 Composer 又从这份手写类型构造，两侧同步移动，DSH 改名不会让任何测试变红——`imageIds` → `attachmentIds` 就是这么发到用户手里的。该 spec 用 `expectTypeOf` 对已发布声明做可赋值性断言，**只在 typecheck 第二遍生效**。它按相对路径深引 `lib/types/client/contract/input.js` 而不走包的 `./client` 入口，因为后者会把 Cordis `Context` 的完整 `conversation` 增强带进程序，与本插件的窄 `ConversationLike` 增强撞 TS2717。
 - **peer 下界写成 `>=x-rc.n` 覆盖不到后续预发布**（spec 第 21.4 节）。node-semver 只让预发布匹配同三元组的比较符，所以 DSH 一发新 rc，七个 peer 全部报未满足。这是已知且刻意保留的形状，不要改成 `*` 或试图"修好"它。
 - Client 构建适配器是**受控依赖的构建约束，不是恶意代码沙箱**。它拒绝间接 / 计算型 `require`、动态 `import` 与未声明 external，是为了让产物可预测、不悄悄夹带第二份 React；不要据此把它扩张成通用安全模型。
 - **`@deepseek-ai/dsh-client-ui-primitives` 是 web shell 的构建期依赖**，由冻结 seed 表无条件提供（`makeRequire` 第一优先命中），磁盘上不存在该包也 require 得到；取证见 `research/client-ui-primitives-availability.md`。它必须同时出现在 `tsdown.config.ts` 的 `external` 与 `package.json` 的 `dsh.client.external`（票据 17 的契约测试做严格相等断言），devDependency **精确锁 `0.1.2-rc.1`**——`latest` dist-tag 停在陈旧的 `0.0.1-rc.1`，少 17 个导出且不发 CSS。**这是整个 DSH 依赖集里唯一不跟版本线的一个**（票据 29 试过提到 `0.1.5-rc.1`，失败）：`0.1.5-rc.1` 的 tarball 删光了 `dependencies`，`lib/index.js` 却仍 `import clsx` 并动态 import `@shikijs/langs/*`，装出来就是解析不了的坏包，`pnpm test` 在 import 阶段直接炸。运行时不受影响（shell 的 seed 表给的是构建期已求值的冻结命名空间），而两版的 `Button`/`Input`/`Pill` `.d.ts` 逐字相同，所以类型面没有损失。DSH 修好该包的依赖声明之前不要再提这个版本。它**没有 `forwardRef`**，`Button`/`Input`/`Pill` 都不能接 `ref`；开场焦点用 `modal.ts` 的 `useInitialFocusIn(container, selector)` 按标记属性寻址。它的裸 ESM 会 `import` 自己的 CSS Modules，所以 `vitest.config.ts` 必须把它列进 `test.server.deps.inline`，否则测试在 import 阶段就报 `Unknown file extension ".css"`。
