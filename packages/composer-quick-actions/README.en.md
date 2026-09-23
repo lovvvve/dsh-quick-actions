@@ -20,22 +20,22 @@ This release has **no insert action** (insert at the selection, keep the editing
 
 | Item | Value |
 |---|---|
-| Verified baseline | DSH core packages at `0.1.5-rc.1`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
-| DSH peers | `>=0.1.5-rc.1` |
-| Cordis | `^4.0.2` |
-| Schemastery | `^3.18.2` |
+| Verified baseline | DSH core packages at `0.1.7-alpha.2`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
+| DSH peers | `>=0.1.7-alpha.2` |
+| Cordis | `^4.0.4` |
+| Schemastery | `^3.18.4` |
 | React and React DOM (browser side) | `^18.3.1`, supplied by the web shell's module table rather than installed into the profile |
-| DSH UI primitives (browser side) | `>=0.1.5-rc.1`, also supplied by the module table |
+| DSH UI primitives (browser side) | `>=0.1.7-alpha.2`, also supplied by the module table |
 | Platform | `web` profile only |
 
 Nothing is capability-detected at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
 
-The floor is the DSH release whose Input contract this plugin reads. **Do not run it against anything older**: `0.1.5-rc.1` renamed `imageIds` to `attachmentIds` in the published snapshot, and this plugin reads the new name.
+The floor is the DSH release whose Settings form this plugin reads. **Do not run it against anything older**: `0.1.7-alpha.1` rewrote Settings — plugins no longer register namespaces of their own, and user data became the plugin's own Config, written into the profile. This release reads and writes the new model only, and on the `0.1.5` and `0.1.6` lines its Client never starts. For those lines, install this plugin's `0.1.0`.
 
 No upper bound is declared, but **that is not a promise of forward compatibility**. Two things to know:
 
-- **The rc line does break published contracts.** Between `0.1.2-rc.1` and `0.1.5-rc.1`, the very field this plugin uses as its only send precondition was renamed, and the whole Quick Actions area rendered an error boundary after the upgrade. Every DSH upgrade may need a follow-up release of this plugin; if the area shows an error after one, suspect another contract change and please open an issue.
-- **`>=0.1.5-rc.1` does not match the next prerelease under semver.** A prerelease version only satisfies a comparator with the same major.minor.patch, so `0.1.6-rc.1` does not satisfy `>=0.1.5-rc.1` — and every DSH version published so far is a prerelease. The moment DSH ships a new rc, package managers report an unmet peer dependency even when the plugin is fine. That is semver's rule for prereleases rather than this plugin being picky: if `dsh plugin add` installs it, keep using it, and judge breakage by the point above. (The `Issues with peer dependencies found` note under "What a good install looks like" below has a different cause; the two show up together.)
+- **The prerelease lines do break published contracts.** Between `0.1.2-rc.1` and `0.1.5-rc.1`, the very field this plugin uses as its only send precondition was renamed; `0.1.7-alpha.1` then replaced the Settings interface wholesale, and an older release of this plugin fails to activate its Host on it (`settings.register is not a function`). Every DSH upgrade may need a follow-up release of this plugin; if the Quick Actions break after one, suspect another contract change and please open an issue.
+- **`>=0.1.7-alpha.2` does not match the next prerelease under semver.** A prerelease version only satisfies a comparator with the same major.minor.patch, so `0.1.8-rc.1` does not satisfy `>=0.1.7-alpha.2` — and every DSH version published so far is a prerelease. The moment DSH ships a new prerelease, package managers report an unmet peer dependency even when the plugin is fine; conversely, semver does not stop you installing this release onto the `0.1.5` line either. That is semver's rule for prereleases rather than this plugin being picky: if `dsh plugin add` installs it, keep using it, and judge breakage by the point above. (The `Issues with peer dependencies found` note under "What a good install looks like" below has a different cause; the two show up together.)
 
 ## Install
 
@@ -118,6 +118,7 @@ Field rules:
 - `id` is required, unique across the catalog and **permanent**. Label, icon and text may change under the same `id`; `confirm` is part of the safety signature, so changing it needs a new `id` — and so does making the text start with `/`, or stop starting with it.
 - `label` and `text` are required; `icon` and `confirm` are optional, and `confirm` defaults to `true`.
 - An invalid preset (a missing field, a duplicate `id`, a catalog over 50 entries) makes **plugin loading fail loudly** and lists every problem at once, rather than truncating silently.
+- `presets` sits under the same row's `config` as your action data (see "Settings paths" below), and this plugin never writes it. It is a DSH volatile field: editing it while the profile runs reaches the Quick Actions immediately; an invalid catalog written that way shows a catalog error in the Quick Actions area, and the next profile restart fails plugin loading with the list of problems.
 
 Users can hide or clone a preset but never edit or delete it; a clone becomes an ordinary Custom Quick Action.
 
@@ -145,12 +146,30 @@ Static text whose first non-whitespace character is `/` is marked as a command.
 
 ## Settings paths
 
-User data lives in `<DSH_HOME>/settings.yaml` (`~/.dsh` when `DSH_HOME` is unset):
+User data is the plugin's own Config, on its loader entry `composer-quick-actions`. DSH Settings writes it into the **active profile**'s `<DSH_HOME>/profiles/web/cordis.patch.yml` (`~/.dsh` when `DSH_HOME` is unset), under that id's row `config`:
 
-- `composer-quick-actions` — the **only** persisted namespace: layout, custom actions, the shared order and preset differences.
-- `composer-quick-actions-catalog` — the preset catalog. Read-only, never written to the user layer, so it does **not** appear in that file.
+```yaml
+- id: composer-quick-actions
+  name: dsh-quick-actions
+  config:
+    schemaVersion: 1
+    layout: bar
+    userActionsById: { ... }
+    actionOrder: [ ... ]
+    presetStateById: { ... }
+```
+
+- Those five fields hold the layout, custom actions, the shared order and preset differences — the **only** persisted data. The same row's `config.presets` is the presets you declared, and this plugin never writes it.
+- Each profile keeps its own copy. The row may not exist at all until your first change in the management panel, and DSH removes it again once everything is back to its defaults.
+- The plugin ships its own management panel, so it opts out of the Settings page DSH would otherwise generate for it.
 
 The Host is the single validation authority and normalizes stored data idempotently at boot. Every change made in the UI carries an expected revision; on a conflict the panel refreshes to the latest state and asks you to confirm again, never silently overwriting someone else's write. Data written by a higher `schemaVersion` is kept as-is, so a downgrade round-trip loses nothing.
+
+### Migrating from DSH 0.1.5 / 0.1.6
+
+Older releases kept the data in the `composer-quick-actions` section of `<DSH_HOME>/settings.yaml`. On its first boot, once every plugin has settled, DSH `0.1.7` renames the whole file to `settings.yaml.imported` and imports each section into the plugin entry of the same id — **exactly once**, and only for whichever profile boots first.
+
+For that import to land, this release of the plugin must be the one running at that moment. **Upgrade this plugin first, then DSH** (or both within the same restart). If DSH was upgraded first, the old plugin fails to activate on it, the import fails with it, and the data stays untouched in `settings.yaml.imported`. Migrate by hand then: copy the five fields under that section verbatim under the row's `config` shown above, and restart the profile.
 
 ## Upgrade, downgrade and uninstall
 
@@ -174,9 +193,9 @@ Both the dependency and the layer in `dsh.profile.bundles` go away. After a prof
 
 **Full manual cleanup** (uninstalling does none of this, because a reinstall should restore your actions):
 
-1. Delete the `composer-quick-actions` section from `<DSH_HOME>/settings.yaml` — the only place user data lives.
-2. Remove any entry you added for this plugin from `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`.
-3. Delete any `config` you wrote for `composer-quick-actions` in the profile's `cordis.patch.yml`.
+1. Delete the `id: composer-quick-actions` row from `<DSH_HOME>/profiles/web/cordis.patch.yml` — the only place user data (and the presets you declared) lives.
+2. If a `composer-quick-actions` section is still left in `<DSH_HOME>/settings.yaml.imported`, delete it too.
+3. Remove any entry you added for this plugin from `<DSH_HOME>/profiles/web/pnpm-workspace.yaml`.
 4. Restart the profile.
 
 ## Development

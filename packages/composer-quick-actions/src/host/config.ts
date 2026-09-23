@@ -7,8 +7,7 @@
  * over fifty entries makes plugin config loading fail with a message naming
  * every problem at once — never a silent truncation or a last-one-wins merge.
  */
-import { buildPresetCatalog } from '../model/index.js'
-import { BUILT_IN_PRESETS } from './presets.js'
+import { BUILT_IN_PRESETS, buildPresetCatalog } from '../model/index.js'
 import type { PresetCatalog, PresetCatalogIssue } from '../model/index.js'
 
 /** What a Host composition may declare for this plugin. */
@@ -31,11 +30,23 @@ function describeIssue(issue: PresetCatalogIssue): string {
 }
 
 /**
+ * The plain value behind one Config field. A Loader-resolved config hands each
+ * volatile field over as a `Volatile` reference (spec 22.2); a composition that
+ * calls `apply` directly hands the plain value.
+ */
+function readVolatile(field: unknown): unknown {
+  if (typeof field === 'object' && field !== null && typeof (field as { get?: unknown }).get === 'function') {
+    return (field as { get(): unknown }).get()
+  }
+  return field
+}
+
+/**
  * Read one Host composition config into the authoritative catalog.
  * @param config - the composition entry's config, absent when nothing was declared.
  */
 export function readComposerQuickActionsConfig(config: unknown): ComposerQuickActionsConfigResult {
-  const declared = (config as ComposerQuickActionsConfig | undefined)?.presets
+  const declared = readVolatile((config as { presets?: unknown } | undefined)?.presets)
   if (declared !== undefined && !Array.isArray(declared)) {
     return { ok: false, message: 'composer-quick-actions: `presets` must be a list of preset quick actions' }
   }

@@ -1,34 +1,32 @@
 /**
  * A controlled stand-in for the DSH settings transport the Client controller
- * binds to: `ctx.settingsScope` over one shared describe mirror, plus
+ * reads through: `ctx.configForms` over one shared describe mirror, plus
  * `ctx.connection`'s observable state.
  *
  * It reproduces the behaviours the controller actually depends on, taken from
- * `@deepseek-ai/dsh-client-ui-settings` 0.1.5-rc.1 — whose `lib/` is byte-identical
- * to the 0.1.2-rc.1 this was first written against, so the contract rename of
- * ticket 29 left this transport untouched: one document read shared by
- * every bound namespace, a snapshot carrying the resolved value alongside the
- * composition `base` and the raw `user` section, revision-fenced writes that
- * fold their answer back in, and a recovery read after a refused write.
+ * `@deepseek-ai/dsh-client-ui-settings` 0.1.7-alpha.2 (ticket 31): one document
+ * read shared by every form, a form snapshot carrying the resolved volatile
+ * fields, revision-fenced writes that fold their answer back in and resolve
+ * `true` / `false`, a recovery read after a refused write, and a mirror whose
+ * public face re-reads only when it holds nothing (`ensure`).
  */
 import type {
-  BoundSettingsScope,
+  ConfigForm,
+  ConfigFormSnapshot,
+  ConfigFormsService,
   ConnectionLike,
   ConnectionState,
   SettingsMirrorSnapshot,
-  SettingsScopeService,
-  SettingsScopeSnapshot,
-  SettingsScopeSpec,
   SettingsSetOp,
 } from '../../src/client/controller.js'
 
-/** One registered namespace as the Host would describe it. */
+/** One served plugin entry's form as the Host would describe it. */
 export interface FakeNamespace {
   /** Schema defaults, the bottom layer of the resolved value. */
   readonly defaults?: Record<string, unknown>
-  /** Composition base layer, where the read-only catalog rides (spec 17.2). */
-  base?: unknown
-  /** Raw stored user section. */
+  /** The layers below the active profile — where bundle- or home-declared presets ride. */
+  base?: Record<string, unknown>
+  /** The fields the active profile patch sets. */
   user?: Record<string, unknown>
   revision: number
 }
@@ -53,13 +51,13 @@ export class FakeSettingsDocument {
   readError: string | null = null
   /** Set to make the next document read fail rather than answer. */
   failReads = false
-  /** Set to make an explicit `load()` reject, the way a failed read does. */
+  /** Set to make a retried read (`ensure()`) reject, the way a failed read does. */
   loadRejects = false
   /** Reads that crossed the wire, so a test can pin the catalog's zero-RPC budget. */
   describeReads = 0
   /** Writes that crossed the wire, so a test can pin that an unchanged plan writes nothing. */
   writes = 0
-  /** Namespaces a controller bound, in bind order. */
+  /** Forms a controller asked for, in request order. */
   readonly bound: string[] = []
   /** Set to refuse the next write, the way a read-only or racing Host would. */
   refuseWrites: FakeWriteRefusal | undefined
@@ -119,27 +117,26 @@ export class FakeSettingsDocument {
     return this.listeners.size
   }
 
-  snapshot(spec: SettingsScopeSpec): SettingsScopeSnapshot {
+  snapshot(ns: string): ConfigFormSnapshot {
     if (this.mode === 'memory') {
-      return { status: 'unavailable', writable: false, mode: 'memory' }
+      return { status: 'unavailable', revision: undefined, writable: false, mode: 'memory' }
     }
-    if (!this.answered) return { status: 'loading', writable: false, mode: 'host' }
-    const namespace = this.namespaces.get(spec.namespace)
-    if (namespace === undefined) return { status: 'unavailable', writable: this.writable, mode: 'host' }
+    if (!this.answered) return { status: 'loading', revision: undefined, writable: false, mode: 'host' }
+    const namespace = this.namespaces.get(ns)
+    if (namespace === undefined) {
+      return { status: 'unavailable', revision: undefined, writable: this.writable, mode: 'host' }
+    }
 
-    const resolved = { ...namespace.defaults, ...asRecord(namespace.base), ...namespace.user }
-    const decoded = spec.decode === undefined ? resolved : spec.decode(clone(resolved))
     return {
-      status: decoded === undefined ? 'loading' : 'ready',
-      ...(decoded === undefined ? {} : { value: decoded }),
-      ...(namespace.base === undefined ? {} : { base: clone(namespace.base) }),
+      status: 'ready',
+      value: clone({ ...namespace.defaults, ...namespace.base, ...namespace.user }),
       revision: namespace.revision,
       writable: this.writable,
       mode: 'host',
     }
   }
 
-  async mutate(ns: string, ops: readonly SettingsSetOp[], expectedRevision: number | undefined): Promise<void> {
+  async mutate(ns: string, ops: readonly SettingsSetOp[], expectedRevision: number | undefined): Promise<boolean> {
     this.writes += 1
     await Promise.resolve()
     this.onWrite?.()
@@ -148,11 +145,11 @@ export class FakeSettingsDocument {
     if (refusal === 'throw') throw new Error('fake settings transport failed')
     if (refusal === 'rejected' || !this.writable) {
       this.recover()
-      return
+      return false
     }
     if (expectedRevision !== undefined && expectedRevision !== namespace.revision) {
       this.recover()
-      return
+      return false
     }
 
     const user: Record<string, unknown> = { ...namespace.user }
@@ -164,6 +161,7 @@ export class FakeSettingsDocument {
     namespace.user = user
     namespace.revision += 1
     this.publish()
+    return true
   }
 
   /** The one recovery read a refused or failed latest write triggers. */
@@ -183,26 +181,24 @@ export class FakeSettingsDocument {
   }
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined
-  return value as Record<string, unknown>
-}
-
-/** The `ctx.settingsScope` face over one fake document. */
-export function fakeSettingsScope(document: FakeSettingsDocument): SettingsScopeService {
+/** The `ctx.configForms` face over one fake document. */
+export function fakeConfigForms(document: FakeSettingsDocument): ConfigFormsService {
   return {
-    bind(spec: SettingsScopeSpec): BoundSettingsScope {
-      document.bound.push(spec.namespace)
+    get(entryId: string): ConfigForm {
+      document.bound.push(entryId)
       return {
-        getSnapshot: () => document.snapshot(spec),
+        getSnapshot: () => document.snapshot(entryId),
         subscribe: (listener) => document.subscribe(listener),
-        mutate: (ops, expectedRevision) => document.mutate(spec.namespace, ops, expectedRevision),
+        mutate: (ops, expectedRevision) => document.mutate(entryId, ops, expectedRevision),
       }
     },
     describe: () => ({
       getSnapshot: () => document.mirrorSnapshot(),
       subscribe: (listener) => document.subscribe(listener),
-      load: async () => {
+      // The shipped mirror reads only while it holds no document; a held one is
+      // refreshed by the Host's document-updated broadcast and reconnects.
+      ensure: async () => {
+        if (document.answered) return
         document.answer()
         if (document.loadRejects) throw new Error('fake settings document read failed')
       },

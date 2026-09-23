@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { QUICK_ACTION_CATALOG_LIMIT } from '../../src/model/index.js'
 import { readComposerQuickActionsConfig } from '../../src/host/config.js'
-import { BUILT_IN_PRESETS } from '../../src/host/presets.js'
+import { BUILT_IN_PRESETS } from '../../src/model/index.js'
 
 describe('Host config loading', () => {
   it('accepts an absent config and yields the built-in catalog', () => {

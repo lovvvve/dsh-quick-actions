@@ -1,43 +1,37 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
-import { apply, inject } from '../../src/index.js'
-import {
-  startQuickActionsHost,
-  type QuickActionsSettingsProvider,
-} from '../../src/host/index.js'
-import { quickActionCatalogSchema, quickActionSettingsSchema } from '../../src/host/settings.js'
-import {
-  QUICK_ACTIONS_CATALOG_NAMESPACE,
-  QUICK_ACTIONS_SETTINGS_NAMESPACE,
-} from '../../src/model/index.js'
+import * as entry from '../../src/index.js'
+import { apply } from '../../src/index.js'
+import { startQuickActionsHost } from '../../src/host/index.js'
+import { Config, type SettingsSetOp } from '../../src/host/settings.js'
+import { QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
 
-class FakeSettings implements QuickActionsSettingsProvider {
+/** A stand-in for DSH `SettingsForms`, as far as the Host entry reaches it. */
+class FakeSettings {
   writable = true
   revision = 1
-  user: unknown = undefined
-  readonly registrations: { ns: string; schema: unknown; options: unknown }[] = []
-  readonly writes: object[] = []
+  user: Record<string, unknown> | undefined = undefined
+  readonly writes: (readonly SettingsSetOp[])[] = []
+  readonly policies: { presentation: { auto?: boolean }; owner: unknown }[] = []
+  released = 0
 
-  register(ns: string, schema: unknown, options?: unknown): unknown {
-    this.registrations.push({ ns, schema, options })
-    return { get: () => this.user, watch: () => () => {} }
+  configure(presentation: { auto?: boolean }, owner: unknown): () => void {
+    this.policies.push({ presentation, owner })
+    return () => {
+      this.released += 1
+    }
   }
 
   describe(): readonly { ns: string; revision: number; user?: unknown }[] {
-    if (this.registrations.length === 0) return []
-    return [
-      {
-        ns: QUICK_ACTIONS_SETTINGS_NAMESPACE,
-        revision: this.revision,
-        ...(this.user === undefined ? {} : { user: this.user }),
-      },
-    ]
+    return [{ ns: QUICK_ACTIONS_SETTINGS_NAMESPACE, revision: this.revision, user: structuredClone(this.user ?? {}) }]
   }
 
-  async replace(ns: string, section: object): Promise<void> {
+  async mutate(ns: string, ops: readonly SettingsSetOp[]): Promise<void> {
     expect(ns).toBe(QUICK_ACTIONS_SETTINGS_NAMESPACE)
-    this.writes.push(section)
-    this.user = JSON.parse(JSON.stringify(section)) as unknown
+    this.writes.push(ops)
+    const user: Record<string, unknown> = { ...this.user }
+    for (const op of ops) user[op.path.join('.')] = structuredClone(op.value)
+    this.user = user
     this.revision += 1
   }
 }
@@ -51,63 +45,111 @@ const drifted = {
   presetStateById: {},
 }
 
-function fakeContext(settings: FakeSettings): {
+/** Resolve through the real Config, the way the Loader hands `apply` its config. */
+function resolved(config: Record<string, unknown>): unknown {
+  return Config(config)
+}
+
+/** A promise the case settles by hand, standing in for `loader.await()`. */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void
+  const promise = new Promise<void>((settle) => {
+    resolve = settle
+  })
+  return { promise, resolve }
+}
+
+function fakeContext(
+  settings: FakeSettings | undefined,
+  loader: { await(): Promise<unknown> } | undefined = { await: () => Promise.resolve() },
+): {
   ctx: Context
+  fiber: object
   warn: ReturnType<typeof vi.fn>
   error: ReturnType<typeof vi.fn>
   dispose: () => void
 } {
   const warn = vi.fn()
   const error = vi.fn()
-  let disposer: (() => void) | undefined
+  const disposers: (() => void)[] = []
+  const effect = (execute: () => () => void): (() => void) => {
+    disposers.push(execute())
+    return () => {}
+  }
+  const fiber = { name: 'composer-quick-actions entry fiber' }
   const ctx = {
-    settings,
+    fiber,
     logger: () => ({ warn, error }),
-    effect: (execute: () => () => void) => {
-      disposer = execute()
-      return () => {}
+    effect,
+    get: (name: string) => (name === 'loader' ? loader : undefined),
+    // `settings` is optional: the callback runs only while the service exists.
+    inject: (deps: readonly string[], callback: (scoped: Context) => void) => {
+      expect(deps).toEqual(['settings'])
+      if (settings !== undefined) callback({ settings, effect } as unknown as Context)
     },
   } as unknown as Context
-  return { ctx, warn, error, dispose: () => disposer?.() }
+  return {
+    ctx,
+    fiber,
+    warn,
+    error,
+    dispose: () => {
+      for (const dispose of disposers.reverse()) dispose()
+    },
+  }
+}
+
+/** Let the rewrite's promise chain run to its end. */
+async function flush(): Promise<void> {
+  for (let round = 0; round < 6; round += 1) await Promise.resolve()
 }
 
 describe('the Host plugin surface', () => {
-  it('declares settings as a hard dependency so it waits instead of inventing storage', () => {
-    expect(inject).toContain('settings')
+  it('names itself after the entry id the bundle patch inserts', () => {
+    expect(entry.name).toBe(QUICK_ACTIONS_SETTINGS_NAMESPACE)
+  })
+
+  it('exports its Config, which is what makes DSH serve it as a Settings form', () => {
+    expect(entry.Config).toBe(Config)
+  })
+
+  it('does not hard-depend on settings, so the Quick Actions run without it', () => {
+    expect('inject' in entry).toBe(false)
   })
 })
 
 describe('starting the Host', () => {
   it('fails loudly on an invalid preset configuration', () => {
-    const settings = new FakeSettings()
-    expect(() => startQuickActionsHost(settings, { presets: [{ id: 'x', kind: 'insert', label: 'X', text: 'x' }] }))
+    expect(() => startQuickActionsHost({ presets: [{ id: 'x', kind: 'insert', label: 'X', text: 'x' }] }))
       .toThrow(/kind is unsupported/)
-    expect(settings.registrations).toHaveLength(0)
   })
 
-  it('registers the user-state namespace with the live schema', () => {
-    const settings = new FakeSettings()
-    startQuickActionsHost(settings, { presets })
-    expect(settings.registrations[0]).toEqual({
-      ns: QUICK_ACTIONS_SETTINGS_NAMESPACE,
-      schema: quickActionSettingsSchema,
-      options: { applies: 'live' },
-    })
+  it('reads presets the Loader hands over as volatile references', async () => {
+    const host = startQuickActionsHost(resolved({ presets }))
+    expect((await host.describeCatalog()).presets.at(-1)).toMatchObject({ id: 'compact' })
+  })
+
+  it('fails loudly on an invalid preset list behind a volatile reference too', () => {
+    expect(() => startQuickActionsHost(resolved({ presets: [{ id: 'dup', label: 'A', text: 'a' }, { id: 'dup', label: 'B', text: 'b' }] })))
+      .toThrow(/duplicate/)
   })
 
   it('canonicalizes a stored section that drifted', async () => {
     const settings = new FakeSettings()
     settings.user = structuredClone(drifted)
-    const host = startQuickActionsHost(settings, { presets })
-    expect(await host.ready).toEqual({ status: 'rewritten', revision: 1 })
-    const written = settings.writes[0] as { layout: string; actionOrder: { source: string; id: string }[] }
+    const host = startQuickActionsHost({ presets })
+    expect(await host.canonicalize(settings)).toEqual({ status: 'rewritten', revision: 1 })
+    const written = Object.fromEntries((settings.writes[0] ?? []).map((op) => [op.path[0], op.value])) as {
+      layout: string
+      actionOrder: { source: string; id: string }[]
+    }
     expect(written.layout).toBe('bar')
     expect(written.actionOrder.at(-1)).toEqual({ source: 'preset', id: 'compact' })
     expect(written.actionOrder.every((ref) => ref.source === 'preset')).toBe(true)
   })
 
   it('serves the authoritative catalog snapshot as lossless JSON', async () => {
-    const host = startQuickActionsHost(new FakeSettings(), { presets })
+    const host = startQuickActionsHost({ presets })
     const snapshot = await host.describeCatalog()
     expect(snapshot.schemaVersion).toBe(1)
     expect(snapshot.revision).toEqual(expect.any(String))
@@ -122,12 +164,12 @@ describe('starting the Host', () => {
   })
 
   it('keeps the catalog revision stable across repeated reads', async () => {
-    const host = startQuickActionsHost(new FakeSettings(), { presets })
+    const host = startQuickActionsHost({ presets })
     expect((await host.describeCatalog()).revision).toBe((await host.describeCatalog()).revision)
   })
 
   it('never hands out a mutable view of the catalog', async () => {
-    const host = startQuickActionsHost(new FakeSettings(), { presets })
+    const host = startQuickActionsHost({ presets })
     const first = await host.describeCatalog()
     const original = first.presets[0]?.label
     ;(first.presets as unknown as { label: string }[])[0]!.label = 'tampered'
@@ -137,42 +179,69 @@ describe('starting the Host', () => {
   it('surfaces a rewrite that could not be fenced instead of throwing', async () => {
     const settings = new FakeSettings()
     settings.user = structuredClone(drifted)
-    settings.replace = vi.fn(async () => {
+    settings.mutate = vi.fn(async () => {
       settings.revision += 1
       throw Object.assign(new Error('moved'), { code: 'SETTINGS_CONFLICT' })
     })
-    const host = startQuickActionsHost(settings, { presets })
-    expect(await host.ready).toEqual({ status: 'conflict', attempts: 3 })
+    const host = startQuickActionsHost({ presets })
+    expect(await host.canonicalize(settings)).toEqual({ status: 'conflict', attempts: 3 })
   })
 })
 
 describe('the composition entry', () => {
-  it('registers both namespaces and returns the running Host', () => {
-    const settings = new FakeSettings()
-    const { ctx } = fakeContext(settings)
-    const host = apply(ctx, { presets })
-    expect(settings.registrations.map((entry) => entry.ns)).toEqual([
-      QUICK_ACTIONS_SETTINGS_NAMESPACE,
-      QUICK_ACTIONS_CATALOG_NAMESPACE,
-    ])
-    expect(typeof host.describeCatalog).toBe('function')
+  it('returns the running Host', () => {
+    const { ctx } = fakeContext(new FakeSettings())
+    expect(typeof apply(ctx, resolved({ presets })).describeCatalog).toBe('function')
   })
 
-  it('throws before registering anything when the configuration is invalid', () => {
+  it('throws before installing anything when the configuration is invalid', () => {
     const settings = new FakeSettings()
     const { ctx } = fakeContext(settings)
     expect(() => apply(ctx, { presets: [{ id: 'dup', label: 'A', text: 'a' }, { id: 'dup', label: 'B', text: 'b' }] }))
       .toThrow(/duplicate/)
-    expect(settings.registrations).toHaveLength(0)
+    expect(settings.policies).toHaveLength(0)
+  })
+
+  it("opts this entry's fiber out of an auto-generated Settings page, and withdraws that on unload", () => {
+    const settings = new FakeSettings()
+    const { ctx, fiber, dispose } = fakeContext(settings)
+    apply(ctx, resolved({ presets }))
+    // The policy names the entry's own fiber, not the inject child it was registered from.
+    expect(settings.policies).toEqual([{ presentation: { auto: false }, owner: fiber }])
+    dispose()
+    expect(settings.released).toBe(1)
+  })
+
+  it('waits for every profile entry to settle before canonicalizing', async () => {
+    const settings = new FakeSettings()
+    settings.user = structuredClone(drifted)
+    const settled = deferred()
+    const { ctx } = fakeContext(settings, { await: () => settled.promise })
+    apply(ctx, resolved({ presets }))
+
+    await flush()
+    // DSH serves this entry's form only once its fiber is active.
+    expect(settings.writes).toHaveLength(0)
+
+    settled.resolve()
+    await flush()
+    expect(settings.writes).toHaveLength(1)
+  })
+
+  it('runs, and writes nothing, without the settings service', async () => {
+    const { ctx, warn, error } = fakeContext(undefined)
+    expect(() => apply(ctx, resolved({ presets }))).not.toThrow()
+    await flush()
+    expect(warn).not.toHaveBeenCalled()
+    expect(error).not.toHaveBeenCalled()
   })
 
   it('reports a section owned by a higher version instead of rewriting it', async () => {
     const settings = new FakeSettings()
     settings.user = { schemaVersion: 3, layout: 'grid', userActionsById: {}, actionOrder: [], presetStateById: {} }
     const { ctx, warn } = fakeContext(settings)
-    const host = apply(ctx, { presets })
-    await host.ready
-    await Promise.resolve()
+    apply(ctx, resolved({ presets }))
+    await flush()
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('schemaVersion'), 3)
     expect(settings.writes).toHaveLength(0)
   })
@@ -182,55 +251,10 @@ describe('the composition entry', () => {
     settings.user = structuredClone(drifted)
     settings.writable = false
     const { ctx, warn, dispose } = fakeContext(settings)
-    const host = apply(ctx, { presets })
+    apply(ctx, resolved({ presets }))
     dispose()
-    await host.ready
-    await Promise.resolve()
+    await flush()
     expect(warn).not.toHaveBeenCalled()
-  })
-})
-
-function catalogRegistration(settings: FakeSettings): { ns: string; schema: unknown; options: unknown } {
-  const registration = settings.registrations.find((entry) => entry.ns === QUICK_ACTIONS_CATALOG_NAMESPACE)
-  if (registration === undefined) throw new Error('the catalog namespace was never registered')
-  return registration
-}
-
-describe('the read-only catalog namespace', () => {
-  it('publishes the catalog snapshot as the composition base layer', async () => {
-    const settings = new FakeSettings()
-    const host = startQuickActionsHost(settings, { presets })
-    const registration = catalogRegistration(settings)
-    expect(registration.schema).toBe(quickActionCatalogSchema)
-    expect(registration.options).toEqual({ base: await host.describeCatalog(), applies: 'restart' })
-  })
-
-  it('takes effect on restart, matching how Host config changes land', () => {
-    const settings = new FakeSettings()
-    startQuickActionsHost(settings, { presets })
-    expect((catalogRegistration(settings).options as { applies: string }).applies).toBe('restart')
-  })
-
-  it('hands the base layer a detached copy the Host cannot be reached through', async () => {
-    const settings = new FakeSettings()
-    const host = startQuickActionsHost(settings, { presets })
-    const base = (catalogRegistration(settings).options as { base: { presets: { label: string }[] } }).base
-    const original = (await host.describeCatalog()).presets[0]?.label
-    base.presets[0]!.label = 'tampered'
-    expect((await host.describeCatalog()).presets[0]?.label).toBe(original)
-  })
-
-  it('accepts the snapshot it publishes', async () => {
-    const host = startQuickActionsHost(new FakeSettings(), { presets })
-    const snapshot = await host.describeCatalog()
-    expect(quickActionCatalogSchema(snapshot)).toEqual(snapshot)
-  })
-
-  it('is never written: the plugin only ever writes the user-state namespace', async () => {
-    const settings = new FakeSettings()
-    settings.user = structuredClone(drifted)
-    const host = startQuickActionsHost(settings, { presets })
-    await host.ready
-    expect(settings.writes).toHaveLength(1)
+    expect(settings.writes).toHaveLength(0)
   })
 })

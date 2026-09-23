@@ -20,22 +20,22 @@
 
 | 项目 | 值 |
 |---|---|
-| 验证基线 | DSH 核心包 `0.1.5-rc.1`。桌面端 `dsh --version` 打印的是依赖集标签，与核心包版本不是同一个数字 |
-| DSH peer | `>=0.1.5-rc.1` |
-| Cordis | `^4.0.2` |
-| Schemastery | `^3.18.2` |
+| 验证基线 | DSH 核心包 `0.1.7-alpha.2`。桌面端 `dsh --version` 打印的是依赖集标签，与核心包版本不是同一个数字 |
+| DSH peer | `>=0.1.7-alpha.2` |
+| Cordis | `^4.0.4` |
+| Schemastery | `^3.18.4` |
 | React 与 React DOM（浏览器侧） | `^18.3.1`，由 web shell 的模块表提供，不从 profile 安装 |
-| DSH UI primitives（浏览器侧） | `>=0.1.5-rc.1`，同样由模块表提供 |
+| DSH UI primitives（浏览器侧） | `>=0.1.7-alpha.2`，同样由模块表提供 |
 | 平台 | 只支持 `web` profile |
 
 安装与运行都不检测 DSH 能力，因此不存在随版本变化的功能分档：要么整个插件能装能跑，要么装不上。
 
-下界取的是本插件读取其 Input 契约的那个 DSH 版本。**不要在更低版本上使用**：`0.1.5-rc.1` 把公开快照里的 `imageIds` 改名为 `attachmentIds`，本插件按新名读取。
+下界取的是本插件读取其 Settings 表单的那个 DSH 版本。**不要在更低版本上使用**：`0.1.7-alpha.1` 重写了 Settings——插件不再自己注册命名空间，用户数据改为插件自己的 Config、写进 profile。本版只按新模型读写，在 `0.1.5`、`0.1.6` 线上 Client 根本不会启动。要在那两条线上用，请装本插件的 `0.1.0`。
 
 上界不设，但**这不等于向后兼容有保障**，两点需要知道：
 
-- **rc 阶段会破坏公开契约。** `0.1.2-rc.1` 到 `0.1.5-rc.1` 之间，被本插件用作唯一发送判据的那个字段就被改了名，升级 DSH 后整个快捷动作区域会显示错误边界。每次 DSH 升级都可能需要本插件跟一版；升级后若该区域出错，多半又是契约变更，请提 issue。
-- **`>=0.1.5-rc.1` 在 semver 里匹配不到下一个预发布版本。** 预发布版本只满足「主次修订号完全相同」的比较符，因此 `0.1.6-rc.1` 不满足 `>=0.1.5-rc.1`；而 DSH 至今发布的每个版本都是预发布。DSH 一旦发出新的 rc，包管理器就会报未满足的 peer 依赖，即使插件本身没问题。这是 semver 对预发布的规定，不是本插件挑版本——`dsh plugin add` 装得上就可以继续用，出错时按上一条判断。（下面「装好之后」里那条 `Issues with peer dependencies found` 说的是另一个原因，两者会一起出现。）
+- **预发布阶段会破坏公开契约。** `0.1.2-rc.1` 到 `0.1.5-rc.1` 之间，被本插件用作唯一发送判据的那个字段被改了名；`0.1.7-alpha.1` 又整个换掉了 Settings 接口，旧版本插件在它上面 Host 直接激活失败（`settings.register is not a function`）。每次 DSH 升级都可能需要本插件跟一版；升级后若快捷动作出错，多半又是契约变更，请提 issue。
+- **`>=0.1.7-alpha.2` 在 semver 里匹配不到下一个预发布版本。** 预发布版本只满足「主次修订号完全相同」的比较符，因此 `0.1.8-rc.1` 不满足 `>=0.1.7-alpha.2`；而 DSH 至今发布的每个版本都是预发布。DSH 一旦发出新的预发布，包管理器就会报未满足的 peer 依赖，即使插件本身没问题。反过来，semver 也拦不住你把本版装到 `0.1.5` 线上。这是 semver 对预发布的规定，不是本插件挑版本——`dsh plugin add` 装得上就可以继续用，出错时按上一条判断。（下面「装好之后」里那条 `Issues with peer dependencies found` 说的是另一个原因，两者会一起出现。）
 
 ## 安装
 
@@ -118,6 +118,7 @@ pnpm 有一条供应链策略：拒绝发布时间在冷却窗口内（默认 24
 - `id` 必填、全目录唯一且**永久**。标签、图标、文本可以在同一个 `id` 下改；`confirm` 属于安全行为签名，要改就得换新 `id`——把文本改成以 `/` 开头（或改掉这一点）同样算。
 - `label`、`text` 必填；`icon`、`confirm` 可选，`confirm` 默认 `true`。
 - 预置无效（缺字段、`id` 重复、目录超过 50 条）会让**插件加载响亮失败**并一次列出所有问题，而不是静默截断。
+- `presets` 与你的动作数据同在这一行 `config` 下（见下文「Settings 路径」），本插件从不写它。它是 DSH 的 volatile 字段：profile 运行期间改动会即时反映到快捷动作上；此时若改出无效目录，快捷动作区域显示目录错误，重启 profile 时插件加载失败并列出问题。
 
 用户对预置只能隐藏或克隆，不能编辑或删除；克隆出来的是一条普通的自定义动作。
 
@@ -145,12 +146,30 @@ pnpm 有一条供应链策略：拒绝发布时间在冷却窗口内（默认 24
 
 ## Settings 路径
 
-用户数据落在 `<DSH_HOME>/settings.yaml`（`DSH_HOME` 未设置时是 `~/.dsh`）：
+用户数据是本插件装载条目 `composer-quick-actions` 自己的 Config。DSH Settings 把它写进**当前 profile** 的 `<DSH_HOME>/profiles/web/cordis.patch.yml`（`DSH_HOME` 未设置时是 `~/.dsh`），落在该 id 那一行的 `config` 下：
 
-- `composer-quick-actions` — **唯一的持久化命名空间**，存放布局、自定义动作、统一顺序和预置差异。
-- `composer-quick-actions-catalog` — 预置目录，只读，不写用户层，因此**不会**出现在这个文件里。
+```yaml
+- id: composer-quick-actions
+  name: dsh-quick-actions
+  config:
+    schemaVersion: 1
+    layout: bar
+    userActionsById: { ... }
+    actionOrder: [ ... ]
+    presetStateById: { ... }
+```
+
+- 这五个字段存放布局、自定义动作、统一顺序和预置差异，是**唯一的持久化数据**。同一行的 `config.presets` 是你声明的预置，本插件从不写它。
+- 数据按 profile 各存一份。第一次在管理面板里改动之前，这一行可能根本不存在；改回默认状态时 DSH 会把它删掉。
+- 本插件自带管理面板，因此关掉了 DSH 为它自动生成设置页。
 
 Host 是校验的唯一权威，启动时按当前目录对存放的数据做一次幂等规范化。界面的每次修改都带上预期 revision；发生冲突时会刷新到最新状态并请你确认后重试，绝不静默覆盖别人的写入。更高 `schemaVersion` 写下的数据原样保留，因此降级往返无损。
+
+### 从 DSH 0.1.5 / 0.1.6 迁移
+
+旧版数据存在 `<DSH_HOME>/settings.yaml` 的 `composer-quick-actions` section。DSH `0.1.7` 首次启动、全部插件就绪后，会把整份文件改名为 `settings.yaml.imported`，再把每个 section 导入同名插件条目——**只尝试这一次**，也只有最先启动的那个 profile 能导入。
+
+导入要成功，那一刻跑着的必须是本版插件。**先升级本插件，再升级 DSH**（或在同一次重启里一起完成）。若 DSH 先升了，旧插件在它上面激活失败，这次导入随之失败，数据原样留在 `settings.yaml.imported` 里。这时手工迁移：把那个 section 下的五个字段原样复制到上面那一行的 `config` 下，然后重启 profile。
 
 ## 升级、降级与卸载
 
@@ -174,9 +193,9 @@ dsh plugin --profile web remove dsh-quick-actions
 
 **手工彻底清理**（卸载不做这些，因为重装应当恢复你的动作）：
 
-1. 从 `<DSH_HOME>/settings.yaml` 删掉 `composer-quick-actions` section，这是唯一保存用户数据的地方。
-2. 如果 `<DSH_HOME>/profiles/web/pnpm-workspace.yaml` 里有为本插件加过的条目，一并删掉。
-3. 如果在 profile 的 `cordis.patch.yml` 里给 `composer-quick-actions` 写过 `config`，把那段删掉。
+1. 从 `<DSH_HOME>/profiles/web/cordis.patch.yml` 删掉 `id: composer-quick-actions` 那一行，这是唯一保存用户数据（以及你声明的预置）的地方。
+2. 如果 `<DSH_HOME>/settings.yaml.imported` 里还留着 `composer-quick-actions` section，一并删掉。
+3. 如果 `<DSH_HOME>/profiles/web/pnpm-workspace.yaml` 里有为本插件加过的条目，一并删掉。
 4. 重启 profile。
 
 ## 开发

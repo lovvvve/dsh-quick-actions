@@ -1,10 +1,10 @@
 /**
  * The Client's single owner of authoritative Quick Action state (spec 7.1).
  *
- * It binds the two Settings namespaces the Host registers — the read-only
- * catalog namespace, read off its composition `base` layer, and the user-state
- * namespace — derives the projection every surface renders, and serializes
- * revision-fenced writes back through the same scope.
+ * It reads the plugin entry's one Settings form (spec 22) — the user-state
+ * fields and the author's `presets`, from which it rebuilds the Preset Catalog
+ * with the shared model — derives the projection every surface renders, and
+ * serializes revision-fenced writes back through the same form.
  *
  * What it deliberately does not own:
  *
@@ -16,15 +16,16 @@
  *   `InputActions` object reaches this module — long-lived global state must not
  *   pin a session's runtime objects (spec 7.1). Draft occupancy, confirmation and
  *   send single-flight belong to the per-session execution layer (spec 7.2).
- * - **Its own copy of the settings document.** Both bindings derive from the one
+ * - **Its own copy of the settings document.** The form derives from the one
  *   browser-side describe mirror, so the catalog costs no read of its own and
- *   refreshes with that mirror after a reconnect (spec 17.3).
+ *   refreshes with that mirror after a reconnect (spec 17.3, 22.3).
  */
 import {
+  BUILT_IN_PRESETS,
   DEFAULT_QUICK_ACTION_SETTINGS,
-  QUICK_ACTIONS_CATALOG_NAMESPACE,
   QUICK_ACTIONS_SETTINGS_NAMESPACE,
-  decodeCatalogSnapshot,
+  QUICK_ACTION_STATE_FIELDS,
+  buildPresetCatalog,
   decodeQuickActionSettings,
   deepEqualJson,
   normalizeQuickActionSettings,
@@ -58,48 +59,53 @@ import type {
 //
 // Declared structurally, and only as wide as this controller actually reads, so
 // the behaviour above is testable against a controlled transport. The shipped
-// `ctx.settingsScope` and `ctx.connection` satisfy them as-is.
+// `ctx.configForms` and `ctx.connection` satisfy them as-is.
 // ---------------------------------------------------------------------------
 
 /**
- * One path-addressed edit inside a namespace section. The transport also accepts
- * an `unset` form; this plugin writes the whole section field by field and never
- * clears one, so only the form it submits is declared.
+ * One path-addressed edit inside the form. The transport also accepts an `unset`
+ * form; this plugin writes the user state field by field and never clears one,
+ * so only the form it submits is declared.
  */
 export interface SettingsSetOp {
   readonly op: 'set'
-  readonly path: readonly string[]
-  readonly value: unknown
+  readonly path: string[]
+  readonly value: SettingsJsonValue
 }
 
-/** One bound namespace as the scope publishes it. */
-export interface SettingsScopeSnapshot {
-  /** `loading` until the shared document answers; `unavailable` when the namespace is not served. */
+/** A JSON value as the Settings wire carries it: the same data the model holds, minus `readonly`. */
+export type SettingsJsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | SettingsJsonValue[]
+  | { [key: string]: SettingsJsonValue }
+
+/** The plugin entry's form as `ctx.configForms` publishes it. */
+export interface ConfigFormSnapshot {
+  /** `loading` until the shared document answers; `unavailable` when the entry is not served. */
   readonly status: 'loading' | 'ready' | 'unavailable'
-  /** Resolved section: schema defaults, then composition base, then the user layer. */
+  /** Resolved volatile fields: schema defaults, then the layers below the profile, then the profile. */
   readonly value?: unknown
-  /** Composition base layer, where an author-owned layer such as the catalog rides. */
-  readonly base?: unknown
-  /** Revision of the raw user section, sent back to fence a write. */
-  readonly revision?: number
+  /** Revision of the raw entry configuration, sent back to fence a write. */
+  readonly revision?: number | undefined
   /** Whether the provider accepts writes at all. */
   readonly writable: boolean
   /** `memory` on a page this Client keeps process-local; no write ever crosses the wire. */
   readonly mode: 'host' | 'memory'
 }
 
-/** The namespace contract handed to `bind`. */
-export interface SettingsScopeSpec {
-  readonly namespace: string
-  /** Narrows the resolved value; returning `undefined` publishes no value at all. */
-  readonly decode?: (value: unknown) => unknown
-}
-
-/** One namespace scope: a derived read plus that namespace's serialized writes. */
-export interface BoundSettingsScope {
-  getSnapshot(): SettingsScopeSnapshot
+/**
+ * One entry's form: a derived read plus that entry's serialized writes. A write
+ * answers whether the Host accepted it, but a refusal and a lost fence both
+ * answer `false`, so this controller never reads the answer — it classifies
+ * from the snapshot the form publishes after the write instead.
+ */
+export interface ConfigForm {
+  getSnapshot(): ConfigFormSnapshot
   subscribe(listener: () => void): () => void
-  mutate(ops: readonly SettingsSetOp[], expectedRevision?: number): Promise<void>
+  mutate(ops: readonly SettingsSetOp[], expectedRevision?: number): Promise<unknown>
 }
 
 /** The shared settings document as the mirror holds it. */
@@ -111,20 +117,21 @@ export interface SettingsMirrorSnapshot {
 }
 
 /**
- * The shared describe mirror's read face. A bound scope publishes nothing at all
- * while the document is unanswered, so a read that *failed* is only visible here
- * — which is what tells a first catalog read failure apart from one still in
+ * The shared describe mirror's read face. A form publishes nothing at all while
+ * the document is unanswered, so a read that *failed* is only visible here —
+ * which is what tells a first catalog read failure apart from one still in
  * flight (spec 10).
  */
 export interface SettingsMirror {
   getSnapshot(): SettingsMirrorSnapshot
   subscribe(listener: () => void): () => void
-  load(): Promise<void>
+  /** Read the document if nothing holds or reads it — exactly the retry after a failed first read. */
+  ensure(): Promise<void>
 }
 
-/** `ctx.settingsScope`. */
-export interface SettingsScopeService {
-  bind(spec: SettingsScopeSpec): BoundSettingsScope
+/** `ctx.configForms`. */
+export interface ConfigFormsService {
+  get(entryId: string): ConfigForm
   describe(): SettingsMirror
 }
 
@@ -147,9 +154,9 @@ export interface ConnectionLike {
 export type CatalogErrorReason =
   /** The settings document could not be read at all; retrying is the remedy. */
   | 'unreadable'
-  /** The Host serves no catalog namespace, or published no `base` layer on it. */
+  /** The Host serves no form for this entry — it is not installed, or failed to load. */
   | 'unavailable'
-  /** A `base` layer this release cannot read in full; never a truncated catalog (spec 5.1). */
+  /** A `presets` field this release cannot read in full; never a truncated catalog (spec 5.1). */
   | 'undecodable'
 
 /** The authoritative Preset Catalog as the Client currently knows it. */
@@ -188,9 +195,10 @@ export type QuickActionWriteFailure =
 /**
  * The structured result every mutation answers with (spec 15, decision 4).
  *
- * The shipped `SettingsScope.mutate` resolves to `void`, and this release adds no
- * DSH core interface (spec 16.4), so success, refusal and conflict are told apart
- * here, from the authoritative snapshot the scope publishes after the write: the
+ * The shipped `ConfigForm.mutate` answers a bare boolean that folds a refusal and
+ * a lost fence into one `false`, and this release adds no DSH core interface
+ * (spec 16.4), so success, refusal and conflict are told apart here, from the
+ * authoritative snapshot the form publishes after the write: the
  * write committed when the stored state now reads back as the plan, the fence was
  * lost when the namespace revision moved elsewhere, and anything else is a Host
  * refusal. Each failing case leaves the caller's form content untouched — the
@@ -252,10 +260,16 @@ export interface QuickActionsController {
 
 /** What the controller is built over. */
 export interface QuickActionsControllerOptions {
-  readonly settingsScope: SettingsScopeService
+  readonly configForms: ConfigFormsService
   readonly connection: ConnectionLike
   /** Mints one Custom Action ID. Defaults to `crypto.randomUUID()`. */
   readonly mintCustomActionId?: () => string
+  /**
+   * The built-in manifest merged ahead of the `presets` field. Defaults to the
+   * package's own, the one the Host validated at load; the suite passes its own
+   * fixtures so that a catalog is exactly what a case declares.
+   */
+  readonly builtinPresets?: readonly unknown[]
 }
 
 /**
@@ -266,38 +280,46 @@ export interface QuickActionsControllerOptions {
  */
 const ID_MINT_ATTEMPTS = 4
 
-/** The five top-level fields of the persisted section (spec 4.2). */
+/**
+ * One write per user-state field (spec 4.2), never touching `presets`: the
+ * author's list shares the entry's config, and this face never writes it.
+ */
 function sectionOps(next: QuickActionSettingsV1): readonly SettingsSetOp[] {
-  return [
-    { op: 'set', path: ['schemaVersion'], value: next.schemaVersion },
-    { op: 'set', path: ['layout'], value: next.layout },
-    { op: 'set', path: ['userActionsById'], value: next.userActionsById },
-    { op: 'set', path: ['actionOrder'], value: next.actionOrder },
-    { op: 'set', path: ['presetStateById'], value: next.presetStateById },
-  ]
+  // The model's section is pure JSON already (spec 4.2); only its `readonly`
+  // typing differs from the wire's, and that exists at compile time alone.
+  return QUICK_ACTION_STATE_FIELDS.map((field) => ({
+    op: 'set',
+    path: [field],
+    value: next[field] as unknown as SettingsJsonValue,
+  }))
 }
 
 /**
- * Read the catalog off a bound namespace.
+ * Rebuild the catalog from the form (spec 22.3): the package's built-ins, then
+ * the author's `presets` field, merged by the same shared model the Host
+ * validated them with at load.
  *
- * `base` is read, never `value`: `base` is the author's own layer, so a user who
- * hand-writes a section of that name into the settings document still sees the
- * Host's catalog (spec 17.2).
+ * The resolved `value` is read, not `base`: author presets are declared in the
+ * profile's own patch layer, which is exactly the layer `base` leaves out. A
+ * list the model refuses is an error, never a partial catalog (spec 5.1).
  */
-function readCatalog(snapshot: SettingsScopeSnapshot, document: SettingsMirrorSnapshot): CatalogState {
+function readCatalog(
+  snapshot: ConfigFormSnapshot,
+  document: SettingsMirrorSnapshot,
+  builtins: readonly unknown[],
+): CatalogState {
   if (snapshot.status === 'loading') {
-    // No namespace answer yet. A held document means the read succeeded and the
-    // namespace simply is not served; no document plus a reported error means the
-    // read itself failed, which is the retryable catalog error of spec 10.
+    // No form answer yet. A held document means the read succeeded and the entry
+    // simply is not served; no document plus a reported error means the read
+    // itself failed, which is the retryable catalog error of spec 10.
     if (document.view !== undefined) return { status: 'error', reason: 'unavailable' }
     return document.error === null ? { status: 'loading' } : { status: 'error', reason: 'unreadable' }
   }
-  if (snapshot.status === 'unavailable' || snapshot.base === undefined) {
-    return { status: 'error', reason: 'unavailable' }
-  }
-  const catalog = decodeCatalogSnapshot(snapshot.base)
-  if (catalog === undefined) return { status: 'error', reason: 'undecodable' }
-  return { status: 'ready', catalog }
+  if (snapshot.status === 'unavailable') return { status: 'error', reason: 'unavailable' }
+  const configured = (snapshot.value as { presets?: unknown } | undefined)?.presets ?? []
+  if (!Array.isArray(configured)) return { status: 'error', reason: 'undecodable' }
+  const result = buildPresetCatalog({ builtins, configured })
+  return result.ok ? { status: 'ready', catalog: result.catalog } : { status: 'error', reason: 'undecodable' }
 }
 
 /**
@@ -308,7 +330,7 @@ function readCatalog(snapshot: SettingsScopeSnapshot, document: SettingsMirrorSn
  * consumer that needs the canonical form — the projection, each planner, the
  * post-write comparison — derives it against the catalog it already holds.
  */
-function readSettings(snapshot: SettingsScopeSnapshot): SettingsState {
+function readSettings(snapshot: ConfigFormSnapshot): SettingsState {
   if (snapshot.status === 'loading') return { status: 'loading' }
   if (snapshot.status === 'unavailable' || snapshot.revision === undefined) return { status: 'unavailable' }
   return {
@@ -353,29 +375,21 @@ function writeGate(catalog: CatalogState, settings: SettingsState, stale: boolea
 }
 
 /**
- * Create the controller. Both bindings are made on the calling fiber, so the
- * scope disposers the binder registers are withdrawn with it; `dispose()`
- * releases what this module owns on top of that.
+ * Create the controller. The form is owned by the settings provider and shared
+ * by every reader of this entry, so there is nothing to release for it;
+ * `dispose()` withdraws this module's own subscriptions.
+ *
+ * Both the catalog and the user state come off the same form. It is decoded
+ * here, by the shared model, rather than trusted as the transport validated
+ * it: the Client's reading of a confirmed snapshot is the model's.
  */
 export function createQuickActionsController(
   options: QuickActionsControllerOptions,
 ): QuickActionsController {
   const mintId = options.mintCustomActionId ?? (() => crypto.randomUUID())
-  const catalogScope = options.settingsScope.bind({
-    namespace: QUICK_ACTIONS_CATALOG_NAMESPACE,
-    // The resolved value is passed through only so the scope reports readiness;
-    // the catalog itself is read from `base`. `null` stands in for a namespace
-    // that resolves to nothing, which would otherwise read as still loading.
-    decode: (value) => value ?? null,
-  })
-  const settingsScope = options.settingsScope.bind({
-    namespace: QUICK_ACTIONS_SETTINGS_NAMESPACE,
-    // Decoding here rather than against the registered schema keeps the Client's
-    // reading of a confirmed snapshot the shared model's, not the transport's.
-    decode: (value) => decodeQuickActionSettings(value),
-  })
-
-  const mirror = options.settingsScope.describe()
+  const builtins = options.builtinPresets ?? BUILT_IN_PRESETS
+  const form =options.configForms.get(QUICK_ACTIONS_SETTINGS_NAMESPACE)
+  const mirror = options.configForms.describe()
 
   const listeners = new Set<() => void>()
   let disposed = false
@@ -389,8 +403,9 @@ export function createQuickActionsController(
   let tail: Promise<unknown> = Promise.resolve()
 
   function derive(): QuickActionsClientState {
-    const catalog = readCatalog(catalogScope.getSnapshot(), mirror.getSnapshot())
-    const settings = readSettings(settingsScope.getSnapshot())
+    const snapshot = form.getSnapshot()
+    const catalog = readCatalog(snapshot, mirror.getSnapshot(), builtins)
+    const settings = readSettings(snapshot)
     const projection =
       catalog.status === 'ready'
         ? projectQuickActions(
@@ -421,9 +436,9 @@ export function createQuickActionsController(
     for (const listener of Array.from(listeners)) listener()
   }
 
-  // The mirror is subscribed to as well as the two scopes: a failed document read
-  // never reaches a scope snapshot, so it is only observable here.
-  const stopSources = [mirror.subscribe(publish), catalogScope.subscribe(publish), settingsScope.subscribe(publish)]
+  // The mirror is subscribed to as well as the form: a failed document read
+  // never reaches a form snapshot, so it is only observable here.
+  const stopSources = [mirror.subscribe(publish), form.subscribe(publish)]
   const stopConnection = options.connection.state.subscribe(() => {
     connectionState = options.connection.state.getSnapshot()
     publish()
@@ -458,7 +473,7 @@ export function createQuickActionsController(
    * the writer that won.
    */
   function classify(catalog: PresetCatalog, next: QuickActionSettingsV1, fence: number): QuickActionWriteOutcome {
-    const snapshot = settingsScope.getSnapshot()
+    const snapshot = form.getSnapshot()
     const settings = readSettings(snapshot)
     if (
       settings.status === 'ready' &&
@@ -493,7 +508,7 @@ export function createQuickActionsController(
         // cost a round trip, and re-normalizing what is stored is not a change.
         if (!outcome.plan.changed) return settle({ ok: true, changed: false })
 
-        await settingsScope.mutate(sectionOps(outcome.plan.next), gate.revision)
+        await form.mutate(sectionOps(outcome.plan.next), gate.revision)
         return settle(classify(gate.catalog, outcome.plan.next, gate.revision))
       } catch (error) {
         // Either the plan could not be built or the write never settled against
@@ -501,11 +516,12 @@ export function createQuickActionsController(
         // user has already moved past, and every write answers with an outcome
         // rather than rejecting into a click handler.
         //
-        // The scope recovers by itself only when the Host *answered* a refusal,
-        // so this branch owns the recovery read: whatever the surfaces render
-        // next must come from the Host, not from a snapshot this write may have
-        // already invalidated.
-        await mirror.load().catch(() => undefined)
+        // The form recovers by itself when the Host *answered* a refusal. A write
+        // that never settled leaves the held snapshot as the Host last confirmed
+        // it; should the write have landed after all, the Host's document-updated
+        // broadcast re-reads the mirror, as a reconnect does. Only a mirror left
+        // holding nothing needs this branch to ask for a read.
+        await mirror.ensure().catch(() => undefined)
         return settle({ ok: false, failure: { kind: 'failed', message: messageOf(error) } })
       }
     })
@@ -526,7 +542,7 @@ export function createQuickActionsController(
     },
     refresh: async () => {
       if (disposed) return
-      await mirror.load()
+      await mirror.ensure()
     },
     openManager() {
       manager = { open: true }

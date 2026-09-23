@@ -29,8 +29,15 @@ import type {
   InputActions as ShippedInputActions,
   InputState as ShippedInputState,
 } from '../../node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/contract/input.js'
+// The same by-path rule holds for Settings: `config-form.d.ts` augments Cordis
+// `Context` with the full `configForms` service and would collide with this
+// plugin's narrow augmentation, while these two files declare the form and the
+// mirror face without augmenting anything.
+import type { ConfigForm as ShippedConfigForm } from '../../node_modules/@deepseek-ai/dsh-client-ui-settings/lib/types/client/config-form-types.js'
+import type { SettingsDescribeFace as ShippedSettingsMirror } from '../../node_modules/@deepseek-ai/dsh-client-ui-settings/lib/types/client/settings-mirror.js'
 import { expectTypeOf, it } from 'vitest'
 
+import type { ConfigForm, SettingsMirror } from '../../src/client/controller.js'
 import type { InputActions, InputState } from '../../src/client/dsh.js'
 
 it('declares no more of the DSH Input contract than DSH publishes', () => {
@@ -42,4 +49,12 @@ it('declares no more of the DSH Input contract than DSH publishes', () => {
   // renamed, removed or retyped field does not.
   expectTypeOf<ShippedInputState>().toExtend<InputState>()
   expectTypeOf<ShippedInputActions>().toExtend<InputActions>()
+})
+
+it('declares no more of the DSH Settings form contract than DSH publishes', () => {
+  // Ticket 31: DSH 0.1.7 replaced `settingsScope` with `configForms` and
+  // changed what a write answers. The controller's hand-written faces are
+  // pinned here for the same reason the Input contract is above.
+  expectTypeOf<ShippedConfigForm<unknown>>().toExtend<ConfigForm>()
+  expectTypeOf<ShippedSettingsMirror>().toExtend<SettingsMirror>()
 })

@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { createQuickActionsController } from '../../src/client/controller.js'
 import type { QuickActionsController } from '../../src/client/controller.js'
 import {
-  QUICK_ACTIONS_CATALOG_NAMESPACE,
+  BUILT_IN_PRESETS,
   QUICK_ACTIONS_SETTINGS_NAMESPACE,
   buildPresetCatalog,
   type PresetCatalog,
 } from '../../src/model/index.js'
-import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
+import { FakeConnection, FakeSettingsDocument, fakeConfigForms } from './support.js'
 
 const SETTINGS_DEFAULTS = {
   schemaVersion: 1,
@@ -17,16 +17,21 @@ const SETTINGS_DEFAULTS = {
   presetStateById: {},
 }
 
+/** The form's schema defaults: the user-state fields plus an empty `presets` (spec 22.2). */
+const FORM_DEFAULTS = { presets: [], ...SETTINGS_DEFAULTS }
+
 function catalogOf(...presets: readonly Record<string, unknown>[]): PresetCatalog {
   const result = buildPresetCatalog({ builtins: presets, configured: [] })
   if (!result.ok) throw new Error(`catalog rejected: ${JSON.stringify(result.issues)}`)
   return result.catalog
 }
 
-const catalog = catalogOf(
+const PRESETS = [
   { id: 'summarize', label: 'Summarize', text: 'summarize this' },
   { id: 'compact', label: 'Compact', text: '/compact', confirm: false },
-)
+] as const
+
+const catalog = catalogOf(...PRESETS)
 
 interface Harness {
   readonly document: FakeSettingsDocument
@@ -35,35 +40,24 @@ interface Harness {
   readonly ids: string[]
 }
 
-/** How the catalog namespace is registered for one case. */
-type CatalogFixture = 'published' | 'unregistered' | 'no-base' | { readonly base: unknown }
+/** How the entry's form declares the author's presets for one case. */
+type CatalogFixture = 'published' | 'unserved' | { readonly presets: unknown }
 
 function harness(
   options: {
     readonly catalog?: CatalogFixture
     readonly stored?: Record<string, unknown>
-    readonly registerSettings?: boolean
     readonly answered?: boolean
+    readonly builtinPresets?: readonly unknown[]
   } = {},
 ): Harness {
   const document = new FakeSettingsDocument()
   document.answered = options.answered ?? true
   const fixture = options.catalog ?? 'published'
-  if (fixture !== 'unregistered') {
-    const base =
-      fixture === 'published'
-        ? (JSON.parse(JSON.stringify(catalog)) as unknown)
-        : fixture === 'no-base'
-          ? undefined
-          : fixture.base
-    document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {
-      defaults: { schemaVersion: 1, revision: '', presets: [] },
-      ...(base === undefined ? {} : { base }),
-    })
-  }
-  if (options.registerSettings !== false) {
+  if (fixture !== 'unserved') {
     document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
-      defaults: SETTINGS_DEFAULTS,
+      defaults: FORM_DEFAULTS,
+      base: { presets: fixture === 'published' ? structuredClone(PRESETS) : fixture.presets },
       ...(options.stored === undefined ? {} : { user: options.stored }),
     })
   }
@@ -71,8 +65,9 @@ function harness(
   const ids: string[] = []
   let minted = 0
   const controller = createQuickActionsController({
-    settingsScope: fakeSettingsScope(document),
+    configForms: fakeConfigForms(document),
     connection,
+    builtinPresets: options.builtinPresets ?? [],
     mintCustomActionId: () => {
       minted += 1
       const id = `minted-${String(minted)}`
@@ -84,20 +79,25 @@ function harness(
 }
 
 describe('Client catalog binding', () => {
-  it('reads the authoritative catalog off the composition base layer', () => {
-    const { controller } = harness()
+  it('rebuilds the authoritative catalog from the form the entry serves', () => {
+    const { document, controller } = harness()
     const state = controller.getSnapshot()
     expect(state.catalog).toEqual({ status: 'ready', catalog })
     expect(state.projection?.composer.map((action) => action.label)).toEqual(['Summarize', 'Compact'])
+    // One entry, one form: the catalog no longer rides a namespace of its own.
+    expect(document.bound).toEqual([QUICK_ACTIONS_SETTINGS_NAMESPACE])
   })
 
-  it('ignores a user section written against the catalog namespace', () => {
-    const { document, controller } = harness()
-    document.concurrentWrite(QUICK_ACTIONS_CATALOG_NAMESPACE, {
-      schemaVersion: 1,
-      revision: 'forged',
-      presets: [{ id: 'forged', kind: 'send', label: 'Forged', text: 'forged', confirm: true }],
-    })
+  it('merges the author presets behind the built-in manifest', () => {
+    const authored = [{ id: 'authored', label: 'Authored', text: 'authored text' }]
+    const { controller } = harness({ builtinPresets: BUILT_IN_PRESETS, catalog: { presets: authored } })
+    const ids = controller.getSnapshot().projection?.managed.map((action) => action.ref.id)
+    expect(ids).toEqual([...BUILT_IN_PRESETS.map((preset) => (preset as { id: string }).id), 'authored'])
+  })
+
+  it('reads presets the active profile declares, not just the layers below it', () => {
+    const { document, controller } = harness({ catalog: { presets: [] } })
+    document.concurrentWrite(QUICK_ACTIONS_SETTINGS_NAMESPACE, { ...SETTINGS_DEFAULTS, presets: structuredClone(PRESETS) })
     expect(controller.getSnapshot().catalog).toEqual({ status: 'ready', catalog })
   })
 
@@ -114,18 +114,18 @@ describe('Client catalog binding', () => {
     expect(state.readOnly).toBe(true)
   })
 
-  it('reports an unavailable catalog when the namespace is not registered', () => {
-    const { controller } = harness({ catalog: 'unregistered' })
-    expect(controller.getSnapshot().catalog).toEqual({ status: 'error', reason: 'unavailable' })
-  })
-
-  it('reports an unavailable catalog when the Host published no base layer', () => {
-    const { controller } = harness({ catalog: 'no-base' })
+  it('reports an unavailable catalog when the Host serves no form for the entry', () => {
+    const { controller } = harness({ catalog: 'unserved' })
     expect(controller.getSnapshot().catalog).toEqual({ status: 'error', reason: 'unavailable' })
   })
 
   it('reports an undecodable catalog rather than a truncated one', () => {
-    const { controller } = harness({ catalog: { base: { schemaVersion: 1, revision: 'r', presets: [{ id: 'a' }] } } })
+    const { controller } = harness({ catalog: { presets: [...PRESETS, { id: 'a' }] } })
+    expect(controller.getSnapshot().catalog).toEqual({ status: 'error', reason: 'undecodable' })
+  })
+
+  it('reports an undecodable catalog when the presets field is not a list', () => {
+    const { controller } = harness({ catalog: { presets: { summarize: PRESETS[0] } } })
     expect(controller.getSnapshot().catalog).toEqual({ status: 'error', reason: 'undecodable' })
   })
 
@@ -160,14 +160,6 @@ describe('Client settings binding', () => {
     expect(state.projection?.composer.map((action) => action.label)).toEqual(['Compact'])
     expect(state.projection?.managed).toHaveLength(2)
     expect(state.readOnly).toBe(false)
-  })
-
-  it('shows the authoritative catalog read-only when the settings namespace is absent', () => {
-    const { controller } = harness({ registerSettings: false })
-    const state = controller.getSnapshot()
-    expect(state.settings).toEqual({ status: 'unavailable' })
-    expect(state.projection?.composer.map((action) => action.label)).toEqual(['Summarize', 'Compact'])
-    expect(state.readOnly).toBe(true)
   })
 
   it('goes read-only when the provider accepts no writes', () => {
@@ -226,6 +218,14 @@ describe('Client writes', () => {
     expect(controller.getSnapshot().projection?.layout).toBe('bar')
   })
 
+  it('writes the user-state fields only, never the author presets', async () => {
+    const { document, controller } = harness()
+    await controller.setLayout('bar')
+    expect(Object.keys(document.stored(QUICK_ACTIONS_SETTINGS_NAMESPACE) ?? {}).sort()).toEqual(
+      Object.keys(SETTINGS_DEFAULTS).sort(),
+    )
+  })
+
   it('writes nothing when the plan would persist what is already stored', async () => {
     const { document, controller } = harness()
     const outcome = await controller.setLayout('ribbon')
@@ -265,15 +265,16 @@ describe('Client writes', () => {
     expect(controller.getSnapshot().projection?.layout).toBe('launcher')
   })
 
-  it('reports a transport failure without retrying it, after one recovery read', async () => {
+  it('reports a transport failure without retrying it, keeping the last confirmed snapshot', async () => {
     const { document, controller } = harness()
     document.refuseWrites = 'throw'
     const outcome = await controller.setLayout('bar')
     expect(outcome).toEqual({ ok: false, failure: { kind: 'failed', message: 'fake settings transport failed' } })
     expect(document.writes).toBe(1)
-    // The scope recovers only when the Host answered a refusal, so a throw has to
-    // bring the authoritative state back itself.
-    expect(document.describeReads).toBe(1)
+    // A write that never settled left the held document as the Host confirmed it;
+    // the mirror refreshes on the Host's broadcast or a reconnect, not on demand.
+    expect(document.describeReads).toBe(0)
+    expect(controller.getSnapshot().projection?.layout).toBe('ribbon')
   })
 
   it('refuses every write while the surfaces are read-only', async () => {
@@ -318,7 +319,7 @@ describe('Client writes', () => {
   })
 
   it('refuses every write while no catalog is readable', async () => {
-    const { document, controller } = harness({ catalog: 'unregistered' })
+    const { document, controller } = harness({ catalog: 'unserved' })
     expect(await controller.setLayout('bar')).toEqual({ ok: false, failure: { kind: 'not-ready' } })
     expect(document.writes).toBe(0)
   })
@@ -465,20 +466,11 @@ describe('Client controller lifecycle', () => {
     expect(controller.getSnapshot().projection?.layout).toBe('bar')
   })
 
-  it('picks up the catalog the Host republished after a restart', () => {
+  it('picks up presets the author changed, live', () => {
     const { document, controller } = harness()
-    const upgraded = JSON.parse(
-      JSON.stringify(
-        catalogOf(
-          { id: 'summarize', label: 'Summarize', text: 'summarize this' },
-          { id: 'compact', label: 'Compact', text: '/compact', confirm: false },
-          { id: 'explain', label: 'Explain', text: 'explain that' },
-        ),
-      ),
-    ) as unknown
-    const namespace = document.namespaces.get(QUICK_ACTIONS_CATALOG_NAMESPACE)
-    if (namespace === undefined) throw new Error('the catalog namespace should be registered')
-    namespace.base = upgraded
+    const namespace = document.namespaces.get(QUICK_ACTIONS_SETTINGS_NAMESPACE)
+    if (namespace === undefined) throw new Error('the entry form should be served')
+    namespace.base = { presets: [...structuredClone(PRESETS), { id: 'explain', label: 'Explain', text: 'explain that' }] }
     document.answer()
 
     expect(controller.getSnapshot().projection?.composer.map((action) => action.label)).toEqual([

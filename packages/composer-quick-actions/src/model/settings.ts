@@ -16,18 +16,28 @@ import type {
 } from './types.js'
 
 /**
- * The one namespace holding user data (spec 4.2); renaming it orphans every
- * stored section. It lives in the shared model because both faces address it:
- * the Host registers it, the Client binds the same name.
+ * The one namespace holding user data (spec 4.2, 22); renaming it orphans every
+ * stored section. Since DSH 0.1.7 a Settings namespace *is* a profile entry id,
+ * so this is also the Cordis loader entry id the bundle patch inserts — the two
+ * can no longer drift apart. It lives in the shared model because both faces
+ * address it: the Host describes and fences its canonical rewrite against it,
+ * the Client reads and writes the same form.
  */
 export const QUICK_ACTIONS_SETTINGS_NAMESPACE = 'composer-quick-actions'
 
 /**
- * The read-only namespace carrying the Preset Catalog to Clients (spec 17.2).
- * The plugin never writes its user layer, so it holds no persisted section —
- * `composer-quick-actions` remains the only persisted namespace (spec 4.2).
+ * The top-level fields of the stored section, in canonical order (spec 4.2).
+ * Each is a separate volatile Config field (spec 22.2): the DSH legacy import
+ * addresses a section by these exact top-level keys, and every write sets them
+ * field by field so a write never reaches the author's `presets`.
  */
-export const QUICK_ACTIONS_CATALOG_NAMESPACE = 'composer-quick-actions-catalog'
+export const QUICK_ACTION_STATE_FIELDS = Object.freeze([
+  'schemaVersion',
+  'layout',
+  'userActionsById',
+  'actionOrder',
+  'presetStateById',
+] as const)
 
 /** The state a fresh install starts from (spec 4.2). */
 export const DEFAULT_QUICK_ACTION_SETTINGS: QuickActionSettingsV1 = Object.freeze({
