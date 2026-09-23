@@ -20,9 +20,9 @@ import { createQuickActionSessionRegistry } from '../../src/client/session/execu
 import { createQuickActionsController } from '../../src/client/controller.js'
 import type { QuickActionsController } from '../../src/client/controller.js'
 import type { InputState, SessionSnapshot, SnapshotSelectorHook, Translate } from '../../src/client/dsh.js'
-import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
+import { QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
 import type { QuickActionLayout } from '../../src/model/index.js'
-import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
+import { FakeConnection, FakeSettingsDocument, fakeConfigForms } from './support.js'
 import { FakeComposerInput, fakeSession } from './composer.js'
 import { zh } from '../../src/locales/index.js'
 
@@ -56,10 +56,10 @@ function settingsSection(overrides: Record<string, unknown> = {}): Record<string
 interface HarnessOptions {
   readonly layout?: QuickActionLayout
   readonly presets?: readonly Record<string, unknown>[]
-  /** The stored user section, or `false` for a namespace the Host does not serve. */
-  readonly user?: Record<string, unknown> | false
-  /** A catalog namespace the Host does not publish a `base` layer for. */
-  readonly noCatalog?: boolean
+  /** The stored user section. */
+  readonly user?: Record<string, unknown>
+  /** The Host serves no form for the entry — it is not installed, or failed to load. */
+  readonly unserved?: boolean
 }
 
 const PRESETS: readonly Record<string, unknown>[] = [
@@ -81,19 +81,17 @@ class ManagerHarness {
 
   constructor(options: HarnessOptions = {}) {
     const presets = options.presets ?? PRESETS
-    this.document.register(
-      QUICK_ACTIONS_CATALOG_NAMESPACE,
-      options.noCatalog === true ? {} : { base: { schemaVersion: 1, revision: 'r', presets } },
-    )
-    if (options.user !== false) {
+    if (options.unserved !== true) {
       this.document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
-        defaults: settingsSection(),
+        defaults: { presets: [], ...settingsSection() },
+        base: { presets },
         user: settingsSection({ layout: options.layout ?? 'ribbon', ...options.user }),
       })
     }
     this.controller = createQuickActionsController({
-      settingsScope: fakeSettingsScope(this.document),
+      configForms: fakeConfigForms(this.document),
       connection: this.connection,
+      builtinPresets: [],
       // Deterministic Custom Action IDs, so a created action can be addressed.
       mintCustomActionId: () => `custom-${this.minted++}`,
     })
@@ -971,8 +969,12 @@ describe('the action ceiling', () => {
 // ---------------------------------------------------------------------------
 
 describe('when settings cannot be written', () => {
-  it('is read-only, and says storage is unavailable, when the namespace is unserved', () => {
-    setup({ user: false })
+  it('is read-only, and says storage is unavailable, when the provider accepts no writes', () => {
+    setup()
+    act(() => {
+      harness.document.writable = false
+      harness.document.answer()
+    })
     mount()
     openManager()
 
@@ -1079,7 +1081,7 @@ describe('when settings cannot be written', () => {
   })
 
   it('offers a retryable catalog error where the list would be', () => {
-    setup({ noCatalog: true })
+    setup({ unserved: true })
     mount()
     // No layout renders without a catalog, so the manager is opened directly.
     act(() => {

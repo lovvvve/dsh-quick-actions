@@ -27,9 +27,9 @@ import type {
   SnapshotSelectorHook,
   Translate,
 } from '../../src/client/dsh.js'
-import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
+import { QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
 import type { QuickActionLayout } from '../../src/model/index.js'
-import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
+import { FakeConnection, FakeSettingsDocument, fakeConfigForms } from './support.js'
 import { FakeComposerInput, fakeSession } from './composer.js'
 import { zh } from '../../src/locales/index.js'
 
@@ -86,16 +86,15 @@ class SurfaceHarness {
   private readonly sessionListeners = new Set<() => void>()
 
   constructor(layout: QuickActionLayout, presets: readonly Record<string, unknown>[]) {
-    this.document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {
-      base: { schemaVersion: 1, revision: 'r', presets },
-    })
     this.document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
-      defaults: { schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
+      defaults: { presets: [], schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
+      base: { presets },
       user: { schemaVersion: 1, layout, userActionsById: {}, actionOrder: [], presetStateById: {} },
     })
     this.controller = createQuickActionsController({
-      settingsScope: fakeSettingsScope(this.document),
+      configForms: fakeConfigForms(this.document),
       connection: this.connection,
+      builtinPresets: [],
     })
     this.entries = createQuickActionDockEntries({
       controller: this.controller,
@@ -518,9 +517,10 @@ describe('executing from a surface', () => {
 describe('the catalog error state', () => {
   it('offers a retry where the layout would be, and does not reject into the page', async () => {
     setup('ribbon')
-    // The Host serves no catalog layer: no action may render, and the entry
+    // The Host serves no form for the entry: no action may render, and the entry
     // becomes the retryable catalog error of spec 10.
-    harness.document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {})
+    harness.document.namespaces.delete(QUICK_ACTIONS_SETTINGS_NAMESPACE)
+    harness.document.answer()
     mount()
 
     const notice = document.querySelector('[data-quick-actions-catalog-error="unavailable"]')
@@ -532,6 +532,9 @@ describe('the catalog error state', () => {
       rejections.push(event.reason)
     }
     window.addEventListener('unhandledrejection', onRejection)
+    // The mirror re-reads only while it holds nothing, so the retry's read is
+    // made to happen — and to fail — rather than resolve as a no-op.
+    harness.document.answered = false
     harness.document.loadRejects = true
 
     fireEvent.click(screen.getByRole('button', { name: '重试' }))

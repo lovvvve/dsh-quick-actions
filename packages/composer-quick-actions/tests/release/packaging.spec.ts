@@ -59,13 +59,14 @@ const declaredInjects = stringList(feature.dsh?.client?.inject, 'dsh.client.inje
 
 /**
  * The browser module table's platform seeds, read out of the shipped web shell
- * of DSH 0.1.5-rc.1 (`@deepseek-ai/dsh-web-frontend`, the seed factory the boot
+ * of DSH 0.1.7-alpha.2 (`@deepseek-ai/dsh-web-frontend`, the seed factory the boot
  * path hands to `ModuleLoader.create` as `staticModules`). A `require` for
  * anything else has to be answered by another plugin row, which is why an
  * external outside this set is a release defect rather than a runtime detail.
  *
  * The table grows between DSH releases — 0.1.5-rc.1 added `dockkit` — so it has
  * to be re-read from the shell whenever the peer floor moves, not relabelled.
+ * Ticket 31 re-read it at 0.1.7-alpha.2: the same nine keys.
  */
 const BROWSER_SEEDS: readonly string[] = [
   'react',
@@ -81,14 +82,15 @@ const BROWSER_SEEDS: readonly string[] = [
 
 /**
  * Which package's Client half provides each Cordis service this Client injects,
- * each re-read from that package's shipped `lib/client.js` at 0.1.5-rc.1.
- * `dsh.client.inject` names packages, not
+ * each re-read from that package's shipped `lib/client.js` at 0.1.7-alpha.2
+ * (`configForms` is `super(ctx, "configForms")` there; 0.1.7 retired
+ * `settingsScope`). `dsh.client.inject` names packages, not
  * services, so this map is what turns the Client's own `inject` list into the
  * manifest declaration the module loader orders arrivals by.
  */
 const SERVICE_PROVIDERS: Readonly<Record<string, string>> = {
   slots: '@deepseek-ai/dsh-client-ui-renderer',
-  settingsScope: '@deepseek-ai/dsh-client-ui-settings',
+  configForms: '@deepseek-ai/dsh-client-ui-settings',
   connection: '@deepseek-ai/dsh-client-connection',
   locale: '@deepseek-ai/dsh-client-locale',
 }
@@ -401,7 +403,7 @@ describe('peer range', () => {
     const peers = feature.peerDependencies ?? {}
     for (const [name, range] of Object.entries(peers)) {
       if (!name.startsWith('@deepseek-ai/dsh-')) continue
-      expect(range, name).toBe('>=0.1.5-rc.1')
+      expect(range, name).toBe('>=0.1.7-alpha.2')
     }
   })
 })

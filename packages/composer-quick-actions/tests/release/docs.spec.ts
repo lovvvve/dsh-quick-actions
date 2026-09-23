@@ -53,8 +53,9 @@ const REQUIRED_IN_FEATURE_DOCS: readonly (readonly [string, readonly string[]])[
   ['the install command', ['dsh plugin --profile web add']],
   ['the uninstall command', ['dsh plugin --profile web remove']],
   ['the local tarball flow', ['pnpm pack']],
-  ['both Settings namespaces', ['composer-quick-actions-catalog']],
-  ['the Settings file path', ['settings.yaml']],
+  ['the Settings form entry id', ['composer-quick-actions']],
+  ['where the Settings form persists', ['cordis.patch.yml']],
+  ['the one-shot legacy import', ['settings.yaml.imported']],
   ['the preset authorization channel', ['Config.presets']],
   ['all three layouts', ['ribbon', 'bar', 'launcher']],
   ['the send action loading path', ['setDraft', 'submit']],
@@ -77,6 +78,7 @@ const FORBIDDEN_EVERYWHERE: readonly (readonly [string, readonly string[]])[] = 
   ['a fabricated minimum DSH version (spec 12)', ['最低 DSH 版本', 'minimum DSH version', 'dsh-v0.1.3-alpha.1']],
   ['an instruction to edit an Agent preset (spec 12)', ['Agent preset', 'Agent 预设']],
   ['an instruction to edit installed node_modules (spec 12)', ['修改 node_modules', 'edit node_modules']],
+  ['the retired catalog namespace (spec 22 folded it into the entry form)', ['composer-quick-actions-catalog']],
 ]
 
 describe('feature readme coverage', () => {

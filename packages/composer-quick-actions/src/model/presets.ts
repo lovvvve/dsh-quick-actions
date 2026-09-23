@@ -3,6 +3,11 @@
  * Preset Catalog (spec 5.1), declared ahead of the Host composition's
  * `Config.presets`.
  *
+ * It lives in the shared model because both faces merge it: the Host validates
+ * the catalog at load, and the Client rebuilds the same catalog from this list
+ * plus the `presets` form field it reads (spec 22.3). One list, so the two can
+ * never disagree about what the built-ins are.
+ *
  * These are author-facing product copy in one language; changing a label or a
  * text is a product decision, not an implementation one.
  *

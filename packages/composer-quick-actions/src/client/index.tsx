@@ -2,21 +2,21 @@
  * Client composition entry for Composer Quick Actions.
  *
  * This fiber owns everything the feature holds in the browser: one global
- * `QuickActionsController` over the two Settings namespaces, the per-Session
+ * `QuickActionsController` over the entry's Settings form, the per-Session
  * execution registry, the Resident Composer registry, the locale dictionaries,
  * the stylesheet, and the two dock Slot registrations. All of it is installed
  * through `ctx.effect` and `ctx.slots.inject`, so unloading the plugin leaves
  * no listener, registration, namespace, style tag or subscription behind
  * (spec 7.3).
  *
- * `settingsScope` is how this Client reaches Host-authoritative state at all — it
+ * `configForms` is how this Client reaches Host-authoritative state at all — it
  * never writes a file, never treats browser storage as a source of truth, and
  * never reaches past Settings to a provider (spec 6.3). `connection` supplies the
  * generation state the read-only-while-disconnected rule needs (spec 10).
  */
 import type { Context } from '@deepseek-ai/cordis'
 import { createQuickActionsController } from './controller.js'
-import type { ConnectionLike, SettingsScopeService } from './controller.js'
+import type { ConfigFormsService, ConnectionLike } from './controller.js'
 import { createQuickActionSessionRegistry } from './session/execution.js'
 import { createResidentComposerRegistry } from './surfaces/residency.js'
 import { createQuickActionDockEntries } from './surfaces/entries.js'
@@ -32,7 +32,7 @@ import { installQuickActionStyles } from '../styles/index.js'
 // `./controller.ts`, deliberately no wider than what is actually read.
 declare module '@deepseek-ai/cordis' {
   interface Context {
-    settingsScope: SettingsScopeService
+    configForms: ConfigFormsService
     connection: ConnectionLike
     slots: SlotsService
     locale: LocaleService
@@ -48,7 +48,7 @@ export const name = 'composer-quick-actions'
  * read "without the inject requirement", because the service is guaranteed
  * present wherever the two dock Slots it declares are rendered.
  */
-export const inject: readonly string[] = ['slots', 'settingsScope', 'connection', 'locale']
+export const inject: readonly string[] = ['slots', 'configForms', 'connection', 'locale']
 
 /** Ascending position among the shipped dock entries; late enough to sit last. */
 const DOCK_ORDER = 100
@@ -63,7 +63,7 @@ const MANAGER_ORDER = 101
  */
 export function apply(ctx: Context): void {
   const controller = createQuickActionsController({
-    settingsScope: ctx.settingsScope,
+    configForms: ctx.configForms,
     connection: ctx.connection,
   })
   const sessions = createQuickActionSessionRegistry()

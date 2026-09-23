@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import { apply, inject, name } from '../../src/client/index.js'
-import { FakeConnection, FakeSettingsDocument, fakeSettingsScope } from './support.js'
-import { QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
+import { FakeConnection, FakeSettingsDocument, fakeConfigForms } from './support.js'
+import { QUICK_ACTIONS_SETTINGS_NAMESPACE } from '../../src/model/index.js'
 import { QUICK_ACTIONS_LOCALE_NAMESPACE } from '../../src/locales/index.js'
 import type { ComposerBlocks, SlotInjectionEffect, SlotRegisterOptions } from '../../src/client/dsh.js'
 
@@ -26,21 +26,15 @@ class FakeClientContext {
   private readonly disposers: (() => void)[] = []
 
   constructor() {
-    this.document.register(QUICK_ACTIONS_CATALOG_NAMESPACE, {
-      base: {
-        schemaVersion: 1,
-        revision: 'r',
-        presets: [{ id: 'a', kind: 'send', label: 'A', text: 'a', confirm: true }],
-      },
-    })
     this.document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
-      defaults: { schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
+      defaults: { presets: [], schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
+      base: { presets: [{ id: 'a', kind: 'send', label: 'A', text: 'a', confirm: true }] },
     })
   }
 
   get ctx(): Context {
     return {
-      settingsScope: fakeSettingsScope(this.document),
+      configForms: fakeConfigForms(this.document),
       connection: this.connection,
       slots: {
         // The shipped `inject` accepts one disposer or an iterable of them; the
@@ -93,13 +87,13 @@ describe('the Client plugin surface', () => {
   })
 
   it('declares exactly the services spec 7.3 lists', () => {
-    expect(inject).toEqual(['slots', 'settingsScope', 'connection', 'locale'])
+    expect(inject).toEqual(['slots', 'configForms', 'connection', 'locale'])
   })
 
-  it('binds the catalog namespace and the user-state namespace, and nothing else', () => {
+  it("reads its own entry's form, and nothing else", () => {
     const host = new FakeClientContext()
     apply(host.ctx)
-    expect(host.document.bound).toEqual([QUICK_ACTIONS_CATALOG_NAMESPACE, QUICK_ACTIONS_SETTINGS_NAMESPACE])
+    expect(host.document.bound).toEqual([QUICK_ACTIONS_SETTINGS_NAMESPACE])
   })
 
   it('costs no settings read of its own', () => {
