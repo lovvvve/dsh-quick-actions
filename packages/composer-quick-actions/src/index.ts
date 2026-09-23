@@ -72,6 +72,14 @@ export function apply(ctx: Context, config?: unknown): QuickActionsHost {
       'composer-quick-actions: settings page policy',
     )
 
+    // Once per boot, and deliberately not again on `settings/document-updated`.
+    // DSH's one-shot legacy import waits on the same Loader promise and lands
+    // after this read, so an imported section is canonicalized only on the next
+    // boot — harmless, because every projection and every planner normalizes
+    // what it reads (spec 22.7). Rewriting from that event instead fails outright:
+    // DSH dispatches it inside its own HMR write transaction, whose async context
+    // follows every continuation, so any write started from it is refused as a
+    // nested transaction.
     scoped.effect(() => {
       let owned = true
       void entriesSettled(ctx)
