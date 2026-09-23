@@ -19,7 +19,7 @@
 import { useState } from 'react'
 import type { ReactElement } from 'react'
 import { filterQuickActions, hasQuickActionQuery } from './search.js'
-import { IconSearchOutline16, Input } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Input } from '@deepseek-ai/dsh-client-ui-primitives'
 import { useInitialFocusIn, useModalKeys } from '../modal.js'
 import { ActionFace } from '../surfaces/ActionFace.js'
 import { unavailableReasonFor } from '../session/availability.js'
@@ -27,6 +27,26 @@ import type { QuickActionSessionState } from '../session/execution.js'
 import { quickActionRefKey } from '../../model/index.js'
 import type { ProjectedQuickAction } from '../../model/index.js'
 import type { Translate } from '../dsh.js'
+
+/**
+ * The search field's glyph: the official `IconSearchOutlineRegular` artwork,
+ * drawn here rather than imported. DSH renamed its icon exports between lines
+ * (`IconSearchOutline16` is gone as of 0.1.7) and the shell's seed table serves
+ * only the running line's names, so an imported icon breaks the whole panel the
+ * next time a name moves (spec 22.5). Stroke follows `currentColor`, so it
+ * themes with the field like the official one.
+ */
+function SearchIcon(): ReactElement {
+  return (
+    <svg width={16} height={16} viewBox="0 0 16 16" fill="none" aria-hidden="true" strokeWidth={1}>
+      <path
+        d="M6.58727 11.8586C9.55061 11.8586 11.9529 9.45637 11.9529 6.49304C11.9529 3.5297 9.55061 1.12744 6.58727 1.12744C3.62394 1.12744 1.22168 3.5297 1.22168 6.49304C1.22168 9.45637 3.62394 11.8586 6.58727 11.8586Z"
+        stroke="currentColor"
+      />
+      <path d="M10.2991 10.3933L14.7783 14.8725" stroke="currentColor" />
+    </svg>
+  )
+}
 
 export interface ActionPanelProps {
   /** The actions this entry offers, already in the shared order. */
@@ -81,7 +101,7 @@ export function ActionPanel(props: ActionPanelProps): ReactElement {
         <label className="dsh-cqa-field">
           <span className="dsh-cqa-field-label">{t('panel.search')}</span>
           <Input
-            icon={<IconSearchOutline16 />}
+            icon={<SearchIcon />}
             type="search"
             value={query}
             data-quick-actions-search=""

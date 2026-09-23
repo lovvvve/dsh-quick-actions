@@ -48,10 +48,14 @@ export interface InputOccurrence {
   readonly ref: string
 }
 
-/** One row of the read-only transient queue projection. */
-export interface InputQueueRow {
-  readonly placement: 'queued' | 'steering' | 'context'
-}
+/**
+ * One row of the read-only transient queue projection. Opaque on purpose: the
+ * plugin never reads a row — a send may join a running turn (spec 9.2) — and
+ * DSH 0.1.7 replaced the row shape outright (`placement` rows became the next
+ * turn's `UserMessage`s), so any field declared here would only be one more
+ * name to drift (spec 22.5).
+ */
+export type InputQueueRow = unknown
 
 /**
  * The published per-Session input state — the whole public snapshot, listed
