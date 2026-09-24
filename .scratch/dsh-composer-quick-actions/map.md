@@ -81,7 +81,9 @@ Label: `wayfinder:map`
 
 - [把验证基线升到 DSH 0.1.7-rc.1](./issues/33-move-the-verified-baseline-to-0.1.7-rc.1.md) — **已 resolved**。基线升到 `0.1.7-rc.1`，peer 下界留在 `>=0.1.7-alpha.2`（两版之间被消费契约逐字相同），两者在文档契约里拆成两个事实（spec 第 22.6 节）。每个 DSH peer 另设锁在基线上的精确 devDependency——只靠 peer 自动安装，pnpm 沿用 lockfile 的旧解析，会留下半条旧线。真实 rc.1 无界面冒烟与 alpha.2 行为逐字一致。
 
-- [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — 开放，被 31 阻塞已解除；前置条件是 3080 通道切到 DSH `0.1.7` 线，由用户决定。
+- [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — **已 resolved**。种子/备份/还原改为操作 profile `cordis.patch.yml` 的本插件行（整份文件逐字节备份还原），运行时默认 `@next`，指纹扩到四个文件；新增外部通道模式与 `live-round.sh`，在用户正在运行的 DSH `0.1.7-rc.1` 上**不重启**热装插件并验证：三视口 33 项通过、等宽 ≤ 1 CSS px；`conflict.spec` 在 90 秒预算下超时，以 240 秒单独重跑 1.8 分钟通过（新模型下的冲突分支成立），已把预算写进该 spec。收尾逐字节还原，四个指纹一致。重启类与 overlay 类 round 留给票据 34。
+
+- [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 开放。其中 overlay 类 round 按读到的 config-editor 代码会在 0.1.7 上被拒写，需先真机确认。
 
 ## Out of scope（范围外）
 
