@@ -20,7 +20,7 @@ This release has **no insert action** (insert at the selection, keep the editing
 
 | Item | Value |
 |---|---|
-| Verified baseline | DSH core packages at `0.1.7-alpha.2`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
+| Verified baseline | DSH core packages at `0.1.7-rc.1`. Note that `dsh --version` on the desktop build prints its dependency-set label, a different number from the core package version |
 | DSH peers | `>=0.1.7-alpha.2` |
 | Cordis | `^4.0.4` |
 | Schemastery | `^3.18.4` |
@@ -31,6 +31,8 @@ This release has **no insert action** (insert at the selection, keep the editing
 Nothing is capability-detected at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
 
 The floor is the DSH release whose Settings form this plugin reads. **Do not run it against anything older**: `0.1.7-alpha.1` rewrote Settings — plugins no longer register namespaces of their own, and user data became the plugin's own Config, written into the profile. This release reads and writes the new model only, and on the `0.1.5` and `0.1.6` lines its Client never starts. For those lines, install this plugin's `0.1.0`.
+
+The verified baseline sits one release above the floor: this release is verified on `0.1.7-rc.1`, and nothing this plugin consumes changed between `0.1.7-alpha.2` and `0.1.7-rc.1`, so the floor stays at `0.1.7-alpha.2` and users still on the alpha channel can install it.
 
 No upper bound is declared, but **that is not a promise of forward compatibility**. Two things to know:
 

@@ -26,6 +26,7 @@ export interface Manifest {
   readonly files?: unknown
   readonly exports?: Record<string, unknown>
   readonly dependencies?: Record<string, string>
+  readonly devDependencies?: Record<string, string>
   readonly peerDependencies?: Record<string, string>
   readonly dsh?: {
     readonly client?: { readonly platform?: unknown; readonly inject?: unknown; readonly external?: unknown }

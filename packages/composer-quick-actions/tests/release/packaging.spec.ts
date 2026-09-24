@@ -399,11 +399,27 @@ describe('peer range', () => {
     }
   })
 
-  it('leaves every DSH range open above the verified baseline, naming no first supported release', () => {
+  it('leaves every DSH range open above the floor, naming no first supported release', () => {
     const peers = feature.peerDependencies ?? {}
     for (const [name, range] of Object.entries(peers)) {
       if (!name.startsWith('@deepseek-ai/dsh-')) continue
       expect(range, name).toBe('>=0.1.7-alpha.2')
     }
+  })
+
+  it('pins every DSH package the dev tree checks against to one verified baseline', () => {
+    // Ticket 33: a peer the dev tree only auto-installs keeps whatever the lockfile
+    // resolved first, so moving the baseline left six Client packages a release
+    // behind the rest. Every DSH peer is therefore also an exact devDependency on
+    // the same line. `dsh-client-ui-primitives` is the one standing exception
+    // (spec 21.5: its newer tarballs ship without their dependencies).
+    const dev = feature.devDependencies ?? {}
+    const dshPeers = Object.keys(feature.peerDependencies ?? {}).filter(
+      (name) => name.startsWith('@deepseek-ai/dsh-') && name !== '@deepseek-ai/dsh-client-ui-primitives',
+    )
+    const pins = new Set(dshPeers.map((name) => dev[name]))
+    expect(pins.size, JSON.stringify(Object.fromEntries(dshPeers.map((name) => [name, dev[name]])))).toBe(1)
+    const [baseline] = [...pins]
+    expect(baseline).toMatch(/^\d+\.\d+\.\d+(?:-[\w.]+)?$/)
   })
 })
