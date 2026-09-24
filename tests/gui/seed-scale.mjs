@@ -6,11 +6,12 @@
 //
 //   node tests/gui/seed-scale.mjs <count>    seed a row (backs the namespace up once)
 //   node tests/gui/seed-scale.mjs --restore  put the user's own namespace back
+//   node tests/gui/seed-scale.mjs --backup   back up without seeding, for rounds that only let the GUI write
 //
 // The user's file is only ever touched through `settings-namespace.mjs`, which owns the
 // backup, the atomic write and the comment-preserving edit.
 import { randomUUID } from 'node:crypto'
-import { restoreNamespace, seedNamespace } from './settings-namespace.mjs'
+import { backupNamespace, restoreNamespace, seedNamespace } from './settings-namespace.mjs'
 
 const PRESETS = ['approve', 'continue', 'summarize', 'explain', 'compact-context']
 
@@ -48,6 +49,7 @@ function seed(target) {
 
 const argument = process.argv[2]
 if (argument === '--restore') restoreNamespace()
+else if (argument === '--backup') backupNamespace()
 else {
   const target = Number(argument)
   if (!Number.isInteger(target) || target < 0) throw new Error('pass an action count, or --restore')

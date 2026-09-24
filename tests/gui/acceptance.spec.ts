@@ -398,7 +398,7 @@ test.describe('final acceptance walk', () => {
     const labels = Object.values(stored.userActionsById ?? {}).map(action => action.label)
     expect(labels).toContain(NORMAL_LABEL_EDITED)
     expect(labels).toContain(COMMAND_LABEL)
-    note(`步骤 6：刷新页面后布局 bar 与 6 项动作原样；settings.yaml 中 layout=${stored.layout}，自定义动作 ${labels.length} 条`)
+    note(`步骤 6：刷新页面后布局 bar 与 6 项动作原样；profile patch 中 layout=${stored.layout}，自定义动作 ${labels.length} 条`)
   })
 })
 
@@ -432,7 +432,7 @@ test.describe('while uninstalled', () => {
     const stored = storedNamespace()
     expect(stored.layout).toBe('bar')
     expect(Object.values(stored.userActionsById ?? {}).map(action => action.label)).toContain(COMMAND_LABEL)
-    note('步骤 7：卸载并重启后，有历史的会话里插件零渲染、零样式；settings.yaml 的命名空间原样保留')
+    note('步骤 7：卸载并重启后，有历史的会话里插件零渲染、零样式；profile patch 中该行的状态原样保留')
   })
 })
 

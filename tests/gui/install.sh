@@ -21,13 +21,21 @@ QA_PACKAGE=dsh-quick-actions
 QA_PROFILE=${DSH_HOME:-$HOME/.dsh}/profiles/web
 QA_FINGERPRINT=.playwright/profile-fingerprint.txt
 # The desktop shim would exec an older globally installed `dsh`, so the runtime is always
-# named explicitly (round 1's PATH trap).
-QA_DSH="npx --yes @deepseek-ai/dsh@latest"
+# named explicitly (round 1's PATH trap) — the same one `boot.sh` runs, `next` by default
+# while DSH's `latest` still names the 0.1.5 line (spec 22.6).
+QA_DSH="npx --yes ${DSH_QA_RUNTIME:-@deepseek-ai/dsh@next}"
+# Where the tarball lives. A caller that installs into the user's live profile passes a
+# directory outside the worktree, so the profile never points into a checkout that may go.
+QA_TARBALLS=${DSH_QA_TARBALLS:-$QA_TARBALLS}
 
 # Absolute: `dsh plugin` forwards to pnpm running *in the profile directory*, so a path
 # relative to this repository resolves under `<DSH_HOME>/profiles/web` and fails with ENOENT.
 qa_tarball() {
-  ls "$(pwd)/$QA_TARBALLS"/$QA_PACKAGE-[0-9]*.tgz 2>/dev/null | head -1
+  case $QA_TARBALLS in
+    /*) dir=$QA_TARBALLS ;;
+    *) dir=$(pwd)/$QA_TARBALLS ;;
+  esac
+  ls "$dir"/$QA_PACKAGE-[0-9]*.tgz 2>/dev/null | head -1
 }
 
 # README step 1. The package declares `prepack`, so its tarball is always built from the
@@ -66,7 +74,10 @@ qa_uninstall() {
 
 qa_profile_snapshot() {
   mkdir -p .playwright
-  ( cd "$QA_PROFILE" && sha256sum package.json pnpm-workspace.yaml ) > "$QA_FINGERPRINT" || return 1
+  # Since DSH 0.1.7 the plugin's stored state lives in the profile patch (spec 22), so the
+  # patch is part of what has to come back byte-identical; the lockfile is the third file
+  # `dsh plugin` rewrites.
+  ( cd "$QA_PROFILE" && sha256sum package.json pnpm-workspace.yaml pnpm-lock.yaml cordis.patch.yml ) > "$QA_FINGERPRINT" || return 1
   echo "fingerprinted the profile files in $QA_FINGERPRINT"
 }
 

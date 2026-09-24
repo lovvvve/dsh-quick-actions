@@ -260,18 +260,20 @@ export interface StoredNamespace {
 }
 
 /**
- * This plugin's own section of the user's live Settings file.
+ * This plugin's own stored state: the `config` of its row in the user's live web profile
+ * patch (spec 22 — since DSH 0.1.7 the stored section is the plugin's Config, written into
+ * the active profile's `cordis.patch.yml`).
  *
  * Two claims can only be checked here, because neither is on screen by definition: a
  * tombstone is what the projection does *not* show, and data surviving an uninstall is
- * what there is no plugin left to render. Only this one namespace is read, and no spec
- * prints it.
+ * what there is no plugin left to render. Only this one row is read, and no spec prints it.
  */
 export function storedNamespace(): StoredNamespace {
-  const file = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'settings.yaml')
-  const document = parse(readFileSync(file, 'utf8')) as Record<string, StoredNamespace | undefined>
-  const section = document['composer-quick-actions']
-  if (section === undefined) throw new Error('the plugin has no section in the settings file')
+  const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
+  const file = join(home, 'profiles', process.env.DSH_QA_PROFILE ?? 'web', 'cordis.patch.yml')
+  const rows = (parse(readFileSync(file, 'utf8')) ?? []) as readonly { id?: unknown; config?: StoredNamespace }[]
+  const section = rows.findLast(row => row.id === 'composer-quick-actions' && row.config !== undefined)?.config
+  if (section === undefined) throw new Error('the plugin has no row with config in the profile patch')
   return section
 }
 
