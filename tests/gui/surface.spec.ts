@@ -14,8 +14,9 @@ test.describe('quick actions surface', () => {
   })
 
   test('renders the packaged preset catalog', async ({ page }) => {
-    // Presets reach the Client through the read-only catalog namespace's composition
-    // `base` layer, so their presence here is the end-to-end proof of that path.
+    // The Client rebuilds the catalog from the built-in manifest plus the `presets` field
+    // of the entry's own Settings form (spec 22.3), so their presence here is the
+    // end-to-end proof of that path.
     await expect(actionFaces(page)).toHaveCount(5)
 
     const names = await actionFaces(page).evaluateAll(

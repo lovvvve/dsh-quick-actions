@@ -1,7 +1,7 @@
 #!/bin/sh
 # Drive spec 13.2's scale rows against a live DSH: seed stored state, boot the profile,
 # assert, repeat. The rows arise from stored state in the field (a package upgrade or a
-# Host config change), so they are seeded into <DSH_HOME>/settings.yaml rather than typed
+# Host config change), so they are seeded into the web profile patch rather than typed
 # through the management overlay.
 #
 # Usage, from the repository root:
@@ -30,7 +30,7 @@ trap cleanup EXIT INT TERM
 
 run_row() {
   echo "=== scale row: $1 actions (over-cap=$2) ==="
-  # Seed with the profile down: the Host rewrites settings.yaml as it runs, and a
+  # Seed with the profile down: the Host rewrites its profile-patch row as it boots, and a
   # concurrent write would race the seed.
   stop_ours
   node tests/gui/seed-scale.mjs "$1" || return 1

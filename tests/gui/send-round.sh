@@ -20,7 +20,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# Seed with the profile down: the Host rewrites settings.yaml as it runs.
+# Seed with the profile down: the Host rewrites its profile-patch row as it boots.
 stop_ours
 node tests/gui/seed-send.mjs || exit 1
 boot || exit 1

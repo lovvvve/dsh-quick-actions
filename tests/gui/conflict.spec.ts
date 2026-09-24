@@ -24,6 +24,10 @@ import { ensureLayout, layoutCell, manageEntry, managerPanel, openResidentCompos
  */
 test.describe('two clients writing the same namespace', () => {
   test.skip(({ viewport }) => (viewport?.width ?? 0) < 1000, 'the outcome does not vary with viewport')
+  // Two clients each have to find a Resident Composer, and on a profile whose first
+  // sidebar rows show the hero that costs up to a minute apiece: the ticket 32 live round
+  // timed out at the suite's 90 s twice and passed in 1.8 min with this budget.
+  test.describe.configure({ timeout: 240_000 })
 
   const DESKTOP = { width: 1440, height: 900 }
 

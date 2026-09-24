@@ -1,61 +1,108 @@
-// Read and write this plugin's namespace inside the user's live `<DSH_HOME>/settings.yaml`,
-// which is what the seeded GUI rounds do to stage stored state before a profile boots.
+// Read and write this plugin's stored state inside the user's live web profile patch,
+// `<DSH_HOME>/profiles/web/cordis.patch.yml`, which is what the seeded GUI rounds do to
+// stage stored state.
+//
+// Since DSH 0.1.7 the stored section *is* the plugin's Config (spec 22): it lives on the
+// `id: composer-quick-actions` row of the active profile patch, beside every other plugin's
+// row the user keeps there. Writing a volatile field of that row is a live update — DSH
+// commits it without remounting the plugin and the Client mirror refreshes — so a round
+// can seed while the profile runs.
 //
 // The file belongs to the user, so three rules hold and this module is the only place they
-// are implemented: the namespace is backed up before the first write and restored on
-// request; edits go through `yaml`'s document API, which leaves every other namespace and
-// its comments byte-identical (a hand-rolled line splice mis-ends the block on a column-0
-// comment and orphans the rest); and writes are temp-file-plus-rename, so a crash cannot
-// leave a truncated settings file behind.
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+// are implemented: the whole file is backed up byte for byte before the first write and put
+// back byte for byte on request; edits go through `yaml`'s document API, which leaves every
+// other row and its comments untouched; and writes are temp-file-plus-rename, so a crash
+// cannot leave a truncated patch behind.
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { Document, parseDocument } from 'yaml'
+import { parseDocument, YAMLMap, YAMLSeq } from 'yaml'
 
 export const NAMESPACE = 'composer-quick-actions'
-const BACKUP = '.playwright/settings-namespace-backup.yaml'
+const PACKAGE = 'dsh-quick-actions'
+/** The five user-state fields (spec 4.2); `presets` on the same row is the author's, never seeded here. */
+const STATE_FIELDS = ['schemaVersion', 'layout', 'userActionsById', 'actionOrder', 'presetStateById']
+const BACKUP = '.playwright/profile-patch-backup.yml'
+/** Present when the file did not exist before the first write, so restoring deletes it. */
+const ABSENT = '.playwright/profile-patch-absent'
 
-export const settingsPath = join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'settings.yaml')
+const home = process.env.DSH_HOME ?? join(homedir(), '.dsh')
+export const patchPath = join(home, 'profiles', process.env.DSH_QA_PROFILE ?? 'web', 'cordis.patch.yml')
 
 function load() {
-  return parseDocument(readFileSync(settingsPath, 'utf8'))
+  const doc = parseDocument(existsSync(patchPath) ? readFileSync(patchPath, 'utf8') : '[]\n')
+  if (doc.contents === null) doc.contents = new YAMLSeq()
+  if (!(doc.contents instanceof YAMLSeq)) throw new Error(`${patchPath} is not a YAML sequence of patch rows`)
+  return doc
 }
 
 function writeAtomically(text) {
-  const next = `${settingsPath}.${process.pid}.next`
-  writeFileSync(next, text)
-  renameSync(next, settingsPath)
+  const next = `${patchPath}.${process.pid}.next`
+  writeFileSync(next, text, { mode: 0o600 })
+  renameSync(next, patchPath)
 }
 
-/**
- * The backup holds the namespace *node*, not its JSON: a node keeps the comments written
- * inside the block, and `toJSON()` drops them — which would silently eat a user's own note.
- */
-function backupOnce(doc) {
-  if (existsSync(BACKUP)) return
+function backupOnce() {
+  if (existsSync(BACKUP) || existsSync(ABSENT)) return
   mkdirSync(dirname(BACKUP), { recursive: true })
-  const fragment = new Document({})
-  const node = doc.get(NAMESPACE, true)
-  if (node !== undefined) fragment.set(NAMESPACE, node)
-  writeFileSync(BACKUP, fragment.toString())
-  console.log(node === undefined ? `noted the namespace was absent in ${BACKUP}` : `backed the namespace up to ${BACKUP}`)
+  if (existsSync(patchPath)) {
+    copyFileSync(patchPath, BACKUP)
+    console.log(`backed the profile patch up to ${BACKUP}`)
+  } else {
+    writeFileSync(ABSENT, '')
+    console.log(`noted the profile patch was absent in ${ABSENT}`)
+  }
 }
 
+/** This plugin's row of the patch, if the profile has one. */
+function row(doc) {
+  return doc.contents.items.find(item => item instanceof YAMLMap && item.get('id') === NAMESPACE)
+}
+
+/** The user-state fields the profile patch currently sets for this plugin, or `undefined`. */
+export function readNamespace() {
+  const found = row(load())?.get('config', true)
+  if (!(found instanceof YAMLMap)) return undefined
+  const config = found.toJSON()
+  const state = Object.fromEntries(STATE_FIELDS.filter(field => field in config).map(field => [field, config[field]]))
+  return Object.keys(state).length === 0 ? undefined : state
+}
+
+/** Replace the five user-state fields, keeping the rest of the row — the author's `presets` included. */
 export function seedNamespace(value) {
+  backupOnce()
   const doc = load()
-  backupOnce(doc)
-  doc.set(NAMESPACE, value)
+  let target = row(doc)
+  if (target === undefined) {
+    target = doc.createNode({ id: NAMESPACE, name: PACKAGE, config: {} })
+    doc.contents.items.push(target)
+  }
+  let config = target.get('config', true)
+  if (!(config instanceof YAMLMap)) {
+    config = doc.createNode({})
+    target.set('config', config)
+  }
+  for (const field of STATE_FIELDS) {
+    if (field in value) config.set(field, doc.createNode(value[field]))
+    else config.delete(field)
+  }
   writeAtomically(doc.toString())
 }
 
 export function restoreNamespace() {
+  if (existsSync(ABSENT)) {
+    rmSync(patchPath, { force: true })
+    rmSync(ABSENT)
+    console.log('removed the profile patch (it did not exist before)')
+    return
+  }
   if (!existsSync(BACKUP)) throw new Error(`no backup at ${BACKUP}; nothing to restore`)
-  const saved = parseDocument(readFileSync(BACKUP, 'utf8'))
-  const doc = load()
-  const node = saved.get(NAMESPACE, true)
-  if (node === undefined) doc.delete(NAMESPACE)
-  else doc.set(NAMESPACE, node)
-  writeAtomically(doc.toString())
+  writeAtomically(readFileSync(BACKUP, 'utf8'))
   rmSync(BACKUP)
-  console.log(node === undefined ? 'removed the namespace (it did not exist before)' : 'restored the original namespace')
+  console.log('restored the profile patch byte for byte')
+}
+
+/** Take the backup without writing anything, so a round that only lets the GUI write can still put the file back. */
+export function backupNamespace() {
+  backupOnce()
 }

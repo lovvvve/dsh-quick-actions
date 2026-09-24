@@ -6,12 +6,22 @@
 # so this never touches a server it did not start. It boots one only when the channel is
 # free, records its process group, and stops exactly that group.
 #
-# Provides: DSH_GUI_URL, LOG, entry_url, boot, stop_ours.
+# Provides: DSH_GUI_URL, DSH_QA_RUNTIME, LOG, entry_url, boot, stop_ours.
+#
+# External channel (ticket 32): when `DSH_GUI_ENTRY` already names a token-bearing entry URL
+# and the channel answers, the round uses that server as is — `boot` starts nothing and
+# `stop_ours` stops nothing. That is how a round runs against the DSH the user keeps open
+# (with `patchReload: live`, installs and seeds reach it without a restart). Rounds that
+# must restart the profile still need the channel free and a server of their own.
 
 DSH_GUI_URL=${DSH_GUI_URL:-http://127.0.0.1:3080}
 export DSH_GUI_URL
 DSH_HOME=${DSH_HOME:-$HOME/.dsh}
 export DSH_HOME
+# The runtime a round boots and installs with. DSH's `latest` dist-tag still names the
+# 0.1.5 line this plugin no longer supports (spec 22.6), so the default is `next`.
+DSH_QA_RUNTIME=${DSH_QA_RUNTIME:-@deepseek-ai/dsh@next}
+export DSH_QA_RUNTIME
 LOG=.playwright/dsh-web.log
 PIDFILE=.playwright/dsh-web.pid
 mkdir -p .playwright
@@ -37,10 +47,23 @@ stop_ours() {
 }
 
 entry_url() {
+  if external_channel; then
+    printf '%s\n' "$DSH_GUI_ENTRY"
+    return 0
+  fi
   grep -o "$DSH_GUI_URL/?token=[^ )]*" "$LOG" | tail -1
 }
 
+# True when the round was handed the entry of a server it must not own.
+external_channel() {
+  [ -n "${DSH_GUI_ENTRY:-}" ] && [ ! -f "$PIDFILE" ] && channel_answers
+}
+
 boot() {
+  if external_channel; then
+    echo "using the running server behind DSH_GUI_ENTRY; nothing is booted"
+    return 0
+  fi
   stop_ours
   if channel_answers; then
     echo "$DSH_GUI_URL is served by a process this round did not start." >&2
@@ -53,9 +76,9 @@ boot() {
   # `DSH_BOOT_PATCH` adds one overlay after every bundle layer, which is how a round can
   # stage a Host config change without editing the user's own `cordis.patch.yml`.
   if [ -n "${DSH_BOOT_PATCH:-}" ]; then
-    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes @deepseek-ai/dsh@latest --profile web --patch '$DSH_BOOT_PATCH' --no-open" >>"$LOG" 2>&1 &
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes $DSH_QA_RUNTIME --profile web --patch '$DSH_BOOT_PATCH' --no-open" >>"$LOG" 2>&1 &
   else
-    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes @deepseek-ai/dsh@latest web --no-open" >>"$LOG" 2>&1 &
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes $DSH_QA_RUNTIME web --no-open" >>"$LOG" 2>&1 &
   fi
 
   for _ in $(seq 1 90); do
