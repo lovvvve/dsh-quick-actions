@@ -79,6 +79,8 @@ Label: `wayfinder:map`
 
 - [适配 DSH 0.1.7 的 Settings 模型重写](./issues/31-follow-dsh-settings-forms.md) — **已 resolved**。DSH `0.1.7-alpha.1` 删掉 `settings.register` 与 Client `settingsScope`，`0.1.0` 在其上 Host 激活失败。定案**只支持新模型**（[spec 第 22 节](./spec.md)）：用户状态即全 volatile 的插件 `Config`，五个状态字段保持顶层逐键不变以让 DSH 的一次性 `settings.yaml` 导入落地；目录命名空间作废，Client 用共享模型从内置清单加 `value.presets` 重建目录；peer 下界 `>=0.1.7-alpha.2`。真实 DSH `0.1.7-alpha.2` 无界面冒烟通过（激活、表单识别、旧文档导入、volatile 写入）；导入晚于启动重写，接受「下次启动规范化」——改用 `document-updated` 触发会撞上 DSH 的 HMR 事务嵌套拒绝。Client 半边的真实 GUI 验证留给票据 32。
 
+- [把验证基线升到 DSH 0.1.7-rc.1](./issues/33-move-the-verified-baseline-to-0.1.7-rc.1.md) — **已 resolved**。基线升到 `0.1.7-rc.1`，peer 下界留在 `>=0.1.7-alpha.2`（两版之间被消费契约逐字相同），两者在文档契约里拆成两个事实（spec 第 22.6 节）。每个 DSH peer 另设锁在基线上的精确 devDependency——只靠 peer 自动安装，pnpm 沿用 lockfile 的旧解析，会留下半条旧线。真实 rc.1 无界面冒烟与 alpha.2 行为逐字一致。
+
 - [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — 开放，被 31 阻塞已解除；前置条件是 3080 通道切到 DSH `0.1.7` 线，由用户决定。
 
 ## Out of scope（范围外）

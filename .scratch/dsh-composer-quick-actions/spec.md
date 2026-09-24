@@ -872,6 +872,8 @@ Config = z.object({
 
 同第 21.3 节：**不做双栈**。DSH peer 下界提到 **`>=0.1.7-alpha.2`**，开发树版本线与 `minimumReleaseAgeExclude` 随之整体上移（同日发布的 Cordis 4.0.4 系成员一并豁免）。`0.1.5` / `0.1.6` 线的用户继续使用本插件 `0.1.0`。
 
+**验证基线与 peer 下界是两个事实**（[票据 33](./issues/33-move-the-verified-baseline-to-0.1.7-rc.1.md)）。基线是开发树精确锁定、测试与冒烟实际跑过的 DSH 版本，现为 **`0.1.7-rc.1`**；下界是插件接受的最旧版本，仍为 `>=0.1.7-alpha.2`，因为两版之间本插件消费的契约逐字相同（逐版 `npm pack` 比对取证见票据 33）。只在两版之间出现被消费契约的变化时才把下界跟到基线。每个 DSH peer 同时声明为锁在基线上的精确 devDependency（primitives 仍是第 21.5 节的例外）：仅靠 peer 自动安装时，pnpm 沿用 lockfile 里最早的解析，基线一动就会留下半条旧线。
+
 由此产生一个发布约束：DSH `latest` dist-tag 仍停在 `0.1.5` 线，本插件若以 `latest` 发布新版，`dsh plugin add` 会把它装到 `0.1.5` 线上并在那里失效。在 DSH 把 `0.1.7` 推上 `latest` 之前，新版应发到非 `latest` 的 dist-tag（例如 `next`）。
 
 ### 22.7 旧数据迁移
