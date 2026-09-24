@@ -21,15 +21,20 @@ import { featureDir, manifest, releasedVersion } from './support.js'
 const version = releasedVersion()
 
 /**
- * The declared DSH floor and the bare version inside it, both taken from the
- * manifest so a floor bump fails here and names the readmes that still carry the
- * old one. The floor range is what the readmes must print as the peer
- * requirement; the bare version is what they must print as the baseline the
- * release was verified against.
+ * The declared DSH floor and the verified baseline, both taken from the manifest
+ * so a bump fails here and names the readmes that still carry the old one.
+ *
+ * They are two facts, not one (ticket 33). The floor range is the oldest DSH
+ * line the plugin accepts, printed as the peer requirement. The baseline is the
+ * exact DSH release the dev tree typechecks and tests against — its pinned
+ * devDependency — printed as the version the release was verified on. The
+ * baseline may sit above the floor when the releases between them change none
+ * of the contracts this plugin consumes.
  */
 const dshFloorRange = manifest(featureDir).peerDependencies?.['@deepseek-ai/dsh-client-ui-conversation']
 if (dshFloorRange === undefined) throw new Error('the manifest declares no DSH peer floor')
-const dshFloor = dshFloorRange.replace(/^[>=^~\s]+/, '')
+const dshBaseline = manifest(featureDir).devDependencies?.['@deepseek-ai/dsh-client-ui-conversation']
+if (dshBaseline === undefined) throw new Error('the manifest pins no DSH baseline for the dev tree')
 
 /** Quote a literal for use inside a `RegExp` source. */
 function escapeRegExp(literal: string): string {
@@ -91,12 +96,12 @@ describe('feature readme coverage', () => {
   }
 
   it('gives the verified baseline its own compatibility row in both languages', () => {
-    // The peer floor prints the baseline version as a substring of its own
-    // range, so a bare `toContain(dshFloor)` cannot tell the two rows apart and
-    // passes even with the baseline row deleted. Anchor on the row itself: its
-    // label and the version have to share one table line.
+    // When the baseline equals the floor, the peer row prints it as a substring
+    // of its own range, so a bare `toContain(dshBaseline)` cannot tell the two
+    // rows apart and passes even with the baseline row deleted. Anchor on the row
+    // itself: its label and the version have to share one table line.
     const row = (label: string) =>
-      new RegExp(String.raw`^\|\s*` + label + String.raw`\s*\|[^|\n]*` + escapeRegExp(dshFloor), 'm')
+      new RegExp(String.raw`^\|\s*` + label + String.raw`\s*\|[^|\n]*` + escapeRegExp(dshBaseline), 'm')
     expect(docs['feature README.md']).toMatch(row('验证基线'))
     expect(docs['feature README.en.md']).toMatch(row('Verified baseline'))
   })
