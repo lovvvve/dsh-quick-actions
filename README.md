@@ -9,13 +9,13 @@ DSH 持久化插件的 pnpm workspace。当前项目包含消息编辑器快捷�
 | `packages/composer-quick-actions` | `dsh-quick-actions` | **唯一发布的包**：Host/Client 双面实现，自带安装 bundle 的 `dsh.bundle.patch`（[README](packages/composer-quick-actions/README.md) · [English](packages/composer-quick-actions/README.en.md)） |
 | `tools/dsh-client-bundle` | `@dsh-plugins/dsh-client-bundle` | 私有构建适配器（不发布）：Client bundle 构建与真实产物 / watch 契约测试 |
 
-发布包 `dsh-quick-actions` 已在 npm 上，许可证 MIT，安装只需一条命令：
+发布包 `dsh-quick-actions` 已在 npm 上，许可证 MIT，安装只需一条命令（DSH `0.1.7` 线装 `next` dist-tag；`latest` 上的 `0.1.0` 只支持 `0.1.5`、`0.1.6` 线，详见包 README）：
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions
+dsh plugin --profile web add dsh-quick-actions@next
 ```
 
-包目录名与两个 Settings 命名空间仍是 `composer-quick-actions`——它们是另一条身份轴，其中 Settings 那两个发布后即用户数据，改名须写迁移。
+包目录名、Cordis 装载条目 id 与 Settings 命名空间仍是 `composer-quick-actions`——它们是另一条身份轴。自 DSH 0.1.7 起 Settings 命名空间就是装载条目 id，用户数据存在它名下，改名须写迁移。
 
 ## 命令
 
