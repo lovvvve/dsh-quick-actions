@@ -42,8 +42,10 @@ No upper bound is declared, but **that is not a promise of forward compatibility
 ## Install
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions
+dsh plugin --profile web add dsh-quick-actions@next
 ```
+
+**Keep the `@next`.** DSH's own npm `latest` still points at the `0.1.5` line, so this release is published under the `next` dist-tag. Without the tag you get `0.1.0` from `latest`, which supports only the `0.1.5` and `0.1.6` lines and fails to activate on `0.1.7`. Once DSH moves `0.1.7` to `latest`, this plugin moves back to `latest` with it.
 
 Then restart the web profile. One package is the whole thing: it carries `dsh.bundle.patch`, which inserts its Host half into the profile, while its `dsh.client` declaration makes the web app load the browser half.
 
@@ -191,7 +193,7 @@ Cross-version data compatibility is the Host's job: new presets are appended to 
 dsh plugin --profile web remove dsh-quick-actions
 ```
 
-Both the dependency and the layer in `dsh.profile.bundles` go away. After a profile restart the actions are gone.
+Both the dependency and the layer in `dsh.profile.bundles` go away. After a profile restart the actions are gone. The `id: composer-quick-actions` row in `cordis.patch.yml` stays as it is — your actions live in its `config`, and a reinstall picks the row back up by id, so they come back. If you uninstall without reinstalling, the profile logs a `patch: entry "composer-quick-actions" not found` warning for that row on every start; it does not block startup, and step 1 below removes it.
 
 **Full manual cleanup** (uninstalling does none of this, because a reinstall should restore your actions):
 

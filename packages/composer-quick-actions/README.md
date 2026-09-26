@@ -42,8 +42,10 @@
 ## 安装
 
 ```sh
-dsh plugin --profile web add dsh-quick-actions
+dsh plugin --profile web add dsh-quick-actions@next
 ```
+
+**`@next` 不能省。** DSH 自己的 npm `latest` 还停在 `0.1.5` 线，所以本版发在 `next` dist-tag 上；不带 tag 装到的是 `latest` 上的 `0.1.0`，它只支持 `0.1.5`、`0.1.6` 线，在 `0.1.7` 上激活失败。等 DSH 把 `0.1.7` 推上 `latest`，本插件跟着回到 `latest`。
 
 然后重启 web profile。一个包就是全部：它自带 `dsh.bundle.patch` 把自己的 Host 半边插进 profile，`dsh.client` 声明让 web 端加载浏览器半边。
 
@@ -191,7 +193,7 @@ dsh plugin --profile web add dsh-quick-actions@<version>
 dsh plugin --profile web remove dsh-quick-actions
 ```
 
-依赖与 `dsh.profile.bundles` 里的那一层会同时去掉，重启 profile 后动作不再出现。
+依赖与 `dsh.profile.bundles` 里的那一层会同时去掉，重启 profile 后动作不再出现。`cordis.patch.yml` 里 `id: composer-quick-actions` 那一行原样保留——你的动作都在它的 `config` 里，重装后按 id 接回，所以动作会回来。只卸不装时，profile 每次启动会为这行打一条 `patch: entry "composer-quick-actions" not found` 警告，不影响启动；按下面第 1 步删掉即可。
 
 **手工彻底清理**（卸载不做这些，因为重装应当恢复你的动作）：
 
