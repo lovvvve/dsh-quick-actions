@@ -515,15 +515,43 @@ describe('executing from a surface', () => {
 })
 
 describe('the catalog error state', () => {
-  it('offers a retry where the layout would be, and does not reject into the page', async () => {
+  it('says the Host serves no form, with no retry a held document could not act on', () => {
     setup('ribbon')
-    // The Host serves no form for the entry: no action may render, and the entry
-    // becomes the retryable catalog error of spec 10.
+    // The entry is not active on the Host, or the page is process-local: no
+    // action may render. The mirror already holds the document, so `ensure()`
+    // would read nothing — the state clears when the Host starts serving.
     harness.document.namespaces.delete(QUICK_ACTIONS_SETTINGS_NAMESPACE)
     harness.document.answer()
     mount()
 
     const notice = document.querySelector('[data-quick-actions-catalog-error="unavailable"]')
+    expect(notice?.textContent).toContain(zh['catalog.unavailable'])
+    expect(screen.queryByRole('button', { name: /继续/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重试' })).toBeNull()
+  })
+
+  it('says the author Preset Catalog is invalid, with no retry, rather than truncating it', () => {
+    // Spec 22.3: presets edited into an invalid list at runtime. Only fixing the
+    // profile patch helps, and the mirror picks that fix up on its own.
+    setup('ribbon', [...PRESETS, { id: 'broken' }])
+    mount()
+
+    const notice = document.querySelector('[data-quick-actions-catalog-error="undecodable"]')
+    expect(notice?.textContent).toContain(zh['catalog.undecodable'])
+    expect(screen.queryByRole('button', { name: /继续/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: '重试' })).toBeNull()
+  })
+
+  it('offers a retry where the layout would be when the first read failed, and does not reject into the page', async () => {
+    setup('ribbon')
+    // The first document read failed: the mirror holds nothing and is idle
+    // again, which is the retryable catalog error of spec 10.
+    harness.document.answered = false
+    harness.document.failReads = true
+    harness.document.answer()
+    mount()
+
+    const notice = document.querySelector('[data-quick-actions-catalog-error="unreadable"]')
     expect(notice).not.toBeNull()
     expect(screen.queryByRole('button', { name: /继续/ })).toBeNull()
 
@@ -532,9 +560,7 @@ describe('the catalog error state', () => {
       rejections.push(event.reason)
     }
     window.addEventListener('unhandledrejection', onRejection)
-    // The mirror re-reads only while it holds nothing, so the retry's read is
-    // made to happen — and to fail — rather than resolve as a no-op.
-    harness.document.answered = false
+    // The retried read fails again, and rejects the way the shipped mirror does.
     harness.document.loadRejects = true
 
     fireEvent.click(screen.getByRole('button', { name: '重试' }))

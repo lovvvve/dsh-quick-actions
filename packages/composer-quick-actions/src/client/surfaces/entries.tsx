@@ -30,6 +30,7 @@ import { QuickActionsSurface } from './QuickActionsSurface.js'
 import { ManagerPanel } from '../manager/ManagerPanel.js'
 import type { ResidentComposerRegistry } from './residency.js'
 import type { QuickActionSessionRegistry } from '../session/execution.js'
+import { isRetryableCatalogError } from '../controller.js'
 import type { QuickActionsClientState, QuickActionsController } from '../controller.js'
 import type {
   ComposerBlock,
@@ -177,9 +178,11 @@ function CatalogNotice(props: {
   return (
     <div className="dsh-cqa-note" role="status" data-quick-actions-catalog-error={client.catalog.reason}>
       <span className="dsh-cqa-note-text">{t(`catalog.${client.catalog.reason}`)}</span>
-      <button type="button" className="dsh-cqa-link" onClick={onRetry}>
-        {t('catalog.retry')}
-      </button>
+      {isRetryableCatalogError(client.catalog.reason) ? (
+        <button type="button" className="dsh-cqa-link" onClick={onRetry}>
+          {t('catalog.retry')}
+        </button>
+      ) : null}
     </div>
   )
 }

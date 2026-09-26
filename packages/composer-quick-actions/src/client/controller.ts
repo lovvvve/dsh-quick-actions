@@ -154,10 +154,22 @@ export interface ConnectionLike {
 export type CatalogErrorReason =
   /** The settings document could not be read at all; retrying is the remedy. */
   | 'unreadable'
-  /** The Host serves no form for this entry — it is not installed, or failed to load. */
+  /** The Host serves this page no form for the entry — it is not active, or the page is process-local. */
   | 'unavailable'
-  /** A `presets` field this release cannot read in full; never a truncated catalog (spec 5.1). */
+  /** The author `presets` field is not a list, or any entry is invalid; never a truncated catalog (spec 5.1, 22.3). */
   | 'undecodable'
+
+/**
+ * Whether a user retry can clear this catalog error (spec 10).
+ *
+ * Only a failed first read can: the mirror's public face re-reads only while it
+ * holds no document (`ensure()`, spec 22.4). The other two arrive with a held
+ * document and clear on their own when the Host's `settings/document-updated`
+ * broadcast or a reconnect refreshes it, so a retry there would do nothing.
+ */
+export function isRetryableCatalogError(reason: CatalogErrorReason): boolean {
+  return reason === 'unreadable'
+}
 
 /** The authoritative Preset Catalog as the Client currently knows it. */
 export type CatalogState =

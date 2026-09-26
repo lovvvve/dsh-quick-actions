@@ -54,6 +54,7 @@ import type {
   QuickActionLayout,
   QuickActionRef,
 } from '../../model/index.js'
+import { isRetryableCatalogError } from '../controller.js'
 import type { QuickActionsClientState, QuickActionsController, QuickActionWriteOutcome } from '../controller.js'
 import type { Translate } from '../dsh.js'
 
@@ -268,19 +269,21 @@ export function ManagerPanel({ client, controller, t }: ManagerPanelProps): Reac
             <span className="dsh-cqa-note-text">
               {t(client.catalog.status === 'error' ? `catalog.${client.catalog.reason}` : 'catalog.loading')}
             </span>
-            <button
-              type="button"
-              className="dsh-cqa-link"
-              onClick={() => {
-                // The controller reports a failed re-read through the catalog
-                // state it publishes, and deliberately lets the promise reject;
-                // swallowing it here is what keeps a retry from raising an
-                // unhandled rejection on the page.
-                controller.refresh().catch(() => undefined)
-              }}
-            >
-              {t('catalog.retry')}
-            </button>
+            {client.catalog.status === 'error' && isRetryableCatalogError(client.catalog.reason) ? (
+              <button
+                type="button"
+                className="dsh-cqa-link"
+                onClick={() => {
+                  // The controller reports a failed re-read through the catalog
+                  // state it publishes, and deliberately lets the promise reject;
+                  // swallowing it here is what keeps a retry from raising an
+                  // unhandled rejection on the page.
+                  controller.refresh().catch(() => undefined)
+                }}
+              >
+                {t('catalog.retry')}
+              </button>
+            ) : null}
           </div>
         ) : null}
 
