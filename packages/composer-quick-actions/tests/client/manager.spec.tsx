@@ -60,6 +60,8 @@ interface HarnessOptions {
   readonly user?: Record<string, unknown>
   /** The Host serves no form for the entry — it is not installed, or failed to load. */
   readonly unserved?: boolean
+  /** The first document read is still in flight, or failed and left the mirror empty. */
+  readonly read?: 'pending' | 'failed'
 }
 
 const PRESETS: readonly Record<string, unknown>[] = [
@@ -87,6 +89,10 @@ class ManagerHarness {
         base: { presets },
         user: settingsSection({ layout: options.layout ?? 'ribbon', ...options.user }),
       })
+    }
+    if (options.read !== undefined) {
+      this.document.answered = false
+      if (options.read === 'failed') this.document.readError = 'fake settings document read failed'
     }
     this.controller = createQuickActionsController({
       configForms: fakeConfigForms(this.document),
@@ -1080,7 +1086,7 @@ describe('when settings cannot be written', () => {
     expect(harness.stored?.presetStateById).toEqual({})
   })
 
-  it('offers a retryable catalog error where the list would be', () => {
+  it('says the Host serves no form where the list would be, with no retry', () => {
     setup({ unserved: true })
     mount()
     // No layout renders without a catalog, so the manager is opened directly.
@@ -1088,14 +1094,41 @@ describe('when settings cannot be written', () => {
       harness.controller.openManager()
     })
 
-    // The layout entry shows the same retryable error where the layout would be,
-    // so this assertion is scoped to the panel's own copy.
+    // The layout entry shows the same error where the layout would be, so these
+    // assertions are scoped to the panel's own copy.
     expect(within(panel()).getByText(zh['catalog.unavailable'])).toBeTruthy()
-    expect(within(panel()).getByRole('button', { name: zh['catalog.retry'] })).toBeTruthy()
+    // The mirror holds the document, so a retry could read nothing (spec 22.4).
+    expect(within(panel()).queryByRole('button', { name: zh['catalog.retry'] })).toBeNull()
     // Spec 10 keeps the two first-read failures apart: with no catalog there is
     // nothing to be read-only *about*, so the storage notice must not appear
     // beside the catalog error and blame the wrong layer.
     expect(document.querySelector('[data-quick-actions-readonly]')).toBeNull()
+  })
+
+  it('shows no retry while the first read is still in flight', () => {
+    setup({ read: 'pending' })
+    mount()
+    act(() => {
+      harness.controller.openManager()
+    })
+
+    expect(within(panel()).getByText(zh['catalog.loading'])).toBeTruthy()
+    expect(within(panel()).queryByRole('button', { name: zh['catalog.retry'] })).toBeNull()
+  })
+
+  it('offers a retry where the list would be when the first read failed, and the retry recovers', async () => {
+    setup({ read: 'failed' })
+    mount()
+    act(() => {
+      harness.controller.openManager()
+    })
+    expect(within(panel()).getByText(zh['catalog.unreadable'])).toBeTruthy()
+
+    fireEvent.click(within(panel()).getByRole('button', { name: zh['catalog.retry'] }))
+    await settle()
+
+    expect(within(panel()).queryByText(zh['catalog.unreadable'])).toBeNull()
+    expect(control('preset:p1', zh['manager.hide'])).toBeTruthy()
   })
 
   it('offers an explicit retry that re-plans the failed write', async () => {
