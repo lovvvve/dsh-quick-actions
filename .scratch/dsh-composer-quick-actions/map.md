@@ -85,6 +85,7 @@ Label: `wayfinder:map`
 
 - [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 开放。其中 overlay 类 round 按读到的 config-editor 代码会在 0.1.7 上被拒写，需先真机确认；票据 35 另补了重装数据保留与旧文档导入两项真机验证。
 - [收掉 0.1.7 适配分支代码审查的发现](./issues/35-close-the-0.1.7-review-findings.md) — 目录错误只有「首次读取失败」给重试，另两种按第 22.3 节新义改写文案；README 安装命令带 `@next`（新版发 `next` dist-tag），卸载保留 patch 行、重装恢复数据已由 `0.1.7-rc.1` 源码取证；过时的「第 17 节优先级最高」等文档漂移已同步。
+- [把 0.2.0-rc.1 发到 npm 的 next dist-tag](./issues/36-publish-0.2.0-rc.1-to-next.md) — 已发布，`latest` 仍是 `0.1.0`，registry 与本地打包逐字节一致；发布后头 24 小时 `@next` 会被 pnpm `minimumReleaseAge` 静默退回 `0.1.0-rc.4`。
 
 ## Out of scope（范围外）
 
