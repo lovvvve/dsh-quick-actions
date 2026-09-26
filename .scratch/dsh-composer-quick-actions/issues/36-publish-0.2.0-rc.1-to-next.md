@@ -2,7 +2,7 @@
 
 Type: task
 Mode: HITL
-Status: claimed
+Status: resolved
 Blocked by: none
 
 ## Question（问题）
@@ -52,3 +52,42 @@ pnpm --filter dsh-quick-actions publish --no-git-checks --tag next
 ```
 
 `--tag next` 不能省：省了会落到 `latest`，正是 spec 22.6 要避免的。发布后若报 `[E409] Failed to save packument`，先查 `curl -s https://registry.npmjs.org/dsh-quick-actions` 的 `versions`，落库可能滞后 2.5 分钟，不要重发。
+
+### 2026-09-27：第一次发布被 E404 拒绝
+
+用户首次执行发布，pnpm 报 `[E404] 404 Not Found - PUT https://registry.npmjs.org/dsh-quick-actions`，未出现 OTP 提示。registry 核对无残留（仍只有 `latest: 0.1.0`，版本号未占用）。`~/.npmrc` 里有 2026-09-16 16:41 写入的 `_authToken`，但 `npm whoami` 对它返回 E401——token 已失效。npm 对未认证的 PUT 回 404 而不是 401，所以 404 在这里的意思是「没认出你是谁」，不是包不存在。用户 `npm login` 重新登录后发布成功。**下次发布前先跑 `npm whoami`**。
+
+## Answer（结论）
+
+**`dsh-quick-actions@0.2.0-rc.1` 已发在 `next` dist-tag，`latest` 仍是 `0.1.0`；registry 上的包与本地验证过的打包逐字节一致。**
+
+### registry 核验
+
+轮询 `registry.npmjs.org/dsh-quick-actions/0.2.0-rc.1`：本地 01:00:52 起连续 404，01:02:25 转为 200；registry 记的发布时刻 `2026-09-26T17:02:15.180Z`。
+
+| 字段 | 值 |
+|---|---|
+| `dist-tags` | `latest: 0.1.0`、`next: 0.2.0-rc.1` |
+| `versions` | `0.1.0`、`0.1.0-rc.3`、`0.1.0-rc.4`、`0.2.0-rc.1` |
+| `repository` | `git+https://github.com/lovvvve/dsh-quick-actions.git` + `directory: packages/composer-quick-actions` |
+| `license` / `dependencies` / `publishConfig` | MIT / 无 / 无 |
+| `dsh.bundle` | `{"patch":"./cordis.patch.yml"}` |
+| `fileCount` / `unpackedSize` | 48 / 621,540 B |
+| `shasum` | `6f516b96e5f6f74e63e57f605993b4af68a312f3` |
+
+registry 的 tarball 下载回来，sha1 与 registry 声明值、与本地 `pnpm pack` 产物三者一致。`latest` 没动，市场（按 `dist-tags.latest` 反查 `repository`）继续指向 `0.1.0`。
+
+### 全新 `DSH_HOME` 单命令安装（`npx @deepseek-ai/dsh@next`，即 `0.1.7-rc.1`；用户 `~/.dsh` 前后指纹一致）
+
+| 条件 | 装到 | profile 里的 spec | `--dump-config` |
+|---|---|---|---|
+| 无标志：`plugin --profile web add dsh-quick-actions@next` | **`0.1.0-rc.4`** | `"0.1.0-rc.4"` | — |
+| 加 `--config.minimumReleaseAge=0` | `0.2.0-rc.1` | `"0.2.0-rc.1"` | `- id: composer-quick-actions` / `name: dsh-quick-actions` |
+
+**dist-tag spec 同样受 pnpm `minimumReleaseAge`（24 小时）约束**：目标版本未满 24 小时、又存在更旧的合格版本时，pnpm 静默退回旧版，不报错也不写豁免——这里退到的是 `0.1.0-rc.4`，既不是 `next` 也不是 `latest`。`0.1.0-rc.4` 是 0.1.5 线的插件，在 DSH 0.1.7 上激活失败。窗口到 **2026-09-27T17:02:15Z（本地 2026-09-28 01:02:15）** 结束，之后 README 那条命令直接装到 `0.2.0-rc.1`，无需任何动作。README 已随 tarball 发布、改不了，而且窗口一天后自动关闭，所以不为它改 README；`CLAUDE.md` 记下了这条坑与急用时的 `--config.minimumReleaseAge=0`。
+
+### 已知边界
+
+- 转正为 `0.2.0` 并挪到 `latest`，等 DSH 把 `0.1.7` 推上 `latest`、票据 34 闭合后另议。届时 `packaging.spec.ts` 的版本线已覆盖 `0.2.0`，README 的 `@next` 要一并改回。
+- 策展目录只读 `latest`，本版不会进市场，从市场安装仍是 `0.1.0`。
+
