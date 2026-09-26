@@ -11,7 +11,7 @@
 
 **不要新建 `docs/adr/`。** 长期有效、不可逆的决策在本仓库有既定归属，另起一处会造出与它们并行的第二份真相：
 
-- [`.scratch/dsh-composer-quick-actions/spec.md`](../../.scratch/dsh-composer-quick-actions/spec.md) 是 baseline，冲突时以它为准。第 15 至 18 节逐条记录了收尾决策、首版范围收缩、目录改走 Settings base 层与样式偏离，其中**第 17 节优先级最高**。
+- [`.scratch/dsh-composer-quick-actions/spec.md`](../../.scratch/dsh-composer-quick-actions/spec.md) 是 baseline，冲突时以它为准。第 15 至 22 节逐条记录了收尾决策、首版范围收缩、目录改走 Settings base 层、样式偏离、包名变更、单包合并、Input 契约改名与 DSH 0.1.7 的 Settings 表单模型，其中**第 22 节优先级最高**（它作废了第 17 节的目录命名空间）。
 - 各票据 `.scratch/dsh-composer-quick-actions/issues/NN-*.md` 的 `## Answer` 是该决策的完整论证与取证。
 - [`map.md`](../../.scratch/dsh-composer-quick-actions/map.md) 的 `Decisions so far` 是已关闭决策的索引。
 - 根目录 [`CLAUDE.md`](../../CLAUDE.md) 的「已闭合、不得倒退的决策」是同一批结论的速查版。
