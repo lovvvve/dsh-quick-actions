@@ -195,11 +195,13 @@ describe('release identity', () => {
   })
 
   it('carries a version this release line can publish', () => {
-    // Ticket 20 fixed `0.1.0` as the initial version and ticket 27 publishes a
-    // `0.1.0-rc.N` ahead of it, to prove the one-command install from the registry
-    // before the number that README documents is spent — an npm version can never be
-    // republished with different content. Anything outside that line is a mistake.
-    expect(feature.version).toMatch(/^0\.1\.0(-rc\.\d+)?$/)
+    // Ticket 20 fixed `0.1.0` as the initial version, and ticket 27 published
+    // `0.1.0-rc.N` ahead of it before the number README documents was spent — an npm
+    // version can never be republished with different content. Ticket 31 dropped the
+    // DSH 0.1.5/0.1.6 lines (spec 22.6), a breaking change, so the next line is
+    // `0.2.0`, again preceded by `0.2.0-rc.N` on the `next` dist-tag (ticket 36).
+    // Anything outside that line is a mistake.
+    expect(feature.version).toMatch(/^0\.2\.0(-rc\.\d+)?$/)
   })
 
   it('declares no publishConfig, because unscoped packages are public by default', () => {
