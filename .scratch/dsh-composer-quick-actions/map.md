@@ -15,13 +15,13 @@ Label: `wayfinder:map`
 - 首个版本中的所有快捷动作均为全局生效。
 - 布局也是全局持久化设置：默认 `ribbon`（A，上方动作带），并可选择 `bar`（B，下方操作栏）或 `launcher`（C，单入口面板）。
 - 正常状态下预置与自定义动作合计最多 50 个；升级导致既有状态被动超限时保留全部数据，但禁止新增和克隆，直到恢复到上限以内。
-- **首版只交付发送动作，不提供插入动作，不新增任何 DSH 核心接口**；`/` 开头文本是合法的命令发送动作。完整契约与已知取舍见 [spec 第 16 节](./spec.md)——该节优先级最高，实施前必读，本地图不复述其细节。
+- **首版只交付发送动作，不提供插入动作，不新增任何 DSH 核心接口**；`/` 开头文本是合法的命令发送动作。完整契约与已知取舍见 [spec 第 16 节](./spec.md)——实施前必读，与第 22 节冲突之处以第 22 节为准，本地图不复述其细节。
 - 在依赖 Cordis 的 Services、Events、Builtins、Slots 或 token 之前，请查阅 `cordis-plugin-development`；Inspect 结果是运行时契约的事实来源。
 - Client `cordis_inspect_query` 调用只能由拥有活动 GUI 页面的前台父会话运行，然后再将结果传给研究代理。如果没有页面响应该子 Agent，后台子代理的查询可能会无限期保持等待；Host Inspect 和已打包源码的读取可在子代理中安全进行。
 - GUI 验证只有一个通道：现有 `http://127.0.0.1:3080` 官方 DSH GUI。首版不依赖 `insertText`，因此不再需要隔离源码检出、补丁应用或第二个受管服务器。不得修改已安装 `node_modules`。
 - 视觉交互工作请查阅 `prototype` 和 `frontend-design`，词汇发生变化时请查阅 `domain-modeling`，实施期间请查阅 `test-driven-development`，宣布交付完成之前请查阅 `verification-before-completion`。
 - 工作区是位于 `main` 分支的 Git 仓库，`origin` 已配置为 GitHub 的 `dsh-quick-actions`（精确地址用 `git remote -v` 获取）。本目录下的本地 Markdown 是议题跟踪器，研究证据则隔离在 `research/<topic>` 分支上。
-- 统一规格已汇总于 [`spec.md`](./spec.md)（baseline）；实现与验证工作以 spec 为准，正文与决策票据冲突时由 spec 第 1、15、16、17 节评估，其中**第 17 节优先级最高**，不再重开已关闭决策。
+- 统一规格已汇总于 [`spec.md`](./spec.md)（baseline）；实现与验证工作以 spec 为准，正文与决策票据冲突时由 spec 第 1、15、16、17、22 节评估，其中**第 22 节优先级最高**（它作废了第 17 节的目录命名空间），不再重开已关闭决策。
 
 ## Decisions so far（已有决策）
 
@@ -83,7 +83,8 @@ Label: `wayfinder:map`
 
 - [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — **已 resolved**。种子/备份/还原改为操作 profile `cordis.patch.yml` 的本插件行（整份文件逐字节备份还原），运行时默认 `@next`，指纹扩到四个文件；新增外部通道模式与 `live-round.sh`，在用户正在运行的 DSH `0.1.7-rc.1` 上**不重启**热装插件并验证：三视口 33 项通过、等宽 ≤ 1 CSS px；`conflict.spec` 在 90 秒预算下超时，以 240 秒单独重跑 1.8 分钟通过（新模型下的冲突分支成立），已把预算写进该 spec。收尾逐字节还原，四个指纹一致。重启类与 overlay 类 round 留给票据 34。
 
-- [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 开放。其中 overlay 类 round 按读到的 config-editor 代码会在 0.1.7 上被拒写，需先真机确认。
+- [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 开放。其中 overlay 类 round 按读到的 config-editor 代码会在 0.1.7 上被拒写，需先真机确认；票据 35 另补了重装数据保留与旧文档导入两项真机验证。
+- [收掉 0.1.7 适配分支代码审查的发现](./issues/35-close-the-0.1.7-review-findings.md) — 目录错误只有「首次读取失败」给重试，另两种按第 22.3 节新义改写文案；README 安装命令带 `@next`（新版发 `next` dist-tag），卸载保留 patch 行、重装恢复数据已由 `0.1.7-rc.1` 源码取证；过时的「第 17 节优先级最高」等文档漂移已同步。
 
 ## Out of scope（范围外）
 

@@ -22,5 +22,7 @@ Blocked by: none
 1. 真机确认 overlay 下的写入拒绝，以及 Client 在那种状态下显示什么（`refused`？只读？）——这本身就是一个用户可能遇到的场景：作者若用 overlay 分发预置，用户就改不了自己的状态。结论可能需要写进 README。
 2. 把两轮改为把 `presets` 种进 profile patch 的同一行（`settings-namespace.mjs` 已保留同行 `presets`，需要补一个写 `presets` 的入口），或者如果第 1 项证明 overlay 是需要支持的分发方式，另立决策。
 3. 与用户约定一次可以停掉其服务器的窗口，重跑重启类 round。
+4. `reinstall` round 要显式断言：`dsh plugin remove` 之后 profile patch 里 `id: composer-quick-actions` 那一行连同 `config` 仍在，重启只打 `patch: entry "composer-quick-actions" not found` 警告；重新 `add` 后五个状态字段恢复、patch 里没有重复行。票据 35 已从源码取证这条链路（`research/dsh-0.1.7-settings-host.md`「未决」第 3 条），README 据此陈述，真机尚未跑过。
+5. 补票据 32 第 3 项、当时只以无界面冒烟抵充的旧文档导入 GUI 验证：预置 `settings.yaml` 的 `composer-quick-actions` section → 首次启动 → `settings.yaml.imported` 出现、profile patch 该行带上五个字段、GUI 显示导入的动作。用户自己的 `~/.dsh` 已导入过一次，无法重演；GUI 又只有 3080 一个通道、不得另起服务器，所以只能在第 3 项的停服窗口里让 3080 临时以一次性 `DSH_HOME` 启动，须与用户一并约定。
 
 ## Comments
