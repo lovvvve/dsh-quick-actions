@@ -2,7 +2,7 @@
 
 Type: task
 Mode: AFK
-Status: open
+Status: claimed
 Blocked by: none
 
 ## Question（问题）
@@ -26,3 +26,23 @@ Blocked by: none
 5. 补票据 32 第 3 项、当时只以无界面冒烟抵充的旧文档导入 GUI 验证：预置 `settings.yaml` 的 `composer-quick-actions` section → 首次启动 → `settings.yaml.imported` 出现、profile patch 该行带上五个字段、GUI 显示导入的动作。用户自己的 `~/.dsh` 已导入过一次，无法重演；GUI 又只有 3080 一个通道、不得另起服务器，所以只能在第 3 项的停服窗口里让 3080 临时以一次性 `DSH_HOME` 启动，须与用户一并约定。
 
 ## Comments
+
+### 2026-09-27：认领，先做不需要停服的第 1、2 项
+
+**第 1 项：源码已取证（`0.1.7-rc.1`，未实跑），细节与行号记在 `research/dsh-0.1.7-settings-host.md` 第 1 节「覆盖的粒度与后果」。**
+
+- 拒写**按整个条目**，不按字段：patch 行的 `config` 整份替换，home patch 或 overlay 里只要有一行本条目带任意 `config`（只有 `presets` 也算），config-editor 就拒绝对该条目的一切表单写入。
+- 更糟的是遮蔽：Client 的 `value` 取的是覆盖层那份整份 config，overlay 里的 `presets` 到得了 Client，但 profile 行里存的五个状态字段被整体遮住、回落为 schema 默认值——用户的动作在界面上「消失」（磁盘上还在）。
+- Client 侧表现：`writable` 恒为 `true`，管理面板不会预先显示只读；每次写入 `mutate` resolve `false`，按写后快照判为 `refused`（「保存被拒绝，没有写入任何内容；请重试。」），重试永远失败。不是 reject，不走传输故障分支。
+- Host 启动规范化重写若需要写，会撞上同一报错并抛出，被 `src/index.ts` 的 `logger.error` 接住，不影响激活。
+- **结论：home patch 与 overlay 都不是可用的预置分发方式**，不必另立「是否支持 overlay 分发」的决策——支持它要改 DSH 的 patch 合并语义，违反「首版不新增任何 DSH 核心接口」。两份 README 的「配置预置动作」一节已加警告：只声明在 active profile 自己的 `cordis.patch.yml`，写进 home patch 或 overlay 会遮住用户数据并拒绝一切保存，删掉那一行并重启即可恢复。真机确认可放进第 3 项的停服窗口顺带做（起一次带 `--patch` 的 profile，点一次隐藏），不是前置条件。
+
+**第 2 项：已完成。**
+
+- `settings-namespace.mjs` 新增 `seedPresets(presets | undefined)`，与 `seedNamespace` 共用抽出的 `rowConfig()`（建行、建 `config`）、同一份逐字节备份与原子写入；只动 `presets`，五个状态字段原样保留。新增 CLI `seed-presets.mjs <file.yml> | --clear`。
+- `presets-round.sh` 四段改为「`seed-presets` → `boot` → 该段 spec」，墓碑段用 `--clear`；`host-config-round.sh` 同理。退出时沿用 `seed-scale.mjs --restore` 的逐字节还原。
+- `boot.sh` 删去已无调用方的 `DSH_BOOT_PATCH` 分支。顺带修掉一个旧缺陷：外部通道下 `boot` 是空操作，旧写法的 overlay 会被静默丢掉，第一段必然失败。
+- 两个 round 现在可在**外部通道**上跑（给 `DSH_GUI_ENTRY` 即不起停服务器，预置作为 live 更新到达；spec 22.3），也可在自起服务器模式下每段重启一次。外部通道下「外部改 patch 文件能否热到达运行中的 DSH」尚未实测，spec 本身会在第一段暴露。
+- 离线验证（假 `DSH_HOME` + 带其他插件行与注释的 patch，工作目录隔离在任务临时目录）：`seed-presets` 写入后其他行、注释、状态字段不变；`--clear` 只删 `presets`；`seed-presets` 与 `seed-scale 3` 交替写互不覆盖；`--restore` 后 sha256 与原文件一致、备份清理；profile 原本无 patch 时还原即删除文件。`sh -n`、`pnpm lint`、两遍 `pnpm typecheck`（覆盖 `tests/gui/**/*.ts`）通过。
+
+**仍需用户：** 在外部通道上跑 `presets`/`host-config` 两轮（会临时改用户 profile patch，退出逐字节还原，同票据 32 的 `live-round.sh`）；第 3–5 项需要停掉 3080 的窗口。另注意 DSH `next` 已是 `0.1.7-rc.2`（2026-09-24），本插件验证基线仍是 rc.1，peer 下界覆盖得到；用户下次以 `npx @deepseek-ai/dsh@next` 重启就会是 rc.2。

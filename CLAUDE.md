@@ -44,12 +44,12 @@ GUI 验证（票据 18，`tests/gui/`，**不在 vitest include 内**，需要�
 DSH_GUI_ENTRY='<dsh web 打印的 127.0.0.1 入口 URL>' DSH_QA_TARBALLS=<工作树外的目录> sh tests/gui/live-round.sh
 sh tests/gui/reinstall-round.sh   # 开安装窗口（打包 + 安装）并跑重装恢复三段
 sh tests/gui/verify-round.sh      # 常规套件（= pnpm verify:gui），可转发参数重跑单个 spec
-sh tests/gui/presets-round.sh     # 预置往返四段（dsh --patch overlay）
+sh tests/gui/presets-round.sh     # 预置往返四段（预置种进 profile patch 本插件行，seed-presets.mjs）
 sh tests/gui/send-round.sh        # 发送路径（真实模型调用，需用户许可）
 sh tests/gui/close-window.sh      # 卸载 + profile 指纹校验
 ```
 
-每个 `*-round.sh` 自带 profile 启停与状态备份/还原（`boot.sh`、`install.sh`、`settings-namespace.mjs`）。自 DSH 0.1.7 起插件状态在 web profile 的 `cordis.patch.yml` 本插件行里，`settings-namespace.mjs` 整份文件逐字节备份还原；`boot.sh` 默认运行时是 `@deepseek-ai/dsh@next`（`latest` 仍是 0.1.5 线），给了 `DSH_GUI_ENTRY` 且通道有应答时走外部通道、不起停任何服务器。重启类 round 仍要求 3080 空闲；靠 `dsh --patch` overlay 注入预置的 `presets`/`host-config` round 在 0.1.7 上可能被拒写（票据 34）。**不要直接 `pnpm verify:gui`**：`validation.spec.ts` 与 `conflict.spec.ts` 会写入 Settings，必须跑在种子命名空间上并在退出时还原。
+每个 `*-round.sh` 自带 profile 启停与状态备份/还原（`boot.sh`、`install.sh`、`settings-namespace.mjs`）。自 DSH 0.1.7 起插件状态在 web profile 的 `cordis.patch.yml` 本插件行里，`settings-namespace.mjs` 整份文件逐字节备份还原；`boot.sh` 默认运行时是 `@deepseek-ai/dsh@next`（`latest` 仍是 0.1.5 线），给了 `DSH_GUI_ENTRY` 且通道有应答时走外部通道、不起停任何服务器。重启类 round 仍要求 3080 空闲。`presets`/`host-config` round 的作者预置经 `seed-presets.mjs` 写进同一行的 `presets`（与状态共用一份逐字节备份），**不要改回 `dsh --patch` overlay**：0.1.7 拒绝对被 overlay 覆盖的条目做表单写入，外部通道也传不了 overlay（票据 34）。**不要直接 `pnpm verify:gui`**：`validation.spec.ts` 与 `conflict.spec.ts` 会写入 Settings，必须跑在种子命名空间上并在退出时还原。
 
 注意 `typecheck` 是**两遍**：`*.spec.ts` 和 `tsdown.config.ts` 不在项目引用里，只有第二遍 `tsconfig.test.json` 才覆盖它们；只跑 `tsc -b` 会漏掉测试侧类型错误。`lib/` 是 gitignored 的构建产物；包级 `tsc -b` 只发 `.d.ts`（`emitDeclarationOnly`），别让它重新向 `lib/types/` 发 JS 或 sourcemap——那会把整包第二份 JS 打进 tarball（票据 17 修复，`tests/release/packaging.spec.ts` 固定）。
 
