@@ -12,11 +12,12 @@ import {
  * The full preset upgrade / downgrade round trip, at the GUI (spec 5.3, and spec 13.2's
  * "预置新增、文案更新、移除、重新加入和行为签名换 ID" row).
  *
- * `Config.presets` is the only authorized channel for a third-party preset and Host config
- * changes take effect on a profile restart, so each half of the round trip is a separate
- * boot: `tests/gui/presets-round.sh` drives four of them, with the stored state carried
- * across by the user's own Settings file — which is the thing under test. The overlays go
- * through `dsh --patch` rather than the user's `cordis.patch.yml`.
+ * `Config.presets` is the only authorized channel for a third-party preset, so each half of
+ * the round trip is a separate catalog: `tests/gui/presets-round.sh` declares four of them
+ * as `presets` on this plugin's row of the profile's `cordis.patch.yml`, booting between
+ * phases when it owns the channel, and the stored state on the same row carries across —
+ * which is the thing under test. (They were `dsh --patch` overlays until ticket 34: DSH
+ * 0.1.7 refuses form writes to an entry an overlay overrides.)
  *
  * Phases, in the order the round runs them:
  *
