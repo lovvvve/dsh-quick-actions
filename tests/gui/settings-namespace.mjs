@@ -1,6 +1,7 @@
 // Read and write this plugin's stored state inside the user's live web profile patch,
 // `<DSH_HOME>/profiles/web/cordis.patch.yml`, which is what the seeded GUI rounds do to
-// stage stored state.
+// stage stored state — and, for the rounds that play the preset author, the `presets`
+// declared on the same row.
 //
 // Since DSH 0.1.7 the stored section *is* the plugin's Config (spec 22): it lives on the
 // `id: composer-quick-actions` row of the active profile patch, beside every other plugin's
@@ -20,7 +21,7 @@ import { parseDocument, YAMLMap, YAMLSeq } from 'yaml'
 
 export const NAMESPACE = 'composer-quick-actions'
 const PACKAGE = 'dsh-quick-actions'
-/** The five user-state fields (spec 4.2); `presets` on the same row is the author's, never seeded here. */
+/** The five user-state fields (spec 4.2); `presets` on the same row is the author's, written only by `seedPresets`. */
 const STATE_FIELDS = ['schemaVersion', 'layout', 'userActionsById', 'actionOrder', 'presetStateById']
 const BACKUP = '.playwright/profile-patch-backup.yml'
 /** Present when the file did not exist before the first write, so restoring deletes it. */
@@ -68,10 +69,8 @@ export function readNamespace() {
   return Object.keys(state).length === 0 ? undefined : state
 }
 
-/** Replace the five user-state fields, keeping the rest of the row — the author's `presets` included. */
-export function seedNamespace(value) {
-  backupOnce()
-  const doc = load()
+/** This plugin's row's `config` map, creating the row and the map when the profile has neither. */
+function rowConfig(doc) {
   let target = row(doc)
   if (target === undefined) {
     target = doc.createNode({ id: NAMESPACE, name: PACKAGE, config: {} })
@@ -82,10 +81,32 @@ export function seedNamespace(value) {
     config = doc.createNode({})
     target.set('config', config)
   }
+  return config
+}
+
+/** Replace the five user-state fields, keeping the rest of the row — the author's `presets` included. */
+export function seedNamespace(value) {
+  backupOnce()
+  const doc = load()
+  const config = rowConfig(doc)
   for (const field of STATE_FIELDS) {
     if (field in value) config.set(field, doc.createNode(value[field]))
     else config.delete(field)
   }
+  writeAtomically(doc.toString())
+}
+
+/**
+ * Declare the author's `presets` on this plugin's row, or drop them with `undefined` —
+ * what an integrator does to extend the catalog (spec 5.1, 22.3). The five user-state
+ * fields are left exactly as they are, so the stored state a round trip carries survives.
+ */
+export function seedPresets(presets) {
+  backupOnce()
+  const doc = load()
+  const config = rowConfig(doc)
+  if (presets === undefined) config.delete('presets')
+  else config.set('presets', doc.createNode(presets))
   writeAtomically(doc.toString())
 }
 

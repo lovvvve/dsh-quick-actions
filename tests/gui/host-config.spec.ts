@@ -6,15 +6,15 @@ import { actionFaces, ensureLayout, manageEntry, managerPanel, openResidentCompo
  * row). `Config.presets` is the only authorized channel for third-party presets — there is
  * no runtime registration API — so this is what an integrator's own catalog entry does.
  *
- * Driven by `tests/gui/host-config-round.sh`, which boots the profile with an extra patch
- * overlay rather than editing the user's own `cordis.patch.yml`: `dsh --patch` applies after
- * every bundle layer, which is exactly where a profile-level preset would land.
+ * Driven by `tests/gui/host-config-round.sh`, which declares the extra preset on this
+ * plugin's row of the profile's own `cordis.patch.yml` — exactly where a profile-level preset
+ * lands — and restores the file byte for byte on exit.
  */
-const overlaid = process.env.DSH_QA_HOST_CONFIG === '1'
-const OVERLAY_PRESET_LABEL = '主机配置验证'
+const declared = process.env.DSH_QA_HOST_CONFIG === '1'
+const DECLARED_PRESET_LABEL = '主机配置验证'
 
 test.describe('a preset declared in Host config', () => {
-  test.skip(!overlaid, 'run through tests/gui/host-config-round.sh, which boots the overlay')
+  test.skip(!declared, 'run through tests/gui/host-config-round.sh, which declares the preset')
 
   test.beforeEach(async ({ page }) => {
     await openResidentComposer(page)
@@ -27,13 +27,13 @@ test.describe('a preset declared in Host config', () => {
     const labels = await actionFaces(page).evaluateAll(
       elements => elements.map(element => (element.textContent ?? '').replace(/\s+/g, '')),
     )
-    expect(labels.at(-1)).toContain(OVERLAY_PRESET_LABEL)
+    expect(labels.at(-1)).toContain(DECLARED_PRESET_LABEL)
   })
 
   test('is read-only like every other preset', async ({ page }) => {
     await manageEntry(page).click()
 
-    const row = managerPanel(page).locator('[data-quick-action]', { hasText: OVERLAY_PRESET_LABEL })
+    const row = managerPanel(page).locator('[data-quick-action]', { hasText: DECLARED_PRESET_LABEL })
     await expect(row).toHaveCount(1)
     // Presets can be cloned and hidden, never edited or deleted: a Host-declared entry is
     // the package author's, not the user's.
