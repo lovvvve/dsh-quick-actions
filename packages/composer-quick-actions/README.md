@@ -123,6 +123,7 @@ pnpm 有一条供应链策略：拒绝发布时间在冷却窗口内（默认 24
 - `label`、`text` 必填；`icon`、`confirm` 可选，`confirm` 默认 `true`。
 - 预置无效（缺字段、`id` 重复、目录超过 50 条）会让**插件加载响亮失败**并一次列出所有问题，而不是静默截断。
 - `presets` 与你的动作数据同在这一行 `config` 下（见下文「Settings 路径」），本插件从不写它。它是 DSH 的 volatile 字段：profile 运行期间改动会即时反映到快捷动作上；此时若改出无效目录，快捷动作区域显示目录错误，重启 profile 时插件加载失败并列出问题。
+- **只写在 active profile 自己的这份 `cordis.patch.yml` 里。** 不要把本插件的 `config` 写进 home patch（`<DSH_HOME>/cordis.patch.yml`）或 `dsh --patch` 的 overlay：DSH 的 patch 行 `config` 是整份替换，那一层会盖住这一行里存的你的动作数据（界面回到默认，磁盘上的数据还在），而且 DSH 会拒绝此后的每一次保存，界面报「保存被拒绝」，重试也不会成功。删掉那一层里本插件的行并重启 profile 即可恢复。
 
 用户对预置只能隐藏或克隆，不能编辑或删除；克隆出来的是一条普通的自定义动作。
 
