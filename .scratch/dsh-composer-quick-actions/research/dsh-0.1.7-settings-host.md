@@ -31,6 +31,13 @@
 - **写入位置**：`update` / `replace` / `mutate` 都走 `SettingsForms.write` → `configEditor.edit(entry, …)`，写的是 **active profile 的 `cordis.patch.yml`**（`profileContext.patchPath`），文件模式 0600，原子写入，写后立即 reconcile Loader。
 - **写入内容**：写进去的是**整份 raw config**，不只是 volatile 字段。做法是先取当前组合好的 raw config，剥掉其中的 volatile 字段，再合并新的 volatile 值；ordinary 字段按当前的原始值被一起「钉」到 profile 层。如果结果和 inherited 深相等，就删掉 profile 行里的 `config`；删完只剩 `id`/`name` 的，整行删除。
 - **`writable`**：**硬编码 `true`**。不存在「只读 profile」的概念。写入被拒只有几种情况：home patch 或命令行 overlay 覆盖了该条目（抛 `Configuration for "…" is overridden by a home patch or command-line overlay`）；条目不唯一或不在 root Include 下；条目不再 ACTIVE。没有 `profileContext` 时，`settings` 服务本身就被 `disabled`，`ctx.settings` 不存在。
+- **覆盖的粒度与后果（票据 34，源码取证，`0.1.7-rc.1`；CE/S/CUS 与 rc.2 逐字相同，未实跑）**：
+  - 按**整个条目**判定，不按字段。CE 写前把 bundle → 新 profile → home → overlay 重新叠一遍，要求叠出的 config 与本次 `next` 整份深相等（`dsh-config-editor/lib/index.js:112-116`），而 patch 行的 `config` 是整份替换（`dsh-app-boot/lib/index.js:73,106`、`:2904`「A patch config replaces the whole config.」）。所以 home 或 overlay 里只要有一行本条目带任意 `config`（只有 `presets` 也算），一切写入都被拒；只有 `id`、没有 `config` 的行不算；`disabled: true` 让 fiber 不再 ACTIVE、namespace 从 describe 消失，走不到这条报错。
+  - 拒绝不 reject：settings-controller 把异常转成 `RemoteError('settings/rejected')`（`dsh-api-settings-controller` `:465-470,507`），Client `ConfigForm.mutate` 见 `!response.ok` 先 `recover()` 再 resolve `false`（`dsh-client-ui-settings/lib/client.js:1182-1186`）。
+  - 被覆盖时快照照常：`status:'ready'`、`writable:true`、revision 照常、namespace 仍在 describe。`value` 取活配置（`dsh-settings/lib/index.js:436`），即覆盖层那份整份 config——**overlay 里的 `presets` 能到 Client，但 profile 行存的五个状态字段被整体遮住、回落为 schema 默认值**；`user` 仍是 profile 行（`:439`）。
+  - home patch 机制相同，区别是每次写都重新从磁盘读、对所有 profile 生效；overlay 启动时定死。
+  - 对本插件：`writeGate` 只看 `writable` 与连接，管理面板不预先显示只读；写操作按写后快照判为 `refused`，重试永远失败，也区分不出「被覆盖」与其他拒绝。Host 启动规范化重写（只在 profile 行的规范形式与已存不同时写）撞上同一报错时抛出，被 `src/index.ts` 的 `logger.error` 接住，不影响激活。
+  - 结论：home patch 与 overlay 不是可用的预置分发方式，README 已写明只声明在 active profile 自己的 patch 行；GUI round 改用 `seed-presets.mjs`。
 
 ### 证据
 
