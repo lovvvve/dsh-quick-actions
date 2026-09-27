@@ -123,6 +123,7 @@ Field rules:
 - `label` and `text` are required; `icon` and `confirm` are optional, and `confirm` defaults to `true`.
 - An invalid preset (a missing field, a duplicate `id`, a catalog over 50 entries) makes **plugin loading fail loudly** and lists every problem at once, rather than truncating silently.
 - `presets` sits under the same row's `config` as your action data (see "Settings paths" below), and this plugin never writes it. It is a DSH volatile field: editing it while the profile runs reaches the Quick Actions immediately; an invalid catalog written that way shows a catalog error in the Quick Actions area, and the next profile restart fails plugin loading with the list of problems.
+- **Declare them in the active profile's own `cordis.patch.yml` only.** Do not put this plugin's `config` in the home patch (`<DSH_HOME>/cordis.patch.yml`) or a `dsh --patch` overlay: DSH replaces a patch row's `config` whole, so that layer hides the action data stored on this row (the UI falls back to defaults; the data on disk is still there), and DSH refuses every save from then on — the UI reports the save as refused, and retrying never succeeds. Remove this plugin's row from that layer and restart the profile to recover.
 
 Users can hide or clone a preset but never edit or delete it; a clone becomes an ordinary Custom Quick Action.
 
