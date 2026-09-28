@@ -5,13 +5,19 @@
 #
 # Usage, from the repository root:  sh tests/gui/restart-round.sh
 # Requires the plugin installed in the web profile. The profile this round boots is
-# stopped on exit; the restore half puts the layout back to `ribbon`.
+# stopped on exit, and the user's profile patch is restored byte for byte.
+#
+# The round only writes through the GUI, but every layout switch has DSH write this
+# plugin's whole row into the profile patch — switching back to `ribbon` puts the layout
+# back, not the file. Before ticket 34 this round took no backup, and the row it left
+# behind became every later round's idea of the user's own patch.
 set -u
 
 . tests/gui/boot.sh
 
 cleanup() {
   status=$?
+  node tests/gui/seed-scale.mjs --restore 2>/dev/null || true
   stop_ours
   exit "$status"
 }
@@ -21,6 +27,9 @@ half() {
   DSH_GUI_ENTRY=$(entry_url) DSH_QA_RESTART="$1" \
     pnpm exec playwright test restart.spec.ts --project=desktop
 }
+
+stop_ours
+node tests/gui/seed-scale.mjs --backup || exit 1
 
 echo '=== choose the layout ==='
 boot || exit 1

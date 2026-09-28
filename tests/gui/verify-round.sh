@@ -27,7 +27,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 stop_ours
-node tests/gui/seed-scale.mjs 3 || exit 1
+# The packaged catalog as shipped — all five presets shown, none hidden, no custom actions —
+# which is what surface.spec and manager.spec count. (It seeded 3 until ticket 34 caught it:
+# the catalog grew to five presets and the specs moved with it, this seed did not.)
+node tests/gui/seed-scale.mjs 5 || exit 1
 boot || exit 1
 
 DSH_GUI_ENTRY=$(entry_url) pnpm exec playwright test "$@"

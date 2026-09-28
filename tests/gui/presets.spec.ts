@@ -23,10 +23,13 @@ import {
  *
  * | phase       | catalog                          | what it proves                        |
  * |-------------|----------------------------------|---------------------------------------|
- * | `stage`     | packaged 3 + probe (confirm on)  | a new preset joins, is clonable, hides |
- * | `tombstone` | packaged 3                       | removal keeps state, drops the count  |
- * | `restore`   | packaged 3 + probe, new label    | re-adding restores the preference     |
- * | `signature` | packaged 3 + probe v2 (off)      | a changed signature is a new ID       |
+ * | `stage`     | packaged + probe (confirm on)    | a new preset joins, is clonable, hides |
+ * | `tombstone` | packaged                         | removal keeps state, drops the count  |
+ * | `restore`   | packaged + probe, new label      | re-adding restores the preference     |
+ * | `signature` | packaged + probe v2 (off)        | a changed signature is a new ID       |
+ *
+ * The round seeds `seed-scale.mjs 3`: of the packaged presets, three are shown and the rest
+ * hidden. Faces count only what is shown; the manager's total counts hidden presets too.
  */
 // No retries: every phase writes to the user's Settings and the next one reads it back, so
 // a second attempt on the same profile starts from the state the first one left — a clone
@@ -35,6 +38,9 @@ import {
 test.describe.configure({ retries: 0 })
 
 const phase = process.env.DSH_QA_PRESETS
+/** The packaged catalog's size, and how many of it the round's seed leaves shown. */
+const PACKAGED = 5
+const SHOWN = 3
 const PROBE = 'preset:qa-preset-probe'
 const PROBE_V2 = 'preset:qa-preset-probe-v2'
 const PROBE_LABEL = '预置往返验证'
@@ -83,8 +89,8 @@ test.describe('a preset joining the catalog', () => {
     await openResidentComposer(page)
     await ensureLayout(page, 'ribbon')
 
-    // Appended after the packaged three (spec 5.3), on a namespace seeded with those three.
-    await expect(actionFaces(page)).toHaveCount(4)
+    // Appended after the packaged presets (spec 5.3), behind the three the seed shows.
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 1)
     expect((await faceLabels(page)).at(-1)).toContain(PROBE_LABEL)
 
     await manageEntry(page).click()
@@ -99,11 +105,12 @@ test.describe('a preset joining the catalog', () => {
     // preference the removal / re-add round trip has to carry.
     await presetRow(page, PROBE).getByRole('button', { name: '隐藏' }).click()
     await expect(presetRow(page, PROBE)).toHaveAttribute('data-quick-action-hidden', '')
-    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText('共 5')
+    // Every packaged preset, the probe and its clone: hiding does not leave the total.
+    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText(`共 ${PACKAGED + 2}`)
 
     await page.locator('[data-quick-actions-manager-close]').click()
     // Hidden means hidden: the clone shows, its source does not.
-    await expect(actionFaces(page)).toHaveCount(4)
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 1)
   })
 })
 
@@ -114,16 +121,16 @@ test.describe('a preset leaving the catalog', () => {
     await openResidentComposer(page)
     await ensureLayout(page, 'ribbon')
 
-    // The packaged three plus the clone. The clone is the user's own action now and does
-    // not follow its source (spec 5.2), so removing the preset must not touch it.
-    await expect(actionFaces(page)).toHaveCount(4)
+    // The shown packaged presets plus the clone. The clone is the user's own action now and
+    // does not follow its source (spec 5.2), so removing the preset must not touch it.
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 1)
 
     await manageEntry(page).click()
     await expect(presetRow(page, PROBE)).toHaveCount(0)
     await expect(cloneRows(page)).toHaveCount(1)
     await expect(cloneRows(page)).not.toHaveAttribute('data-quick-action-hidden', '')
     // A preset the current catalog does not know is not part of the total (spec 5.4).
-    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText('共 4')
+    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText(`共 ${PACKAGED + 1}`)
 
     // The other half of the claim, and the half no projection can show: the preference and
     // its order reference are still in the stored state, having survived a normalizing
@@ -143,19 +150,19 @@ test.describe('a preset re-entering the catalog', () => {
 
     // Still hidden, so the projection is unchanged by its return: the round trip is
     // lossless in both directions (spec 5.3).
-    await expect(actionFaces(page)).toHaveCount(4)
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 1)
 
     await manageEntry(page).click()
     await expect(presetRow(page, PROBE)).toHaveAttribute('data-quick-action-hidden', '')
     // Same ID, new label: an upgrade may update the label, icon and text (spec 5.1).
     await expect(presetRow(page, PROBE).locator('.dsh-cqa-label')).toHaveText(PROBE_LABEL_UPDATED)
-    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText('共 5')
+    await expect(managerPanel(page).locator('[data-quick-actions-count]')).toContainText(`共 ${PACKAGED + 2}`)
 
     // Restoring it is what makes the next phase's projection unambiguous.
     await presetRow(page, PROBE).getByRole('button', { name: '恢复' }).click()
     await expect(presetRow(page, PROBE)).not.toHaveAttribute('data-quick-action-hidden', '')
     await page.locator('[data-quick-actions-manager-close]').click()
-    await expect(actionFaces(page)).toHaveCount(5)
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 2)
   })
 })
 
@@ -168,7 +175,8 @@ test.describe('a preset changing its behaviour signature', () => {
 
     // The old ID is gone, so it is a tombstone again — the stored state of the two never
     // meets, which is the reason spec 5.1 requires a new ID for a changed signature.
-    await expect(actionFaces(page)).toHaveCount(5)
+    // The shown packaged presets, the first clone and the new ID.
+    await expect(actionFaces(page)).toHaveCount(SHOWN + 2)
     const labels = await faceLabels(page)
     expect(labels.at(-1)).toContain(PROBE_V2_LABEL)
     expect(labels.join()).not.toContain(PROBE_LABEL_UPDATED)
