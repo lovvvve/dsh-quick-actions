@@ -194,7 +194,7 @@ Cross-version data compatibility is the Host's job: new presets are appended to 
 dsh plugin --profile web remove dsh-quick-actions
 ```
 
-Both the dependency and the layer in `dsh.profile.bundles` go away. After a profile restart the actions are gone. The `id: composer-quick-actions` row in `cordis.patch.yml` stays as it is — your actions live in its `config`, and a reinstall picks the row back up by id, so they come back. If you uninstall without reinstalling, the profile logs a `patch: entry "composer-quick-actions" not found` warning for that row on every start; it does not block startup, and step 1 below removes it.
+Both the dependency and the layer in `dsh.profile.bundles` go away. After a profile restart the actions are gone. The `id: composer-quick-actions` row in `cordis.patch.yml` stays as it is — your actions live in its `config`, and a reinstall picks the row back up by id, so they come back. If you uninstall without reinstalling, that row is left addressing nothing: it does not block startup, `dsh --profile web --dump-config` reports it as `patch: entry "composer-quick-actions" not found`, and step 1 below removes it.
 
 **Full manual cleanup** (uninstalling does none of this, because a reinstall should restore your actions):
 

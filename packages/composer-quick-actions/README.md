@@ -194,7 +194,7 @@ dsh plugin --profile web add dsh-quick-actions@<version>
 dsh plugin --profile web remove dsh-quick-actions
 ```
 
-依赖与 `dsh.profile.bundles` 里的那一层会同时去掉，重启 profile 后动作不再出现。`cordis.patch.yml` 里 `id: composer-quick-actions` 那一行原样保留——你的动作都在它的 `config` 里，重装后按 id 接回，所以动作会回来。只卸不装时，profile 每次启动会为这行打一条 `patch: entry "composer-quick-actions" not found` 警告，不影响启动；按下面第 1 步删掉即可。
+依赖与 `dsh.profile.bundles` 里的那一层会同时去掉，重启 profile 后动作不再出现。`cordis.patch.yml` 里 `id: composer-quick-actions` 那一行原样保留——你的动作都在它的 `config` 里，重装后按 id 接回，所以动作会回来。只卸不装时，这一行就成了找不到目标的孤儿行：不影响启动，`dsh --profile web --dump-config` 会为它报 `patch: entry "composer-quick-actions" not found`；按下面第 1 步删掉即可。
 
 **手工彻底清理**（卸载不做这些，因为重装应当恢复你的动作）：
 
