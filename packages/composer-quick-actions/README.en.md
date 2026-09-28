@@ -9,7 +9,7 @@ Preset Quick Actions ship with the package and are read-only — you can hide or
 ## What it does
 
 - **Send Actions**: load a piece of static text into the draft and submit it through the official path. There is exactly one loading path, `setDraft(text)` → `submit()`.
-- **Three layouts**: a ribbon above the input, a bar inside it, or a single launcher opening a searchable panel. Switch at any time.
+- **Three layouts**: a ribbon above the input, a bar under it, or a single launcher opening a searchable panel. Switch at any time.
 - **Per-action send confirmation**, on by default and yours to change.
 - **Text starting with `/` is a valid Command Send Action**, adjudicated by DSH itself.
 - Presets and customs are capped at **50 combined**. At the cap, adding and cloning stop; if an upgrade or a config change pushes existing state past it, **no data is lost** — adding and cloning are simply refused until you are back under it.
@@ -134,7 +134,7 @@ Layout is a global persisted setting, switched in the management panel:
 | Value | Name | Where |
 |---|---|---|
 | `ribbon` (default) | Action ribbon | One row above the input, matching its width |
-| `bar` | Action bar | One row inside the input; whatever does not fit folds into "more" |
+| `bar` | Action bar | One row under the input, beside DSH's own usage info, as wide as its content and at most as wide as the input card; whatever does not fit folds into "more" |
 | `launcher` | Single launcher | One entry button opening a searchable panel |
 
 `bar` and `launcher` share the same searchable panel, and the search matches labels and texts only. The management panel is where you reorder, hide, restore and clone presets, create, edit, enable and delete custom actions, and switch layout.
