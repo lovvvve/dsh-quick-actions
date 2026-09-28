@@ -51,6 +51,13 @@ echo '=== uninstall ==='
 stop_ours
 qa_uninstall || exit 1
 installed=0
+# `dsh plugin remove` rewrites package.json only: the patch row and the state on it stay.
+node tests/gui/check-row.mjs || exit 1
+# A row that now addresses no entry is a per-entry patch warning. DSH reports patch
+# diagnostics from the CLI's config dump, which composes the same layers a boot does; a web
+# boot's stdout carries none of them. The boot below is what proves it does not block.
+$QA_DSH --profile web --dump-config 2>&1 | grep 'patch: entry "composer-quick-actions" not found' \
+  || { echo 'composing the profile did not report the orphaned row' >&2; exit 1; }
 boot || exit 1
 phase gone || exit 1
 
@@ -60,6 +67,8 @@ qa_install || exit 1
 installed=1
 boot || exit 1
 phase back || exit 1
+# The reinstalled bundle row took the stored config back by id; no second row appeared.
+node tests/gui/check-row.mjs || exit 1
 
 # The window is left open on purpose: the other rounds of this ticket need the plugin
 # installed. `tests/gui/close-window.sh` closes it, and that is where the profile

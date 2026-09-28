@@ -73,9 +73,15 @@ boot() {
   fi
 
   : > "$LOG"
-  # No `dsh --patch` overlay: DSH 0.1.7 refuses form writes to an entry an overlay overrides,
-  # so rounds that stage author presets declare them in the profile patch (seed-presets.mjs).
-  setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes $DSH_QA_RUNTIME web --no-open" >>"$LOG" 2>&1 &
+  # `DSH_BOOT_PATCH` adds one `dsh --patch` overlay. Only overlay-round.sh uses it, to prove
+  # what an overlay does to this plugin: DSH 0.1.7 refuses form writes to an entry an overlay
+  # overrides, so rounds that stage author presets declare them in the profile patch instead
+  # (seed-presets.mjs).
+  if [ -n "${DSH_BOOT_PATCH:-}" ]; then
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes $DSH_QA_RUNTIME --profile web --patch '$DSH_BOOT_PATCH' --no-open" >>"$LOG" 2>&1 &
+  else
+    setsid sh -c "echo \$\$ > '$PIDFILE'; exec npx --yes $DSH_QA_RUNTIME web --no-open" >>"$LOG" 2>&1 &
+  fi
 
   for _ in $(seq 1 90); do
     if grep -q "dsh web: http" "$LOG" 2>/dev/null; then
