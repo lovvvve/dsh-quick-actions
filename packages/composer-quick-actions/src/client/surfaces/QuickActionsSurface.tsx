@@ -73,10 +73,13 @@ function ActionControl(props: {
 }
 
 /**
- * Measure one element's inner width, republishing on every resize. Used twice:
- * on the whole row for the density rule, and on the action region alone for the
- * bar's overflow split — the region is `flex: 1 1 auto`, so its width is already
- * what is left after the controls that must stay visible.
+ * Measure one element's width, republishing on every resize. Used twice: on the
+ * whole row for the density rule, and on the action region alone for the bar's
+ * overflow split — the region is `flex: 1 1 auto`, so its width is already what
+ * is left after the controls that must stay visible.
+ *
+ * Fractional, like the control widths it is compared with: `clientWidth` rounds,
+ * and a region reported a pixel short of the faces it holds folds one of them.
  */
 function useElementWidth(): [MutableRefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement | null>(null)
@@ -86,10 +89,10 @@ function useElementWidth(): [MutableRefObject<HTMLDivElement | null>, number] {
     const element = ref.current
     if (element === null || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(() => {
-      setWidth(element.clientWidth)
+      setWidth(element.getBoundingClientRect().width)
     })
     observer.observe(element)
-    setWidth(element.clientWidth)
+    setWidth(element.getBoundingClientRect().width)
     return () => {
       observer.disconnect()
     }
@@ -120,7 +123,7 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
     let changed = false
     for (const node of Array.from(fitRef.current?.querySelectorAll<HTMLElement>('[data-quick-action]') ?? [])) {
       const key = node.dataset['quickAction']
-      const value = node.offsetWidth
+      const value = node.getBoundingClientRect().width
       if (key === undefined || value <= 0 || widths.current.get(key) === value) continue
       widths.current.set(key, value)
       changed = true
@@ -206,7 +209,15 @@ export function QuickActionsSurface(props: QuickActionsSurfaceProps): ReactEleme
   const rootClass = layout === 'bar' ? 'dsh-cqa-bar' : layout === 'launcher' ? 'dsh-cqa-launcher' : 'dsh-cqa-ribbon'
 
   return (
-    <div className={rootClass} data-quick-actions-layout={layout} data-quick-actions-density={density}>
+    <div
+      className={rootClass}
+      data-quick-actions-layout={layout}
+      data-quick-actions-density={density}
+      // A bar that has to fold claims the dock row's width (spec 22.9): content-sized,
+      // the region it measures would only ever be as wide as what it already shows,
+      // and it could never find the room a wider window gives back.
+      data-quick-actions-overflow={layout === 'bar' && overflow.length > 0 ? '' : undefined}
+    >
       <div className="dsh-cqa-row" ref={rowRef} data-density={density}>
         {layout === 'ribbon' && density === 'wide' ? <span className="dsh-cqa-title">{t('title')}</span> : null}
 

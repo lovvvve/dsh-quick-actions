@@ -31,6 +31,9 @@ export function densityFor(width: number): SurfaceDensity {
   return width > 0 && width < NARROW_SURFACE_WIDTH ? 'narrow' : 'wide'
 }
 
+/** How far, in CSS px, a control may overrun the bar row and still count as fitting. */
+export const FIT_TOLERANCE = 0.5
+
 /** One measured row of the `bar` layout. */
 export interface BarFitInput {
   /** Usable inner width of the action row. */
@@ -52,6 +55,11 @@ export interface BarFitInput {
  * no layout — every width reads as zero. That answers "all of them": showing the
  * full row and letting the browser's own overflow handle it for one frame is
  * better than flashing a "more" button that the next frame withdraws.
+ *
+ * A control fits when it overruns the row by less than `FIT_TOLERANCE`. Whenever
+ * the bar is content-sized (spec 22.9) the row it measures is exactly as wide as
+ * the controls it shows, and fractional layout can report that a hair short;
+ * folding a face over the difference would narrow the row and start a cascade.
  */
 export function fitActionCount(input: BarFitInput): number {
   const { available, widths, reserved, gap } = input
@@ -62,7 +70,7 @@ export function fitActionCount(input: BarFitInput): number {
   let shown = 0
   for (const width of widths) {
     const next = used + width + (shown === 0 && reserved === 0 ? 0 : gap)
-    if (next > available) break
+    if (next > available + FIT_TOLERANCE) break
     used = next
     shown += 1
   }

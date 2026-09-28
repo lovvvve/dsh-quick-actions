@@ -394,25 +394,29 @@ describe('the shared searchable action panel', () => {
   })
 })
 
-/** Give jsdom the measurements the `bar` overflow split needs, then take them back. */
+/**
+ * Give jsdom the measurements the `bar` overflow split needs, then take them back:
+ * every action face is `action` wide, every other element — the row and the fit
+ * region — `row` wide. The split reads fractional box widths.
+ */
 function stubMeasurement(sizes: { readonly row: number; readonly action: number }): () => void {
   const observer = globalThis.ResizeObserver
-  const width = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
-  const offset = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth')
+  const rect = Element.prototype.getBoundingClientRect
 
   globalThis.ResizeObserver = class {
     observe(): void {}
     unobserve(): void {}
     disconnect(): void {}
   } as unknown as typeof ResizeObserver
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => sizes.row })
-  Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get: () => sizes.action })
+  Element.prototype.getBoundingClientRect = function measured(this: Element): DOMRect {
+    const width = this.hasAttribute('data-quick-action') ? sizes.action : sizes.row
+    return { width, height: 0, x: 0, y: 0, top: 0, left: 0, right: width, bottom: 0, toJSON: () => ({}) } as DOMRect
+  }
 
   return () => {
     if (observer === undefined) delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver
     else globalThis.ResizeObserver = observer
-    if (width !== undefined) Object.defineProperty(HTMLElement.prototype, 'clientWidth', width)
-    if (offset !== undefined) Object.defineProperty(HTMLElement.prototype, 'offsetWidth', offset)
+    Element.prototype.getBoundingClientRect = rect
   }
 }
 
