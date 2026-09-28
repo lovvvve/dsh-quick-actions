@@ -100,7 +100,8 @@ export async function dismissShellOverlays(page: Page): Promise<void> {
   })
 }
 
-let knownLeaf: number | undefined
+/** The row key (`session:<id>`) of the session that mounted the landmark last; history does not go away. */
+let knownSession: string | undefined
 
 /**
  * Quick actions render at the Resident Composer, and DSH's hero screen — what an empty
@@ -142,26 +143,57 @@ export async function enterSession(page: Page, landmark: 'plugin' | 'history'): 
   await openGui(page)
   await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
   await dismissShellOverlays(page)
-  const rows = page.locator('[role="treeitem"]')
-  await expect(rows.first()).toBeVisible({ timeout: 20_000 })
+  // DSH's workspace tree renders session rows and workspace rows as *siblings*, told apart
+  // only by their row keys (`session:<id>` / `workspace:<id>`, the latter with
+  // `aria-expanded`). A folded workspace has no child treeitem either, so "a row without
+  // children" is no test for a session — clicking one only folds or unfolds it. Every new
+  // page starts with each workspace folded except the current session's: the expansion
+  // lives in localStorage, and each Playwright test gets empty storage (ticket 38).
+  const sessions = page.locator('[role="treeitem"][data-row-key^="session:"]')
+  const folded = page.locator('[role="treeitem"][data-row-key^="workspace:"][aria-expanded="false"]')
+  await expect(page.locator('[role="treeitem"][data-row-key]').first()).toBeVisible({ timeout: 20_000 })
+  const tried = new Set<string>()
+  let waitedForSessions = false
 
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    // The tree nests sessions inside workspace rows, and clicking a workspace row
-    // collapses it — which hides the very sessions we are looking for. Only leaf rows are
-    // sessions, and the snapshot is retaken every attempt because a click can reorder or
-    // collapse the tree under us.
-    const leaves = await rows.evaluateAll(elements => elements
-      .map((element, index) => ({ index, leaf: element.querySelector('[role="treeitem"]') === null }))
-      .filter(row => row.leaf)
-      .map(row => row.index))
-    // The row that worked once is tried first: sessions with history do not lose it. A
-    // cached index that is no longer a leaf is dropped rather than clicked blindly.
-    const preferred = attempt === 0 && knownLeaf !== undefined && leaves.includes(knownLeaf)
-      ? knownLeaf
-      : leaves[attempt]
-    if (preferred === undefined) break
+  while (tried.size < 8) {
+    const visible = await sessions.evaluateAll(elements => elements.map(element => element.getAttribute('data-row-key') ?? ''))
+    // The session that worked once is tried first: sessions with history do not lose it.
+    const next = [knownSession, ...visible].find(key => key !== undefined && visible.includes(key) && !tried.has(key))
+    if (next === undefined) {
+      // Every visible session is spent: unfold the next workspace, or give up.
+      const group = await folded.first().getAttribute('data-row-key', { timeout: 1_000 }).catch(() => null)
+      if (group === null) {
+        // Workspace rows render before the session rows an unfolded workspace loads, so a
+        // tree that shows neither an untried session nor a folded workspace gets one
+        // chance to finish loading before it counts as having none.
+        if (waitedForSessions) break
+        waitedForSessions = true
+        await page.waitForFunction(
+          seen => [...document.querySelectorAll('[role="treeitem"][data-row-key^="session:"]')]
+            .some(row => !seen.includes(row.getAttribute('data-row-key') ?? '')),
+          [...tried],
+          { timeout: 10_000 },
+        ).catch(() => undefined)
+        continue
+      }
+      const row = page.locator(`[role="treeitem"][data-row-key="${group}"]`)
+      // On the folder icon near the left edge: the row's centre and right side are where
+      // its hover-revealed buttons ("workspace actions", "new session here") appear, and a
+      // click that lands on one of those opens a menu — or starts a session — instead. A
+      // click made while the freshly loaded tree is still settling can be swallowed, so it
+      // is repeated, but only while the row still reads folded: a second click on an
+      // unfolded row would fold it again.
+      for (let click = 0; click < 3 && await row.getAttribute('aria-expanded') !== 'true'; click += 1) {
+        const box = await row.boundingBox()
+        await row.click({ position: { x: 20, y: (box?.height ?? 28) / 2 } })
+        await expect(row).toHaveAttribute('aria-expanded', 'true', { timeout: 2_000 }).catch(() => undefined)
+      }
+      await expect(row).toHaveAttribute('aria-expanded', 'true')
+      continue
+    }
+    tried.add(next)
 
-    await rows.nth(preferred).click()
+    await page.locator(`[role="treeitem"][data-row-key="${next}"]`).click()
     await expect(composerInput(page)).toBeVisible({ timeout: 20_000 })
     // A profile that has just booted mounts the first surface slowly: the web app is
     // loading its module table while this waits, so the budget is generous.
@@ -169,9 +201,9 @@ export async function enterSession(page: Page, landmark: 'plugin' | 'history'): 
     const mounted = await beacon
       .waitFor({ state: 'visible', timeout: 25_000 })
       .then(() => true, () => false)
-    if (!mounted) continue // this session shows the hero; try the next row
+    if (!mounted) continue // this session shows the hero; try the next one
 
-    knownLeaf = preferred
+    knownSession = next
     if (requested !== null) await page.setViewportSize(requested)
     // Asserted outside the discovery fallback on purpose: a cell that disappears when the
     // window shrinks is a responsive defect, and swallowing it here would report it as
