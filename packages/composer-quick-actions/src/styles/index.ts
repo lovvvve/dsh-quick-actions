@@ -11,20 +11,24 @@
  * Colours are DSH alias theme tokens only — nothing here defines a palette, and
  * nothing overrides a global theme (spec 8.4).
  *
- * ## The width rule (spec 8.2)
+ * ## The width rule (spec 8.2, 22.9)
  *
- * The two layouts sit in different boxes, so they reach the same outer edges by
- * different arithmetic:
+ * `.dsh-cqa-ribbon` (and the launcher, in the same box) renders in the composer
+ * stack, outside the InputBar, which is the element that owns
+ * `--dsh-composer-side-clearance` as padding. It therefore subtracts that
+ * clearance from both sides itself, is capped at `--dsh-composer-card-max-width`
+ * — the same cap the composer card uses — and is centred, so its left and right
+ * edges coincide with the input box exactly rather than approximately.
  *
- * - `.dsh-cqa-ribbon` renders in the composer stack, outside the InputBar, which
- *   is the element that owns `--dsh-composer-side-clearance` as padding. It
- *   therefore subtracts that clearance from both sides itself.
- * - `.dsh-cqa-bar` renders as the InputBar's last child, inside that padding, so
- *   it is simply `100%` wide.
- *
- * Both are then capped at `--dsh-composer-card-max-width` — the same cap the
- * composer card uses — and centred, so their left and right edges coincide with
- * the input box exactly rather than approximately.
+ * `.dsh-cqa-bar` makes no such claim. Since DSH 0.1.6-alpha.2 the composer dock is
+ * a row under the card that DSH centres and sizes to its content, shared with
+ * DSH's own stats pills and context meter, so the bar is a content-sized member of
+ * that row (spec 22.9). It only has to stay inside it: `min-width: 0` lets it
+ * shrink when the row reaches the composer's width, which is what hands the
+ * overflow split a smaller region to fold into "more". Once it folds it claims
+ * the card's width (`[data-quick-actions-overflow]`), capped by the row's own
+ * `max-width: 100%`: content-sized, the region the split measures would only be
+ * as wide as what it already shows, and a wider window could never unfold it.
  */
 
 const TAG_ID = 'dsh-quick-actions/surfaces.css'
@@ -39,9 +43,12 @@ export const QUICK_ACTIONS_CSS = `
 }
 .dsh-cqa-bar {
   box-sizing: border-box;
-  width: 100%;
+  min-width: 0;
   max-width: var(--dsh-composer-card-max-width);
-  margin: 0 auto;
+}
+/* Folding: claim the card's width, for the dock row's own max-width to cap. */
+.dsh-cqa-bar[data-quick-actions-overflow] {
+  width: var(--dsh-composer-card-max-width);
 }
 
 .dsh-cqa-row {

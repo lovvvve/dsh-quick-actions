@@ -573,6 +573,55 @@ describe('the catalog error state', () => {
   })
 })
 
+describe('the bar overflow split', () => {
+  // jsdom lays nothing out, so the region the split measures and each face are given
+  // widths here: the fit region `fitWidth`, every face 80 px.
+  const realResizeObserver = globalThis.ResizeObserver
+  const realRect = Element.prototype.getBoundingClientRect
+  let fitWidth = 0
+
+  beforeEach(() => {
+    globalThis.ResizeObserver = class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    } as unknown as typeof ResizeObserver
+    Element.prototype.getBoundingClientRect = function rect(this: Element): DOMRect {
+      const width = this.classList.contains('dsh-cqa-fit') ? fitWidth : this.hasAttribute('data-quick-action') ? 80 : 0
+      return { width, height: 0, x: 0, y: 0, top: 0, left: 0, right: width, bottom: 0, toJSON: () => ({}) } as DOMRect
+    }
+  })
+
+  afterEach(() => {
+    if (realResizeObserver === undefined) delete (globalThis as { ResizeObserver?: unknown }).ResizeObserver
+    else globalThis.ResizeObserver = realResizeObserver
+    Element.prototype.getBoundingClientRect = realRect
+  })
+
+  it("claims the dock row's width once it has to fold, so what it measures stops tracking what it shows", () => {
+    // Room for one of the two faces. A content-sized bar would then measure a region
+    // exactly one face wide and could never discover the room a wider window gives it
+    // back (spec 22.9); the marker is what the stylesheet widens the bar on.
+    fitWidth = 100
+    setup('bar')
+    mount()
+
+    expect(screen.getByRole('button', { name: '更多 1' })).toBeTruthy()
+    const root = document.querySelector('[data-quick-actions-layout="bar"]')
+    expect(root?.hasAttribute('data-quick-actions-overflow')).toBe(true)
+  })
+
+  it('stays content-sized while every action fits', () => {
+    fitWidth = 400
+    setup('bar')
+    mount()
+
+    expect(screen.queryByRole('button', { name: /更多/ })).toBeNull()
+    const root = document.querySelector('[data-quick-actions-layout="bar"]')
+    expect(root?.hasAttribute('data-quick-actions-overflow')).toBe(false)
+  })
+})
+
 describe('failure isolation', () => {
   it('replaces the Quick Action area alone, with a retry, when a surface throws', () => {
     setup('ribbon')

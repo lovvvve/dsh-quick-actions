@@ -3,11 +3,12 @@
  * registry's own bookkeeping.
  *
  * The equal-width requirement is pinned here as the formula the stylesheet
- * declares: the ribbon subtracts the side clearance the InputBar owns, the bar
- * does not because it renders inside that padding, and both take the composer
- * card's max width and centre. Measuring the rendered result to the CSS pixel is
- * the GUI verification task's job; keeping the formula from drifting is this
- * suite's.
+ * declares: the ribbon subtracts the side clearance the InputBar owns, takes the
+ * composer card's max width and centres. The bar makes no equal-width claim since
+ * spec 22.9 — it is a content-sized member of DSH's composer dock row — so its
+ * rule only has to stay shrinkable and capped. Measuring the rendered result to
+ * the CSS pixel is the GUI verification task's job; keeping the formula from
+ * drifting is this suite's.
  */
 import { describe, expect, it } from 'vitest'
 import { NARROW_SURFACE_WIDTH, densityFor, fitActionCount } from '../../src/client/surfaces/layout.js'
@@ -21,18 +22,30 @@ describe('the surface width formula', () => {
     )
   })
 
-  it('takes the full width for the bar, which renders inside that clearance', () => {
-    const bar = QUICK_ACTIONS_CSS.slice(QUICK_ACTIONS_CSS.indexOf('.dsh-cqa-bar {'))
-    expect(bar.slice(0, bar.indexOf('}'))).toContain('width: 100%;')
+  it('caps the ribbon at the composer card width and centres it', () => {
+    const rule = QUICK_ACTIONS_CSS.split('}').find((candidate) => candidate.includes('.dsh-cqa-ribbon,'))
+    expect(rule).toContain('max-width: var(--dsh-composer-card-max-width);')
+    expect(rule).toContain('margin: 0 auto;')
   })
 
-  it('caps both at the composer card width and centres them', () => {
-    const rules = QUICK_ACTIONS_CSS.split('}')
-    for (const selector of ['.dsh-cqa-ribbon,', '.dsh-cqa-bar {']) {
-      const rule = rules.find((candidate) => candidate.includes(selector))
-      expect(rule).toContain('max-width: var(--dsh-composer-card-max-width);')
-      expect(rule).toContain('margin: 0 auto;')
-    }
+  it('leaves the bar content-sized and shrinkable inside DSH\'s dock row (spec 22.9)', () => {
+    const bar = QUICK_ACTIONS_CSS.slice(QUICK_ACTIONS_CSS.indexOf('.dsh-cqa-bar {'))
+    const rule = bar.slice(0, bar.indexOf('}'))
+    // A width of its own would be a percentage of a row DSH sizes to its content: at
+    // best a no-op, at worst a flex basis as wide as the row, squeezing DSH's own pills.
+    expect(rule).not.toMatch(/(^|[\s;{])width:/)
+    // DSH centres the row; an auto margin would claim space the row never has.
+    expect(rule).not.toContain('margin: 0 auto;')
+    expect(rule).toContain('min-width: 0;')
+    expect(rule).toContain('max-width: var(--dsh-composer-card-max-width);')
+  })
+
+  it("widens a bar that has to fold to the composer card, for the dock row to cap", () => {
+    // Content-sized, a folding bar would measure only what it already shows (spec 22.9).
+    // The card width is a plain length in the main conversation body, so it can open up
+    // a row DSH sizes to its content; the row's own `max-width: 100%` caps it.
+    const rule = QUICK_ACTIONS_CSS.split('}').find((candidate) => candidate.includes('.dsh-cqa-bar[data-quick-actions-overflow]'))
+    expect(rule).toContain('width: var(--dsh-composer-card-max-width);')
   })
 
   it('defines no colour of its own, only DSH alias theme tokens', () => {
@@ -63,6 +76,16 @@ describe('the bar overflow split', () => {
 
   it('keeps room for the controls that must stay visible', () => {
     expect(fitActionCount({ available: 200, widths: [80, 80], reserved: 100, gap: 8 })).toBe(1)
+  })
+
+  it('does not fold an action away over a sub-pixel difference', () => {
+    // A content-sized bar measures a region exactly as wide as the controls it shows
+    // (spec 22.9): three 52.6 px faces and two gaps. Fractional layout can report that
+    // region a hair narrower, and folding one face over it would shrink the region
+    // again — the start of a cascade.
+    expect(fitActionCount({ available: 173.5, widths: [52.6, 52.6, 52.6], reserved: 0, gap: 8 })).toBe(3)
+    // A real shortfall still folds.
+    expect(fitActionCount({ available: 172.5, widths: [52.6, 52.6, 52.6], reserved: 0, gap: 8 })).toBe(2)
   })
 
   it('folds everything away when not even the first action fits', () => {
