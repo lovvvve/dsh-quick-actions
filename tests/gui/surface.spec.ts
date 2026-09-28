@@ -47,6 +47,21 @@ test.describe('quick actions surface', () => {
     expect(Math.abs(cell.right - reference.right), `right ${cell.right} vs ${reference.right}`).toBeLessThanOrEqual(1)
   })
 
+  test('keeps the bar no wider than the composer box and inside the viewport', async ({ page }, testInfo) => {
+    // Since DSH 0.1.6-alpha.2 the bar is a member of DSH's composer dock row, centred by DSH
+    // and bounded by the conversation column rather than the card (spec 22.9): wide DSH pills
+    // beside it can carry the row past the card's edges, so the gate is the bar's own width
+    // and the viewport. Until ticket 37 nothing but the screenshot baselines looked at it.
+    await ensureLayout(page, 'bar')
+    const cell = await edges(layoutCell(page))
+    const reference = await composerBoxEdges(page)
+    const viewport = page.viewportSize()!
+
+    expect(cell.width, `${testInfo.project.name}: bar ${cell.width} vs card ${reference.width}`).toBeLessThanOrEqual(reference.width + 1)
+    expect(cell.left).toBeGreaterThanOrEqual(0)
+    expect(cell.right).toBeLessThanOrEqual(viewport.width)
+  })
+
   test('leaf controls are the official DSH primitives', async ({ page }) => {
     // Primitives ship CSS Modules, so their classes are hashed (`_button_<hash>_<line>`)
     // while this plugin's own classes carry the `dsh-cqa-` prefix. Both on one element is

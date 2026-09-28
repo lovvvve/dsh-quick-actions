@@ -50,6 +50,32 @@ test.describe(`quick actions at ${requested ?? 'no'} seeded actions`, () => {
     }
   })
 
+  test('folds the bar into "more" once, accounting for every action', async ({ page }) => {
+    // Since DSH 0.1.6-alpha.2 the bar is a content-sized member of DSH's composer dock row
+    // (spec 22.9), so the region its overflow split measures is itself sized by what it
+    // shows. A rounding slip there would fold one action after another, or flip between
+    // folding and not. The split must settle, show at least one face when there is any
+    // action, and give each action exactly one place: a face, or a count in "more".
+    await ensureLayout(page, 'bar')
+    const more = page.locator('[data-quick-actions-entry="bar"]')
+    const split = async (): Promise<{ faces: number; folded: number }> => ({
+      faces: await actionFaces(page).count(),
+      folded: await more.count() === 0 ? 0 : Number(/\d+/.exec((await more.textContent()) ?? '')?.[0] ?? Number.NaN),
+    })
+
+    const first = await split()
+    await page.waitForTimeout(1_500)
+    const settled = await split()
+
+    expect(settled, 'the split kept moving').toEqual(first)
+    expect(settled.faces + settled.folded).toBe(expected)
+    if (expected > 0) expect(settled.faces).toBeGreaterThan(0)
+    const cell = await layoutCell(page).boundingBox()
+    const viewport = page.viewportSize()!
+    expect(cell!.x).toBeGreaterThanOrEqual(0)
+    expect(cell!.x + cell!.width).toBeLessThanOrEqual(viewport.width)
+  })
+
   test('keeps the equal-width surface intact at this scale', async ({ page }) => {
     // Many actions must not push the row past the composer it tracks.
     const cell = await layoutCell(page).boundingBox()

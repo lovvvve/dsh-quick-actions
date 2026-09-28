@@ -231,9 +231,14 @@ test.describe('final acceptance walk', () => {
         const right = Math.abs(cell.right - reference.right)
         expect(cell.left).toBeGreaterThanOrEqual(0)
         expect(cell.right).toBeLessThanOrEqual(width)
-        if (layout !== 'launcher') {
+        if (layout === 'ribbon') {
           expect(left, `${layout}@${width} left`).toBeLessThanOrEqual(1)
           expect(right, `${layout}@${width} right`).toBeLessThanOrEqual(1)
+        } else if (layout === 'bar') {
+          // A member of DSH's composer dock row since 0.1.6-alpha.2, bounded by the
+          // conversation column rather than the card (spec 22.9): no wider than the card,
+          // inside the viewport (checked above).
+          expect(cell.width, `${layout}@${width} width`).toBeLessThanOrEqual(reference.width + 1)
         }
         const density = await layoutCell(page).getAttribute('data-quick-actions-density')
         const more = page.locator('[data-quick-actions-entry="bar"]')
