@@ -88,6 +88,7 @@ Label: `wayfinder:map`
 - [把 0.2.0-rc.1 发到 npm 的 next dist-tag](./issues/36-publish-0.2.0-rc.1-to-next.md) — 已发布，`latest` 仍是 `0.1.0`，registry 与本地打包逐字节一致；发布后头 24 小时 `@next` 会被 pnpm `minimumReleaseAge` 静默退回 `0.1.0-rc.4`。
 - [让 bar 布局在 DSH 0.1.7 上重新与输入框等宽](./issues/37-restore-the-bar-width-on-dsh-0.1.7.md) — 用户选择接受 DSH `0.1.6-alpha.2` 起的 dock 行设计（spec 22.9）：bar 宽度随内容、最多与卡片同宽，不再等宽，门槛改为不比卡片宽、不越出视口、折叠稳定；修掉内容宽 bar 在窄屏折叠时的振荡（折叠时撑到卡片宽、小数像素测量、0.5 px 容差），真机三视口、六档规模与验收全过。
 - [让 GUI 驱动进入会话时不被折叠的工作区行卡住](./issues/38-make-session-entry-survive-collapsed-workspaces.md) — DSH 侧栏里会话行与工作区行是兄弟节点、展开状态在 localStorage，旧 helper 按行下标缓存、把折叠工作区当会话去点；改为只点 `session:` 行、先展开折叠工作区、按会话 id 缓存，surface + manager 30 条一次全过（27.7→3.8 分钟）。
+- [把 0.2.0-rc.2 发到 npm 的 next dist-tag](./issues/39-publish-0.2.0-rc.2-to-next.md) — 已发布，带票据 37 的 bar 修复，`latest` 仍是 `0.1.0`，registry 与本地打包逐字节一致；头 24 小时 `@next` 会被年龄门槛退回 `0.2.0-rc.1`。
 
 ## Out of scope（范围外）
 
