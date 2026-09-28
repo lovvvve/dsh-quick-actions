@@ -83,9 +83,10 @@ Label: `wayfinder:map`
 
 - [把 GUI round 驱动移植到 profile 承载的 Settings](./issues/32-port-the-gui-rounds-to-profile-backed-settings.md) — **已 resolved**。种子/备份/还原改为操作 profile `cordis.patch.yml` 的本插件行（整份文件逐字节备份还原），运行时默认 `@next`，指纹扩到四个文件；新增外部通道模式与 `live-round.sh`，在用户正在运行的 DSH `0.1.7-rc.1` 上**不重启**热装插件并验证：三视口 33 项通过、等宽 ≤ 1 CSS px；`conflict.spec` 在 90 秒预算下超时，以 240 秒单独重跑 1.8 分钟通过（新模型下的冲突分支成立），已把预算写进该 spec。收尾逐字节还原，四个指纹一致。重启类与 overlay 类 round 留给票据 34。
 
-- [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 开放。其中 overlay 类 round 按读到的 config-editor 代码会在 0.1.7 上被拒写，需先真机确认；票据 35 另补了重装数据保留与旧文档导入两项真机验证。
+- [重跑需要重启 profile 与靠 overlay 注入预置的 GUI round](./issues/34-rerun-the-restarting-and-overlay-rounds.md) — 在 DSH `0.1.7-rc.2` 的停服窗口里跑完：重装保留数据、重启恢复、断线只读、规模、预置往返、Host 预置、旧文档导入全部成立；overlay 真机确认会遮住用户数据并拒绝保存，预置 round 改为种进 patch 行；修掉 `a92de23` 漏改的种子与计数、`restart-round.sh` 不还原 patch 的缺口；bar 布局不再撑满另立票据 37。
 - [收掉 0.1.7 适配分支代码审查的发现](./issues/35-close-the-0.1.7-review-findings.md) — 目录错误只有「首次读取失败」给重试，另两种按第 22.3 节新义改写文案；README 安装命令带 `@next`（新版发 `next` dist-tag），卸载保留 patch 行、重装恢复数据已由 `0.1.7-rc.1` 源码取证；过时的「第 17 节优先级最高」等文档漂移已同步。
 - [把 0.2.0-rc.1 发到 npm 的 next dist-tag](./issues/36-publish-0.2.0-rc.1-to-next.md) — 已发布，`latest` 仍是 `0.1.0`，registry 与本地打包逐字节一致；发布后头 24 小时 `@next` 会被 pnpm `minimumReleaseAge` 静默退回 `0.1.0-rc.4`。
+- [让 bar 布局在 DSH 0.1.7 上重新与输入框等宽](./issues/37-restore-the-bar-width-on-dsh-0.1.7.md) — 开放。`0.1.7-rc.2` 上 bar 只有内容宽（desktop 776→367 px，1440 下左缘偏 159 px），DSH 侧 InputBar 不再给最后一个子元素整行宽度；bar 截图基线有意保留为旧图。
 
 ## Out of scope（范围外）
 
