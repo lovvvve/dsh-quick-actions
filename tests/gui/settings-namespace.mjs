@@ -84,6 +84,17 @@ function rowConfig(doc) {
   return config
 }
 
+/**
+ * How many rows of the patch address this plugin, and which user-state fields the first
+ * one sets — what the reinstall round checks around `dsh plugin remove` and `add`.
+ */
+export function inspectRows() {
+  const rows = load().contents.items.filter(item => item instanceof YAMLMap && item.get('id') === NAMESPACE)
+  const config = rows[0]?.get('config', true)
+  const stateFields = config instanceof YAMLMap ? STATE_FIELDS.filter(field => config.has(field)) : []
+  return { rows: rows.length, stateFields }
+}
+
 /** Replace the five user-state fields, keeping the rest of the row — the author's `presets` included. */
 export function seedNamespace(value) {
   backupOnce()
