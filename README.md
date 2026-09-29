@@ -26,7 +26,11 @@ pnpm typecheck   # tsc -b（项目引用，只发 .d.ts）+ tsc -p tsconfig.test
 pnpm lint
 pnpm build
 pnpm watch:client
+# 离线布局/真实组件浏览器回归（本机需安装 Chrome；不起服务器、不写 profile）
+pnpm exec playwright test --config tests/browser/playwright.config.ts
 ```
+
+未发布的 bar 独立下方行适配需要[本地 DSH 核心补丁](.scratch/dsh-composer-quick-actions/core/bar-footer/conversation-composer-footer.patch)，基于 `dsh-v0.1.7-rc.2`；未打补丁时保留原位置。应用方式与核心构建限制见[验证报告](.scratch/dsh-composer-quick-actions/core/bar-footer/verification.md)。修改源码或仅安装插件，不会自动更新当前运行的 DSH GUI。
 
 ## 状态
 

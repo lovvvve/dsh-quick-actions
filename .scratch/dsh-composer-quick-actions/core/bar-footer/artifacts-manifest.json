@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "artifacts": [
+    {
+      "file": "deepseek-ai-dsh-client-ui-conversation-0.1.7-rc.2.tgz",
+      "name": "@deepseek-ai/dsh-client-ui-conversation",
+      "version": "0.1.7-rc.2",
+      "bytes": 262285,
+      "sha256": "37111b9f70c1fc803c6232c50f54f734ef40cd912f2d7198943767ec7bb1e899",
+      "clientSha256": "28defe1df3910d219f46a9b84cc6bd359f78793110d213e2dbbea0c15baaf63a"
+    },
+    {
+      "file": "dsh-quick-actions-0.2.0-rc.2.tgz",
+      "name": "dsh-quick-actions",
+      "version": "0.2.0-rc.2",
+      "bytes": 180589,
+      "sha256": "85dc1228cad43c7432252a34d9895238f2cecdb713a073fde81e2ed02ec32fd1",
+      "clientSha256": "85c9c5ab142ca12e2c5e62f32f8f74acd3d3a23b1fd0d2b9af25bb899cfb1930"
+    }
+  ]
+}

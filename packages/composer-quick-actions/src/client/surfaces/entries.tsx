@@ -1,5 +1,5 @@
 /**
- * The two dock Slot entries (spec 7.3, 8.1).
+ * The dock entries and optional composer footer (spec 7.3, 8.1, 23).
  *
  * Both are always registered; which one renders the layout is decided at render
  * time from the authoritative Settings snapshot, and both render nothing at all
@@ -7,12 +7,14 @@
  *
  * - `conversation.composer.dock` is the residency beacon. Its mount is DSH's own
  *   statement that this Session's composer is in its resident variant, so it
- *   marks the Session while mounted and additionally renders the `bar` layout.
+ *   marks the Session while mounted and renders `bar` only without a footer.
+ * - `conversation.composer.footer`, when provided by the local core patch,
+ *   renders `bar` on its own row and suppresses that Session's dock fallback.
  * - `conversation.input.dock` renders `ribbon` or `launcher`, but only while the
  *   beacon's mark stands — that Slot also mounts on the blank-session hero, and
  *   the first release must never appear there.
  *
- * A third entry rides the same input dock: the centralized management overlay,
+ * Another entry rides the same input dock: the centralized management overlay,
  * which spec 8.1 requires to be registered independently of the layout entries.
  * It is a separate Slot cell with its own id, order and error boundary, so a
  * failure in the management panel cannot take a Composer layout down with it and
@@ -28,6 +30,7 @@ import type { ReactElement } from 'react'
 import { SurfaceErrorBoundary } from './ErrorBoundary.js'
 import { QuickActionsSurface } from './QuickActionsSurface.js'
 import { ManagerPanel } from '../manager/ManagerPanel.js'
+import { createResidentComposerRegistry } from './residency.js'
 import type { ResidentComposerRegistry } from './residency.js'
 import type { QuickActionSessionRegistry } from '../session/execution.js'
 import { isRetryableCatalogError } from '../controller.js'
@@ -36,6 +39,7 @@ import type {
   ComposerBlock,
   ComposerBlocks,
   ComposerDockProps,
+  ComposerFooterProps,
   InputDockProps,
   SessionSlotProps,
 } from '../dsh.js'
@@ -191,10 +195,15 @@ function CatalogNotice(props: {
 export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
   readonly InputDock: (props: InputDockProps) => ReactElement
   readonly ComposerDock: (props: ComposerDockProps) => ReactElement
+  readonly FooterDock: (props: ComposerFooterProps) => ReactElement
   readonly ManagerDock: (props: InputDockProps) => ReactElement
 } {
-  function Body(props: SessionSlotProps & { readonly owns: readonly QuickActionLayout[] }): ReactElement | null {
-    const { owns, ...slot } = props
+  // The optional core extension is detected by its actual per-session mount,
+  // never by a version string or private DOM. An old core mounts no footer.
+  const footers = createResidentComposerRegistry()
+
+  function Body(props: SessionSlotProps & { readonly owns: readonly QuickActionLayout[]; readonly footer?: boolean }): ReactElement | null {
+    const { owns, footer, ...slot } = props
     const client = useControllerState(deps.controller)
     const projection = client.projection
     const onRetry = useCallback(() => {
@@ -210,7 +219,7 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
       return owns.includes('ribbon') ? <CatalogNotice client={client} t={slot.t} onRetry={onRetry} /> : null
     }
     if (!owns.includes(projection.layout)) return null
-    return (
+    const surface = (
       <SessionSurface
         {...slot}
         deps={deps}
@@ -218,6 +227,7 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
         actions={projection.composer}
       />
     )
+    return footer ? <div className="dsh-cqa-footer">{surface}</div> : surface
   }
 
   function InputDock(props: InputDockProps): ReactElement {
@@ -231,6 +241,7 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
 
   function ComposerDock(props: ComposerDockProps): ReactElement {
     const { sessionId } = props
+    const hasFooter = useResident(footers, sessionId)
     // The beacon. A layout effect, so the mark lands — and the input dock's own
     // re-render lands with it — before the browser paints this commit: a hero
     // that becomes resident brings the ribbon up in the same frame, not the next.
@@ -239,7 +250,20 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
 
     return (
       <SurfaceErrorBoundary t={props.t}>
-        <Body {...props} owns={COMPOSER_DOCK_LAYOUTS} />
+        {hasFooter ? null : <Body {...props} owns={COMPOSER_DOCK_LAYOUTS} />}
+      </SurfaceErrorBoundary>
+    )
+  }
+
+  function FooterDock(props: ComposerFooterProps): ReactElement {
+    const { sessionId } = props
+    const ready = useResident(footers, sessionId)
+    useLayoutEffect(() => footers.mark(sessionId), [sessionId])
+    // Wait for the mark so the fallback unmounts in the same commit that mounts
+    // this surface; two execution bindings must not coexist during handover.
+    return (
+      <SurfaceErrorBoundary t={props.t}>
+        {ready ? <Body {...props} owns={COMPOSER_DOCK_LAYOUTS} footer /> : null}
       </SurfaceErrorBoundary>
     )
   }
@@ -263,7 +287,7 @@ export function createQuickActionDockEntries(deps: QuickActionSurfaceDeps): {
     )
   }
 
-  return { InputDock, ComposerDock, ManagerDock }
+  return { InputDock, ComposerDock, FooterDock, ManagerDock }
 }
 
 /** `ribbon` and `launcher` render above the composer card (spec 8.1). */

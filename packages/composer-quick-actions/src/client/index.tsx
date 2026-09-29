@@ -4,7 +4,7 @@
  * This fiber owns everything the feature holds in the browser: one global
  * `QuickActionsController` over the entry's Settings form, the per-Session
  * execution registry, the Resident Composer registry, the locale dictionaries,
- * the stylesheet, and the two dock Slot registrations. All of it is installed
+ * the stylesheet, and the dock/optional footer Slot registrations. All of it is installed
  * through `ctx.effect` and `ctx.slots.inject`, so unloading the plugin leaves
  * no listener, registration, namespace, style tag or subscription behind
  * (spec 7.3).
@@ -82,7 +82,7 @@ export function apply(ctx: Context): void {
   )
   ctx.effect(installQuickActionStyles, 'composer-quick-actions: surface styles')
 
-  const { InputDock, ComposerDock, ManagerDock } = createQuickActionDockEntries({
+  const { InputDock, ComposerDock, FooterDock, ManagerDock } = createQuickActionDockEntries({
     controller,
     sessions,
     residency,
@@ -126,6 +126,19 @@ export function apply(ctx: Context): void {
         locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
       },
       ComposerDock as ComponentType<never>,
+    ),
+  )
+  // Optional local core extension. inject waits harmlessly on older cores;
+  // the existing composer dock remains the fallback until a footer mounts.
+  ctx.slots.inject('conversation.composer.footer', () =>
+    ctx.slots.register(
+      {
+        name: 'conversation.composer.footer',
+        id: 'composer-quick-actions',
+        order: DOCK_ORDER,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
+      FooterDock as ComponentType<never>,
     ),
   )
 }

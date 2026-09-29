@@ -1,0 +1,72 @@
+{
+  "baseCommit": "477b4f420553e8a52c2fbccc464d7561b239c443",
+  "archiveSha256": "a6b78577dec0653bf336f6aa093c55dd93cb3350f220f91efde951b18c7eda83",
+  "patchSha256": "1095ea6198eacad4fe9a3f3fd3a4c7dfe9433105f2101a664ba08fbba51802a3",
+  "files": [
+    {
+      "path": "docs/subsystems/slots.md",
+      "baseSha256": "77dfedb420f10ebd40de0fada2112aa12b8f627a93d8a0509ae4208fd05c1527",
+      "patchedSha256": "3476fb791d26e9e56c1edc7cd6809870ac6c8aaecf4c7638eb1285086dcbecab"
+    },
+    {
+      "path": "docs/subsystems/slots.zh.md",
+      "baseSha256": "ee0c525a9df07a4e1ba40133042b75682cdc03ce940511f40507465904ebbf58",
+      "patchedSha256": "40df347e3deb8b5eb8831ff3efd5c9bf6283b88cb442747f8c86af17834d9192"
+    },
+    {
+      "path": "packages/client/ui-conversation/README.i18n.yaml",
+      "baseSha256": "126600f84a6e384a961fa95da5f2acc83eb79deafcb67f7151c0cde7653ff7e0",
+      "patchedSha256": "7ab3ac56f91e0d867264d9a59b09c6f2f72c7622b965f2a9a2ead4ab0fb99b0e"
+    },
+    {
+      "path": "packages/client/ui-conversation/README.md",
+      "baseSha256": "f70f25496897a8922c1b5c1754bbd573d52fa4b0205cd69854bd05fd04f8a608",
+      "patchedSha256": "c1da49221bba6e7b2ccd0a54f6c34d7260310824624f0c9c46341556ca07835b"
+    },
+    {
+      "path": "packages/client/ui-conversation/README.zh.md",
+      "baseSha256": "339f885b4d55b8b0a031019fffac10db00d914a165395ee7668592fbf4635166",
+      "patchedSha256": "3eb6be206daf3f4bff59bb6973fefd7bc10b00818dfd09d15f9e44c470220b08"
+    },
+    {
+      "path": "packages/client/ui-conversation/src/client/apply.ts",
+      "baseSha256": "cb02689e17f80dd89d560e8e1f2937e089b3422814f076d0587afb99acb17e5e",
+      "patchedSha256": "59fff009535ab63a9a6d2cb9fdc59839f610ea0636c0bde58ee90ffa00806c26"
+    },
+    {
+      "path": "packages/client/ui-conversation/src/client/contract/slots.ts",
+      "baseSha256": "d7a2c2132b62dd7b2eeac5ef184666ea8f84ff42a7469d4815e705a30bad0e78",
+      "patchedSha256": "80f0f46100dcf539ee1f87d1e7db9c1b3441245013990487fde10760125687fb"
+    },
+    {
+      "path": "packages/client/ui-conversation/src/client/skeleton/InputBar.module.css",
+      "baseSha256": "3728d67da4e1d1c2dd102d66f42f0c129a5c1e17e6a1167d738c999d0d87f60b",
+      "patchedSha256": "2c5fe3aacb6cc8e9a63ff7a90be998a963ba6cd5191637484be1d2e1befa5ec6"
+    },
+    {
+      "path": "packages/client/ui-conversation/src/client/skeleton/InputBar.tsx",
+      "baseSha256": "cdb7cb6b592b85e696d3046b560d4fddf8fbd54ca9bd5deef41767588f27e60c",
+      "patchedSha256": "f8277e3d1a7555f9cb77931c6d523a354b7ae1844dd71fcae005c9bbfd9c967c"
+    },
+    {
+      "path": "packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx",
+      "baseSha256": "bd8f728b0ba17f09748f3795d8fc1c0c46248660c59f6cdd3fbba6d6acbc4d50",
+      "patchedSha256": "e5e6781e4b1c89af94494d09e20b40b284f008be3c4cc1fb4174f7e733c53e4b"
+    },
+    {
+      "path": "packages/client/ui-conversation/tests/input-bar.client.spec.tsx",
+      "baseSha256": "2fa76bf2cd26efc8a0327dc9c8187939ef521d4e9ff7d260698d869bda754a70",
+      "patchedSha256": "f1875fe84ab3ae89bd252887a2af714781a63944e5d07c2b862c0680f3b1f538"
+    },
+    {
+      "path": "packages/client/ui-conversation/tests/skeleton.client.spec.tsx",
+      "baseSha256": "77fdc1eff552addd2c6b60a21e665f45c66f2610d29c2e247b7f7425af42f2cc",
+      "patchedSha256": "9775606881939ff9a60ab46f1daeef33ee8b127bdfc13c6e669ebe248b38c499"
+    },
+    {
+      "path": "packages/extensions/cordis-client-runner/src/client/slot-catalog.ts",
+      "baseSha256": "04c3b345437ea8835463560588c0e89caaf7f002402dcba580223c867e217269",
+      "patchedSha256": "7dea2f8519047d598465c95c7b5ee8134b3b287935c4221adfb8a90893570922"
+    }
+  ]
+}

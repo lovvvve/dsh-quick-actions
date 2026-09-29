@@ -10,7 +10,7 @@
  * signal the input dock reads.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { useSyncExternalStore } from 'react'
+import { StrictMode, useSyncExternalStore } from 'react'
 import type { ReactElement } from 'react'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { createQuickActionDockEntries } from '../../src/client/surfaces/entries.js'
@@ -173,6 +173,94 @@ function setup(layout: QuickActionLayout, presets: readonly Record<string, unkno
 afterEach(() => {
   cleanup()
   harness.dispose()
+})
+
+describe('the separate composer footer', () => {
+  beforeEach(() => setup('bar'))
+
+  function Host({ footer = true, sessionId = 'session-1' }: { footer?: boolean; sessionId?: string }): ReactElement {
+    const { ComposerDock, FooterDock } = harness.entries
+    const props = { ...harness.slotProps, sessionId }
+    return <>
+      <div data-dock={sessionId}><ComposerDock {...props} /></div>
+      <div data-footer={sessionId}>{footer ? <FooterDock {...props} /> : null}</div>
+    </>
+  }
+
+  it('places the only bar in the footer and sends once', () => {
+    const { container } = render(<Host />)
+    expect(container.querySelector('[data-dock]')?.innerHTML).toBe('')
+    expect(container.querySelector('[data-footer] [data-quick-actions-layout="bar"]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-quick-actions-layout="bar"]')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    expect(harness.input.sends).toEqual(['继续'])
+  })
+
+  it('moves from the old dock to a late footer and restores the old dock on removal', () => {
+    const { container, rerender } = render(<Host footer={false} />)
+    expect(container.querySelector('[data-dock] [data-quick-actions-layout="bar"]')).not.toBeNull()
+    rerender(<Host />)
+    expect(container.querySelector('[data-dock]')?.innerHTML).toBe('')
+    expect(container.querySelectorAll('[data-quick-actions-layout="bar"]')).toHaveLength(1)
+    rerender(<Host footer={false} />)
+    expect(container.querySelector('[data-footer]')?.innerHTML).toBe('')
+    expect(container.querySelector('[data-dock] [data-quick-actions-layout="bar"]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-quick-actions-layout="bar"]')).toHaveLength(1)
+  })
+
+  it('does not suppress another session that has no footer', () => {
+    const { container } = render(<><Host /><Host sessionId="session-2" footer={false} /></>)
+    expect(container.querySelector('[data-dock="session-1"]')?.innerHTML).toBe('')
+    expect(container.querySelector('[data-dock="session-2"] [data-quick-actions-layout="bar"]')).not.toBeNull()
+  })
+
+  it('survives StrictMode remounts and removes the mark on final unmount', () => {
+    const { container, rerender } = render(<StrictMode><Host /></StrictMode>)
+    expect(container.querySelectorAll('[data-quick-actions-layout="bar"]')).toHaveLength(1)
+    expect(container.querySelector('[data-dock]')?.innerHTML).toBe('')
+    rerender(<StrictMode><Host footer={false} /></StrictMode>)
+    expect(container.querySelector('[data-dock] [data-quick-actions-layout="bar"]')).not.toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    expect(harness.input.sends).toEqual(['继续'])
+  })
+
+  it('cancels a pending confirmation when its footer is removed without sending', () => {
+    const { rerender } = render(<Host />)
+    fireEvent.click(screen.getByRole('button', { name: /压缩/ }))
+    expect(screen.getByRole('dialog')).not.toBeNull()
+    rerender(<Host footer={false} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(harness.input.sends).toEqual([])
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    expect(harness.input.sends).toEqual(['继续'])
+  })
+
+  it.each([true, false])('keeps the official flight locked through footer handover (initial footer=%s)', (footer) => {
+    const { container, rerender } = render(<Host footer={footer} />)
+    fireEvent.click(screen.getByRole('button', { name: /压缩/ }))
+    fireEvent.click(screen.getByRole('button', { name: '发送' }))
+    expect(harness.input.snapshot.phase).toBe('adjudicating')
+    rerender(<Host footer={!footer} />)
+    expect(container.querySelectorAll('[data-quick-actions-layout="bar"]')).toHaveLength(1)
+    expect((screen.getByRole('button', { name: '继续' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    expect(harness.input.snapshot.draft).toBe('/compact')
+    expect(harness.input.sends).toEqual([])
+    act(() => harness.input.settleAdjudication('claim'))
+    rerender(<Host footer={footer} />)
+    expect((screen.getByRole('button', { name: '继续' }) as HTMLButtonElement).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    act(() => harness.input.settleClaim(true))
+    expect(harness.input.sends).toEqual(['/compact'])
+    fireEvent.click(screen.getByRole('button', { name: '继续' }))
+    expect(harness.input.sends).toEqual(['/compact', '继续'])
+  })
+
+  it.each(['ribbon', 'launcher'] as const)('leaves no footer element for %s', (layout) => {
+    setup(layout)
+    const { container } = render(<Host />)
+    expect(container.querySelector('[data-footer]')?.innerHTML).toBe('')
+  })
 })
 
 describe('the Resident Composer predicate', () => {

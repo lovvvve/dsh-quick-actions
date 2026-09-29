@@ -1,0 +1,22 @@
+{
+  "status": "installed-live-geometry-verified",
+  "installExitCode": 0,
+  "liveQuickActionsRev": "c178b19e6973",
+  "coreUnchanged": true,
+  "settingsUnchanged": true,
+  "liveGeometryEvidence": "center-live.json",
+  "maxCenterErrorCssPx": 0.0078125,
+  "profile": "/Users/lovvvve/.dsh/profiles/web",
+  "backup": "/Users/lovvvve/.dsh/backups/quick-actions-center-20260929T022207Z",
+  "tarball": "/Users/lovvvve/.dsh/local-packages/quick-actions-center-20260929T022207Z/dsh-quick-actions-0.2.0-rc.2.tgz",
+  "sha256": "428970d6326ad299a2ca9d539af976318f9d782f5224e34a349bf9a712e0e0f7",
+  "clientSha256": "1b055639ef1d1bf2f30a112bdcc02f0eab747f0c7894ca051b0181a1247fc288",
+  "backupEntries": 32671,
+  "profileHashes": {
+    "package.json": "e215a1e34295fd65fffb57304995160a74b3cbaa8d38abfbca5dcfe2faa9c7fb",
+    "pnpm-lock.yaml": "b86353695fbbc5f57d3bea5971abb26af5bba4af43e0bb55eae6c279d826ceba",
+    "pnpm-workspace.yaml": "a22e845f8c061107e8e434c7a3f0b3f0f22cef9edd4029fde453366e3111e1f5",
+    "cordis.patch.yml": "a566338c5e121d2aefd5547cbe8c58bd12639aef5e303b0236679f2431fe6155"
+  },
+  "coreClientSha256": "28defe1df3910d219f46a9b84cc6bd359f78793110d213e2dbbea0c15baaf63a"
+}

@@ -179,9 +179,12 @@ export type InputDockProps = SessionSlotProps & InputZoneOwnerProps
 /** Props of the `conversation.composer.dock` entry (this Slot declares no owner props). */
 export type ComposerDockProps = SessionSlotProps
 
-/** Registration options both dock Slots accept. */
+/** Props of the optional local core footer Slot (session scope, no owner props). */
+export type ComposerFooterProps = SessionSlotProps
+
+/** Registration options the dock and optional footer Slots accept. */
 export interface SlotRegisterOptions {
-  readonly name: 'conversation.input.dock' | 'conversation.composer.dock'
+  readonly name: 'conversation.input.dock' | 'conversation.composer.dock' | 'conversation.composer.footer'
   /** Cell key; a fresh id is added beside the shipped entries. */
   readonly id: string
   /** Position among the entries, ascending. */

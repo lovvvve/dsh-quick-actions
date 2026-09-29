@@ -1,0 +1,50 @@
+{
+  "status": "restored-after-explicit-user-request",
+  "latestReceipt": "footer-restore-receipt.json",
+  "postRestartPid": 35440,
+  "postRestartCoreRev": "452ad05ef96c",
+  "postRestartCoreMatchesLocalPatch": true,
+  "postRestartQuickActionsPresent": false,
+  "postRestartNote": "Quick Actions absent from live module manifest and from profile dependencies/bundles. No reinstall or rollback performed; user intent must be confirmed.",
+  "installExitCode": 0,
+  "installLog": "/Users/lovvvve/.dsh/backups/quick-actions-footer-20260928T100220Z/install.log",
+  "verifiedProfilePatchUnchanged": true,
+  "verifiedApplicationInstallationUnchanged": true,
+  "verifiedBackupIntact": true,
+  "liveCoreRevBeforeRestart": "da71fb918a5c",
+  "liveQuickActionsRevBeforeRestart": "04f16d465557",
+  "createdUtc": "20260928T100220Z",
+  "profile": "/Users/lovvvve/.dsh/profiles/web",
+  "backup": "/Users/lovvvve/.dsh/backups/quick-actions-footer-20260928T100220Z",
+  "localPackages": "/Users/lovvvve/.dsh/local-packages/quick-actions-footer-20260928T100220Z",
+  "backupEntries": 18361,
+  "profileHashes": {
+    "package.json": "4b3f188edeb2faeb72fffa1ca5a559bd91640801da2fb9796b984357e1ec553a",
+    "pnpm-lock.yaml": "d5f7ffa80787977d7d966c70e1eb58f4ae653a716c0d66027a922d847e554822",
+    "pnpm-workspace.yaml": "01a4c8955e741a4964e4daa90cb549a76359a01b1dbeb32a216ace892dc82e45",
+    "cordis.patch.yml": "b447cce87c723f73daef2980c87a56519f7660a5fdc19f1049d9f8e8a0aea8ed"
+  },
+  "installationHashes": {
+    "package.json": "986ffb906daa5ac33f1e352a5dc276e281043604c883cb97a3e9f6f40af7bb31",
+    "package-lock.json": "ec6c93f13fa201b015f6ba866458d9b783a7021418cc0db4fe2b596d8ab879ba",
+    "node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/client.js": "6700e9f25f99af8562cedc5f2f833ddc52f5f5f619a8a3746c85975bb1bf780d"
+  },
+  "artifacts": [
+    {
+      "file": "deepseek-ai-dsh-client-ui-conversation-0.1.7-rc.2.tgz",
+      "name": "@deepseek-ai/dsh-client-ui-conversation",
+      "version": "0.1.7-rc.2",
+      "bytes": 262285,
+      "sha256": "37111b9f70c1fc803c6232c50f54f734ef40cd912f2d7198943767ec7bb1e899",
+      "clientSha256": "28defe1df3910d219f46a9b84cc6bd359f78793110d213e2dbbea0c15baaf63a"
+    },
+    {
+      "file": "dsh-quick-actions-0.2.0-rc.2.tgz",
+      "name": "dsh-quick-actions",
+      "version": "0.2.0-rc.2",
+      "bytes": 180589,
+      "sha256": "85dc1228cad43c7432252a34d9895238f2cecdb713a073fde81e2ed02ec32fd1",
+      "clientSha256": "85c9c5ab142ca12e2c5e62f32f8f74acd3d3a23b1fd0d2b9af25bb899cfb1930"
+    }
+  ]
+}

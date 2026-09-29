@@ -1,0 +1,787 @@
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+The plugin "vite-tsconfig-paths" is detected. Vite now supports tsconfig paths resolution natively via the resolve.tsconfigPaths option. You can remove the plugin and set resolve.tsconfigPaths: true in your Vite config instead.
+
+ RUN  v4.1.8 /private/tmp/dsh-footer-source.gZQq0j/deepseek-harness-477b4f420553e8a52c2fbccc464d7561b239c443
+
+ ❯ |thread-safe| packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx (6 tests | 1 failed | 5 skipped) 26ms
+     ↓ hides only the Trajectory View while developer tools are disabled and restores it when enabled
+     ↓ waits for the layout-owned conversation declaration before registering its subtree
+     ↓ provides both action and assembly services without installing Chat
+     × owns shell slots and shares only the Conversation store 25ms
+     ↓ binds a cached locale-aware View roster only to its shell entries
+     ↓ removes services, entries, and declarations with the plugin fiber
+ ❯ |thread-safe| packages/client/ui-conversation/tests/skeleton.client.spec.tsx (26 tests | 1 failed | 25 skipped) 131ms
+     ↓ renders the English preview badge through the hero locale seat
+     ↓ keeps global header navigation without selecting a Session
+     ↓ does not redispatch composer child slots for an unrelated Session publication
+     ↓ renders the composer inert with the blocker’s own reason
+     ↓ lets the no-workspace posture win over a block
+     ↓ keeps composer text in the machine, mirrors to the Conversation store, and submits through the sink
+     ↓ shows hierarchy only for subagents and opens their ordinary owner
+     ↓ keeps intermediate subagent breadcrumbs at the compact title size
+     ↓ active phase: fixed header outside the scrollport; sticky composer seat inside it
+     × sticky composer seat wraps the whole overlay chain, not only the fallback stack 130ms
+     ↓ hero phase: keeps sidebar controls accessible while hiding conversation chrome
+     ↓ keeps a rejected first prompt engaging instead of returning to the Hero
+     ↓ settling phase: a summary that does not prove the session blank hides the composer while it opens
+     ↓ settling phase: a session the list has no row for settles conservatively
+     ↓ startup auto-selection: a summary-proven blank session opens straight into the hero
+     ↓ same textarea DOM node survives the hero → active flip into the sticky scrollport
+     ↓ keeps the Chat fallback selected by id when a view is inserted before it
+     ↓ rolls the pending workspace label back when switching fails
+     ↓ blank session keeps the interactive picker chip (workspace switchable until the first message)
+     ↓ prompt failure renders the promptError strip (ordinary failure, no transaction UI)
+     ↓ publishes the column width as a px variable for the shared width axis
+     ↓ drag → persist → window clamp round-trip on a width handle
+     ↓ forwards wheel scrolling from a width handle to the transcript
+     ↓ does not check capture, measure, style, or schedule width-handle moves before dragging
+     ↓ starts width dragging only from the primary pointer button
+     ↓ hero phase renders no width handles (no transcript to size)
+ ❯ |thread-safe| packages/client/ui-conversation/tests/input-bar.client.spec.tsx (103 tests | 2 failed | 98 skipped) 146ms
+     ↓ focus() returns the keyboard to the editor through Lexical, not a bare DOM focus
+     ↓ hides for whitespace " " and returns after deletion
+     ↓ hides for whitespace "   " and returns after deletion
+     ↓ hides for whitespace "\t" and returns after deletion
+     ↓ hides for whitespace "\n" and returns after deletion
+     ↓ hides for pasted spaces and restores after clearing
+     ↓ keeps whitespace hidden through composition and rerender
+     ↓ collects clipboard files while preserving text from a mixed paste
+     ↓ passes known clipboard directories and keeps files whose entry metadata is unavailable
+     ↓ pre-checks projected limits at intake: whole-batch refusal with product copy, none added
+     ↓ announces the format problem before any limit when the batch holds a non-image
+     ↓ projects display-ready limits into the attachment slot
+     ↓ forwards dropped directories to addFiles and announces its refusal
+     ↓ announces server attachment rejections as product copy, other codes as developer text
+     ↓ marks the attachment slot unavailable while the composer is locked
+     ↓ sends an image-only draft and exposes removal through the attachment slot
+     ↓ returns an image-only draft to the rail when its admission fails
+     ↓ announces an image-intake rejection as a fading toast, repeatable for the same reason
+     ↓ announces a rejected attachment-slot intake through the same toast
+     ↓ advertises the empty-draft whole-queue steering gesture when it is available
+     ↓ keeps the owning placeholder or ordinary guidance when whole-queue steering is unavailable
+     ↓ an open command menu withholds the whole-queue steering gesture
+     ↓ plain Enter submits queue mode through the machine; repeat and empty are suppressed
+     ↓ non-Enter keys and Shift+Enter fall through to native behavior
+     ↓ Shift+Enter newline wins even inside IME composition (unconditional precedence)
+     ↓ Ctrl/Meta+Enter sends normally while idle and steers while running
+     ↓ empty-draft Cmd/Ctrl+Enter steers the whole queue instead of submitting
+     ↓ queue steering stays gated by activity, gesture, capability, and queued rows
+     ↓ draft content outranks the queue: accelerated Enter steers the draft only
+     ↓ empty-draft accelerated Enter without a steerQueue face stays a silent no-op
+     ↓ platform undo/redo chords drive the Lexical history stack, never the browser one
+     ↓ a paste inside the typing merge window is its own undo step
+     ↓ caret-only commits advance neither draftRev nor the published state
+     ↓ composition Enter never sends: ref guard, isComposing, and keyCode 229 paths
+     ↓ shows the registered Stop sequence on 'hover' and removes it when unavailable
+     ↓ shows the registered Stop sequence on 'focus' and removes it when unavailable
+     ↓ dismisses the Stop tooltip when an empty composer becomes idle
+     ↓ running switches the primary between Stop and Queue Send with the draft
+     ↓ running Send follows the busy-state Steer preference and labels the delivery
+     ↓ running Send relabels when the busy-state preference changes live
+     ↓ running Send keeps the plain label for a slash line and a claimed command
+     ↓ running Send keeps the plain label while a file upload is still pending
+     ↓ idle Send keeps the plain label regardless of the busy-state preference
+     ↓ running treats an attachment-only draft as Send
+     ↓ running blocked composer keeps Stop with a retained draft
+     ↓ running plain Enter follows the busy-state Steer preference
+     ↓ running Cmd/Ctrl+Enter uses the opposite of the busy-state Enter preference
+     ↓ running continuable subagent keeps Send beside an independent Stop
+     ↓ running continuable subagent Send follows the Steer preference like an ordinary session
+     ↓ active plan keeps ordinary generic-file intake enabled
+     ↓ active goal keeps ordinary generic-file intake enabled
+     ↓ removed session hides and refuses the File action
+     ↓ inert composer hides and refuses the File action
+     ↓ blocked composer hides and refuses the File action
+     ↓ file action availability follows mount and live composer state
+     ↓ parent-offline running continuable locks Send but keeps independent Stop usable
+     ↓ running one-shot subagent never exposes Stop
+     ↓ applies the ordinary Queue/Steer preference to a running continuable child
+     ↓ disabled (session removed) locks the textarea and chrome
+     ↓ idle primary sends and disables on empty draft
+     ↓ unlock refocuses the surface; mousedown on the button keeps focus
+     ↓ a programmatic draft write echoes back through the state and the editor DOM
+     ↓ wheel over a non-overflowing draft forwards to the conversation host
+     ↓ wheel chains: long drafts scroll inside the draft scrollport until each edge, then the host
+     ↓ one editable surface rides the scrollport (no mirror or backdrop layers)
+     ↓ a session switch refocuses the editable surface with preventScroll
+     ↓ a persisted draft adopted after mount does not steal focus from another control
+     ↓ disabled state shows the unavailable placeholder; custom placeholder wins
+     ↓ the inert textarea opens the Workspace picker by pointer or keyboard
+     ↓ the plan projection swaps the placeholder while its effective target is plan mode
+     ↓ submitting renders read-only textarea, pending dot, and a disabled primary
+     ↓ claimed token styles the leading leaf and sets the blank-args hint variable
+     ↓ a locale entry for the claimed command overrides the raw claim hint (trailing-space token)
+     ↓ the hint lookup keys on the claim name, so a localized claim token keeps the locale entry
+     ↓ suppresses placeholders throughout native composition, including a temporarily empty draft
+     ↓ an inserted reference renders a real chip capsule with its icon and label
+     ↓ keeps the chip decorator mounted when the session becomes disabled
+     ↓ a chip leaves the document as one unit (keyboard deletion is asserted in the browser lane)
+     ↓ copy and cut expand a selected chip to its clipboard projection natively
+     ↓ a lexicon-matched plain token renders the text-ref node
+     ↓ a directory completion decorates color-only: literal text, no icon seat
+     ↓ a plain-text reference keeps its DOM node while typing ahead of it (bug #2793 regression)
+     ↓ splices plain text over the span and reports success as true
+     ↓ a stale draftRev refuses whole: false, draft untouched
+     ↓ shows localized guidance when another writer owns the Session
+     ↓ shows localized guidance when another writer owns the Session
+     ↓ announces promptError as a fading toast (ordinary failure — no transaction UI, no Retry)
+     ↓ announces an error notice from the machine store as a fading toast
+     ↓ renders an information notice from the machine store as a status strip
+     ↓ hero variant adds the hero class and accessory row renders
+     ↓ renders overlay, left/right, and footer slots at their layout positions
+     × places actions in their own row after the unchanged dock and context meter 119ms
+     ✓ does not dispatch the footer outside the resident composer: {"variant":"hero"} 9ms
+     ✓ does not dispatch the footer outside the resident composer: {"noSession":true} 7ms
+     ✓ does not dispatch the footer outside the resident composer: {"noInput":true} 5ms
+     × allows an empty renderer anchor and entries returning null 6ms
+     ↓ renders the command launcher and dispatches every empty control seat
+     ↓ passes the textarea selection to the command menu launcher and reflects its expanded state
+     ↓ opening the command menu from the button puts the keyboard in the editor first
+     ↓ a registered entry fills its seat and receives the locked owner prop
+     ↓ disabled locks the command launcher while running does not
+   ↓ lets a toolbar activity replace accessories without replacing the draft editor or send action
+   ↓ places context usage below the composer and hides it until the activity closes
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |thread-safe| packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx > target-neutral Conversation apply wiring > owns shell slots and shares only the Conversation store
+AssertionError: expected undefined to deeply equal { kind: 'list', scope: 'session' }
+
+- Expected:
+{
+  "kind": "list",
+  "scope": "session",
+}
+
++ Received:
+undefined
+
+ ❯ packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx:104:8
+    102|       .toEqual({ kind: 'chain', scope: 'session' })
+    103|     expect(b.runtime.slots.spec('conversation.composer.footer'))
+    104|       .toEqual({ kind: 'list', scope: 'session' })
+       |        ^
+    105|     expect(b.runtime.slots.entries('settings.general.item').map(row =>…
+    106|       .toEqual(['composer-enter'])
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  |thread-safe| packages/client/ui-conversation/tests/input-bar.client.spec.tsx > resident composer footer > places actions in their own row after the unchanged dock and context meter
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "Quick action"
+
+Here are the accessible roles:
+
+  textbox:
+
+  Name "发消息或创建任务, / 调用指令, @ 文件或对话":
+  [36m<div[39m
+    [33maria-label[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+    [33maria-multiline[39m=[32m"true"[39m
+    [33mautocapitalize[39m=[32m"off"[39m
+    [33mclass[39m=[32m"_input_497bd7"[39m
+    [33mcontenteditable[39m=[32m"true"[39m
+    [33mdata-composer-input[39m=[32m"true"[39m
+    [33mdata-lexical-editor[39m=[32m"true"[39m
+    [33mdata-phase[39m=[32m"plain"[39m
+    [33mdata-placeholder[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+    [33mrole[39m=[32m"textbox"[39m
+    [33mstyle[39m=[32m"user-select: text; white-space: pre-wrap; word-break: break-word;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "添加文件或调用指令":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-haspopup[39m=[32m"listbox"[39m
+    [33maria-label[39m=[32m"添加文件或调用指令"[39m
+    [33mclass[39m=[32m"_add_497bd7"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "发送消息":
+  [36m<button[39m
+    [33maria-label[39m=[32m"发送消息"[39m
+    [33mclass[39m=[32m"_primary_497bd7"[39m
+    [33mdisabled[39m=[32m""[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Session statistics":
+  [36m<button />[39m
+
+  Name "上下文已用 25%":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-haspopup[39m=[32m"dialog"[39m
+    [33maria-label[39m=[32m"上下文已用 25%"[39m
+    [33mclass[39m=[32m"_trigger_5f9cb4"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"_root_497bd7"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_card_497bd7"[39m
+        [33mdata-composer-card[39m=[32m"true"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_overlayAnchor_497bd7"[39m
+        [36m/>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_scroll_497bd7"[39m
+          [33mdata-input-scroll[39m=[32m"true"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_grow_497bd7"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33maria-label[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+              [33maria-multiline[39m=[32m"true"[39m
+              [33mautocapitalize[39m=[32m"off"[39m
+              [33mclass[39m=[32m"_input_497bd7"[39m
+              [33mcontenteditable[39m=[32m"true"[39m
+              [33mdata-composer-input[39m=[32m"true"[39m
+              [33mdata-lexical-editor[39m=[32m"true"[39m
+              [33mdata-phase[39m=[32m"plain"[39m
+              [33mdata-placeholder[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+              [33mrole[39m=[32m"textbox"[39m
+              [33mstyle[39m=[32m"user-select: text; white-space: pre-wrap; word-break: break-word;"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mclass[39m=[32m"_placeholder_497bd7"[39m
+              [33mdata-composer-placeholder[39m=[32m"true"[39m
+            [36m>[39m
+              [0m发消息或创建任务, / 调用指令, @ 文件或对话[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_row_497bd7"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_tools_497bd7"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33maria-label[39m=[32m"添加文件或调用指令"[39m
+              [33mclass[39m=[32m"_add_497bd7"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mfill[39m=[32m"none"[39m
+                [33mheight[39m=[32m"14"[39m
+                [33mstroke-width[39m=[32m"1.3"[39m
+                [33mviewBox[39m=[32m"0 0 16 16"[39m
+                [33mwidth[39m=[32m"14"[39m
+                [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M8 2V14"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                [36m/>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M2 8H14"[39m
+                  [33mstroke[39m=[32m"currentColor"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+            [36m<input[39m
+              [33mhidden[39m=[32m""[39m
+              [33mmultiple[39m=[32m""[39m
+              [33mtype[39m=[32m"file"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_modes_497bd7"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_trailing_497bd7"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_standardControls_497bd7"[39m
+            [36m/>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_activity_497bd7"[39m
+            [36m/>[39m
+            [36m<button[39m
+              [33maria-label[39m=[32m"发送消息"[39m
+              [33mclass[39m=[32m"_primary_497bd7"[39m
+              [33mdisabled[39m=[32m""[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<svg[39m
+                [33maria-hidden[39m=[32m"true"[39m
+                [33mheight[39m=[32m"16"[39m
+                [33mviewBox[39m=[32m"0 0 16 16"[39m
+                [33mwidth[39m=[32m"16"[39m
+              [36m>[39m
+                [36m<path[39m
+                  [33md[39m=[32m"M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z"[39m
+                  [33mfill[39m=[32m"currentColor"[39m
+                [36m/>[39m
+              [36m</svg>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_dock_497bd7"[39m
+      [36m>[39m
+        [36m<button>[39m
+          [0mSession statistics[0m
+        [36m</button>[39m
+        [36m<span[39m
+          [33mclass[39m=[32m"_root_5f9cb4"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-expanded[39m=[32m"false"[39m
+            [33maria-haspopup[39m=[32m"dialog"[39m
+            [33maria-label[39m=[32m"上下文已用 25%"[39m
+            [33mclass[39m=[32m"_trigger_5f9cb4"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [36m<svg[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33mheight[39m=[32m"14"[39m
+              [33mviewBox[39m=[32m"0 0 14 14"[39m
+              [33mwidth[39m=[32m"14"[39m
+            [36m>[39m
+              [36m<circle[39m
+                [33mclass[39m=[32m"_track_5f9cb4"[39m
+                [33mcx[39m=[32m"7"[39m
+                [33mcy[39m=[32m"7"[39m
+                [33mr[39m=[32m"5.5"[39m
+              [36m/>[39m
+              [36m<circle[39m
+                [33mclass[39m=[32m"_fill_5f9cb4"[39m
+                [33mcx[39m=[32m"7"[39m
+                [33mcy[39m=[32m"7"[39m
+                [33mr[39m=[32m"5.5"[39m
+                [33mstroke-dasharray[39m=[32m"8.63937979737193 34.55751918948772"[39m
+                [33mtransform[39m=[32m"rotate(-90 7 7)"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+            [36m<span>[39m
+              [0m25%[0m
+            [36m</span>[39m
+          [36m</button>[39m
+        [36m</span>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ packages/client/ui-conversation/tests/input-bar.client.spec.tsx:1681:25
+    1679|     const card = view.container.querySelector('[data-composer-card]')!
+    1680|     const dock = view.getByRole('button', { name: 'Session statistics'…
+    1681|     const action = view.getByRole('button', { name: 'Quick action' })
+       |                         ^
+    1682|     const footer = action.closest('[data-slot]')!.parentElement!
+    1683|     expect(dock.contains(view.getByRole('button', { name: '上下文已用 25%' …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  |thread-safe| packages/client/ui-conversation/tests/input-bar.client.spec.tsx > resident composer footer > allows an empty renderer anchor and entries returning null
+AssertionError: expected null not to be null
+ ❯ packages/client/ui-conversation/tests/input-bar.client.spec.tsx:1703:24
+    1701|     const { view } = bench({ composerFooter: <EmptyEntry /> })
+    1702|     const outlet = view.container.querySelector('[data-slot="conversat…
+    1703|     expect(outlet).not.toBeNull()
+       |                        ^
+    1704|     expect(outlet!.childNodes).toHaveLength(0)
+    1705|   })
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  |thread-safe| packages/client/ui-conversation/tests/skeleton.client.spec.tsx > ConversationRoot resident composer > sticky composer seat wraps the whole overlay chain, not only the fallback stack
+TestingLibraryElementError: Unable to find an element with the role "button" and name "Footer action"
+
+Here are the available roles:
+
+  banner:
+
+  Name "":
+  [36m<header[39m
+    [33mclass[39m=[32m"_header_f1cc6e"[39m
+    [33mdata-window-drag[39m=[32m"true"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  navigation:
+
+  Name "会话层级":
+  [36m<nav[39m
+    [33maria-label[39m=[32m"会话层级"[39m
+    [33mclass[39m=[32m"_crumbs_f1cc6e"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tablist:
+
+  Name "":
+  [36m<div[39m
+    [33mclass[39m=[32m"_tabs_f1cc6e"[39m
+    [33mdata-conversation-tabs[39m=[32m""[39m
+    [33mrole[39m=[32m"tablist"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  tab:
+
+  Name "Chat":
+  [36m<button[39m
+    [33maria-selected[39m=[32m"true"[39m
+    [33mclass[39m=[32m"_tab_f1cc6e _tabActive_f1cc6e"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "Trajectory":
+  [36m<button[39m
+    [33maria-selected[39m=[32m"false"[39m
+    [33mclass[39m=[32m"_tab_f1cc6e"[39m
+    [33mrole[39m=[32m"tab"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  textbox:
+
+  Name "发消息或创建任务, / 调用指令, @ 文件或对话":
+  [36m<div[39m
+    [33maria-label[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+    [33maria-multiline[39m=[32m"true"[39m
+    [33mautocapitalize[39m=[32m"off"[39m
+    [33mclass[39m=[32m"_input_497bd7"[39m
+    [33mcontenteditable[39m=[32m"true"[39m
+    [33mdata-composer-input[39m=[32m"true"[39m
+    [33mdata-lexical-editor[39m=[32m"true"[39m
+    [33mdata-phase[39m=[32m"plain"[39m
+    [33mdata-placeholder[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+    [33mrole[39m=[32m"textbox"[39m
+    [33mstyle[39m=[32m"user-select: text; white-space: pre-wrap; word-break: break-word;"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  [36m<p[39m
+    [33mdir[39m=[32m"auto"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+  button:
+
+  Name "添加文件或调用指令":
+  [36m<button[39m
+    [33maria-expanded[39m=[32m"false"[39m
+    [33maria-haspopup[39m=[32m"listbox"[39m
+    [33maria-label[39m=[32m"添加文件或调用指令"[39m
+    [33mclass[39m=[32m"_add_497bd7"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  Name "发送消息":
+  [36m<button[39m
+    [33maria-label[39m=[32m"发送消息"[39m
+    [33mclass[39m=[32m"_primary_497bd7"[39m
+    [33mtype[39m=[32m"button"[39m
+  [36m/>[39m
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"_root_f1cc6e"[39m
+      [33mdata-phase[39m=[32m"active"[39m
+      [33mstyle[39m=[32m"--dsh-conversation-column-width: 0px;"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"_header_f1cc6e"[39m
+        [33mdata-window-drag[39m=[32m"true"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_headerLeading_f1cc6e"[39m
+          [33mdata-conversation-header-leading[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mdata-testid[39m=[32m"view-conversation.header.leading"[39m
+          [36m/>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_titleRow_f1cc6e"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_titleCluster_f1cc6e"[39m
+          [36m>[39m
+            [36m<nav[39m
+              [33maria-label[39m=[32m"会话层级"[39m
+              [33mclass[39m=[32m"_crumbs_f1cc6e"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"_crumbSeg_f1cc6e"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"_crumb_f1cc6e _crumbCurrent_f1cc6e"[39m
+                [36m>[39m
+                  [0mChild[0m
+                [36m</span>[39m
+              [36m</span>[39m
+            [36m</nav>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"_headerActions_f1cc6e"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mdata-testid[39m=[32m"view-conversation.session.header.actions"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_headerUtilities_f1cc6e"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mdata-testid[39m=[32m"view-conversation.session.header.utilities"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_headerCorner_f1cc6e"[39m
+            [33mdata-conversation-header-corner[39m=[32m""[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mdata-testid[39m=[32m"view-conversation.session.header.corner"[39m
+            [36m/>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_tabs_f1cc6e"[39m
+          [33mdata-conversation-tabs[39m=[32m""[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<button[39m
+            [33maria-selected[39m=[32m"true"[39m
+            [33mclass[39m=[32m"_tab_f1cc6e _tabActive_f1cc6e"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mChat[0m
+          [36m</button>[39m
+          [36m<button[39m
+            [33maria-selected[39m=[32m"false"[39m
+            [33mclass[39m=[32m"_tab_f1cc6e"[39m
+            [33mrole[39m=[32m"tab"[39m
+            [33mtype[39m=[32m"button"[39m
+          [36m>[39m
+            [0mTrajectory[0m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"_body_f1cc6e"[39m
+        [33mdata-content-phase[39m=[32m"active"[39m
+        [33mdata-conversation-content[39m=[32m""[39m
+        [33mdata-conversation-region[39m=[32m"chat"[39m
+        [33mdata-conversation-session[39m=[32m"s1"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_scrollBody_f1cc6e"[39m
+          [33mdata-conversation-scroll[39m=[32m""[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_viewArea_f1cc6e"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mdata-testid[39m=[32m"view-chat"[39m
+            [36m/>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"_composerSeat_f1cc6e"[39m
+            [33mdata-composer-seat[39m=[32m""[39m
+            [33mdata-conversation-region[39m=[32m"composer"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mdata-chain-overlay-fallback[39m=[32m"conversation.composer"[39m
+              [33mstyle[39m=[32m"display: none;"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"_composerStack_f1cc6e"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mdata-testid[39m=[32m"view-conversation.input.dock"[39m
+                [36m/>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"_root_497bd7"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"_card_497bd7"[39m
+                    [33mdata-composer-card[39m=[32m"true"[39m
+                  [36m>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"_overlayAnchor_497bd7"[39m
+                    [36m/>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"_scroll_497bd7"[39m
+                      [33mdata-input-scroll[39m=[32m"true"[39m
+                    [36m>[39m
+                      [36m<div[39m
+                        [33mclass[39m=[32m"_grow_497bd7"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33maria-label[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+                          [33maria-multiline[39m=[32m"true"[39m
+                          [33mautocapitalize[39m=[32m"off"[39m
+                          [33mclass[39m=[32m"_input_497bd7"[39m
+                          [33mcontenteditable[39m=[32m"true"[39m
+                          [33mdata-composer-input[39m=[32m"true"[39m
+                          [33mdata-lexical-editor[39m=[32m"true"[39m
+                          [33mdata-phase[39m=[32m"plain"[39m
+                          [33mdata-placeholder[39m=[32m"发消息或创建任务, / 调用指令, @ 文件或对话"[39m
+                          [33mrole[39m=[32m"textbox"[39m
+                          [33mstyle[39m=[32m"user-select: text; white-space: pre-wrap; word-break: break-word;"[39m
+                        [36m>[39m
+                          [36m<p[39m
+                            [33mdir[39m=[32m"auto"[39m
+                          [36m>[39m
+                            [36m<span[39m
+                              [33mdata-lexical-text[39m=[32m"true"[39m
+                            [36m>[39m
+                              [0mordinary draft[0m
+                            [36m</span>[39m
+                          [36m</p>[39m
+                        [36m</div>[39m
+                      [36m</div>[39m
+                    [36m</div>[39m
+                    [36m<div[39m
+                      [33mclass[39m=[32m"_row_497bd7"[39m
+                    [36m>[39m
+                      [36m<div[39m
+                        [33mclass[39m=[32m"_tools_497bd7"[39m
+                      [36m>[39m
+                        [36m<button[39m
+                          [33maria-expanded[39m=[32m"false"[39m
+                          [33maria-haspopup[39m=[32m"listbox"[39m
+                          [33maria-label[39m=[32m"添加文件或调用指令"[39m
+                          [33mclass[39m=[32m"_add_497bd7"[39m
+                          [33mtype[39m=[32m"button"[39m
+                        [36m>[39m
+                          [36m<svg[39m
+                            [33maria-hidden[39m=[32m"true"[39m
+                            [33mfill[39m=[32m"none"[39m
+                            [33mheight[39m=[32m"14"[39m
+                            [33mstroke-width[39m=[32m"1.3"[39m
+                            [33mviewBox[39m=[32m"0 0 16 16"[39m
+                            [33mwidth[39m=[32m"14"[39m
+                            [33mxmlns[39m=[32m"http://www.w3.org/2000/svg"[39m
+                          [36m>[39m
+                            [36m<path[39m
+                              [33md[39m=[32m"M8 2V14"[39m
+                              [33mstroke[39m=[32m"currentColor"[39m
+                            [36m/>[39m
+                            [36m<path[39m
+                              [33md[39m=[32m"M2 8H14"[39m
+                              [33mstroke[39m=[32m"currentColor"[39m
+                            [36m/>[39m
+                          [36m</svg>[39m
+                        [36m</button>[39m
+                        [36m<input[39m
+                          [33mhidden[39m=[32m""[39m
+                          [33mmultiple[39m=[32m""[39m
+                          [33mtype[39m=[32m"file"[39m
+                        [36m/>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"_modes_497bd7"[39m
+                        [36m/>[39m
+                      [36m</div>[39m
+                      [36m<div[39m
+                        [33mclass[39m=[32m"_trailing_497bd7"[39m
+                      [36m>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"_standardControls_497bd7"[39m
+                        [36m/>[39m
+                        [36m<div[39m
+                          [33mclass[39m=[32m"_activity_497bd7"[39m
+                        [36m/>[39m
+                        [36m<button[39m
+                          [33maria-label[39m=[32m"发送消息"[39m
+                          [33mclass[39m=[32m"_primary_497bd7"[39m
+                          [33mtype[39m=[32m"button"[39m
+                        [36m>[39m
+                          [36m<svg[39m
+                            [33maria-hidden[39m=[32m"true"[39m
+                            [33mheight[39m=[32m"16"[39m
+                            [33mviewBox[39m=[32m"0 0 16 16"[39m
+                            [33mwidth[39m=[32m"16"[39m
+                          [36m>[39m
+                            [36m<path[39m
+                              [33md[39m=[32m"M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z"[39m
+                              [33mfill[39m=[32m"currentColor"[39m
+                            [36m/>[39m
+                          [36m</svg>[39m
+                        [36m</button>[39m
+                      [36m</div>[39m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"_dock_497bd7"[39m
+                  [36m/>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mdata-testid[39m=[32m"composer-takeover"[39m
+            [36m>[39m
+              [0mTAKEOVER[0m
+            [36m</div>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_widthHandle_f1cc6e"[39m
+          [33mdata-side[39m=[32m"left"[39m
+          [33mdata-width-handle[39m=[32m"left"[39m
+        [36m/>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"_widthHandle_f1cc6e"[39m
+          [33mdata-side[39m=[32m"right"[39m
+          [33mdata-width-handle[39m=[32m"right"[39m
+        [36m/>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+  [36m</div>[39m
+[36m</body>[39m
+ ❯ Object.getElementError node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/.pnpm/@testing-library+dom@10.4.2/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ packages/client/ui-conversation/tests/skeleton.client.spec.tsx:533:38
+    531|     expect(seat?.contains(fallback)).toBe(true)
+    532|     expect(b.view.queryByRole('button', { name: 'Footer action' })).to…
+    533|     expect(fallback?.contains(b.view.getByRole('button', { name: 'Foot…
+       |                                      ^
+    534|   })
+    535|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  3 failed (3)
+      Tests  4 failed | 3 passed | 128 skipped (135)
+   Start at  16:37:30
+   Duration  2.71s (transform 3.59s, setup 533ms, import 5.10s, tests 304ms, environment 1.73s)
+

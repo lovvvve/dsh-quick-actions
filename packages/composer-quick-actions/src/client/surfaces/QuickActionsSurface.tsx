@@ -4,7 +4,7 @@
  * | layout     | Slot                        | body                                                        |
  * |------------|-----------------------------|-------------------------------------------------------------|
  * | `ribbon`   | `conversation.input.dock`   | title, the actions in shared order, and "manage" on one line |
- * | `bar`      | `conversation.composer.dock`| the leading actions that fit, then "more", then "manage"     |
+ * | `bar`      | composer footer (dock fallback) | the leading actions that fit, then "more", then "manage" |
  * | `launcher` | `conversation.input.dock`   | one compact entry carrying the Composer projection's count   |
  *
  * Three rules hold across all of them:

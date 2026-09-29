@@ -1,0 +1,27 @@
+{
+  "status": "installed-live-modules-verified",
+  "installExitCode": 0,
+  "liveCoreRev": "452ad05ef96c",
+  "liveQuickActionsRev": "f6db199a0cbd",
+  "existingConfigurationRowsUnchanged": true,
+  "configurationChange": "Only a new default composer-quick-actions row was added (layout bar); no prior Quick Actions row existed.",
+  "visualAcceptancePending": true,
+  "backup": "/Users/lovvvve/.dsh/backups/quick-actions-restore-20260929T020122Z",
+  "profile": "/Users/lovvvve/.dsh/profiles/web",
+  "tarball": "/Users/lovvvve/.dsh/local-packages/quick-actions-footer-20260928T100220Z/dsh-quick-actions-0.2.0-rc.2.tgz",
+  "artifact": {
+    "file": "dsh-quick-actions-0.2.0-rc.2.tgz",
+    "name": "dsh-quick-actions",
+    "version": "0.2.0-rc.2",
+    "bytes": 180589,
+    "sha256": "85dc1228cad43c7432252a34d9895238f2cecdb713a073fde81e2ed02ec32fd1",
+    "clientSha256": "85c9c5ab142ca12e2c5e62f32f8f74acd3d3a23b1fd0d2b9af25bb899cfb1930"
+  },
+  "backupEntries": 32610,
+  "profileHashes": {
+    "package.json": "e8e077d9bc35a060ec2fff810c2e98c2b0540223811357d0bd9f70763e6f6996",
+    "pnpm-lock.yaml": "2c608ff0d5dd6bb02b88fc1cab6b30d00c83184add453e3355903faeff7f4360",
+    "pnpm-workspace.yaml": "a22e845f8c061107e8e434c7a3f0b3f0f22cef9edd4029fde453366e3111e1f5",
+    "cordis.patch.yml": "36f8db31ca4791bb6d9738fbf6283cd991a01a978afbf7001396f2e1bad0977d"
+  }
+}

@@ -1,0 +1,28 @@
+ℹ tsdown v0.22.2 powered by rolldown v1.1.1
+ℹ config file: /private/tmp/dsh-footer-source.gZQq0j/deepseek-harness-477b4f420553e8a52c2fbccc464d7561b239c443/packages/client/ui-conversation/tsdown.config.ts 
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] entry: src/client/index.ts
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] tsconfig: tsconfig.json
+ℹ [@deepseek-ai/dsh-client-ui-conversation] entry: lib/types/index.js
+ℹ [@deepseek-ai/dsh-client-ui-conversation] target: es2024
+ℹ [@deepseek-ai/dsh-client-ui-conversation] tsconfig: tsconfig.json
+ℹ Build start
+ℹ [@deepseek-ai/dsh-client-ui-conversation] [ESM] lib/index.js  1.52 kB │ gzip: 0.74 kB
+ℹ [@deepseek-ai/dsh-client-ui-conversation] [ESM] 1 files, total: 1.52 kB
+✔ [@deepseek-ai/dsh-client-ui-conversation] Build complete in 37ms
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- lexical
+- @lexical/selection
+- @lexical/utils
+- @lexical/extension
+- @lexical/html
+- @lexical/clipboard
+- @lexical/plain-text
+- @lexical/history
+- clsx
+- @lexical/text
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] lib/client.js      715.38 kB │ gzip: 177.54 kB
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] lib/client.js.map    1.33 MB
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] 2 files, total: 2.04 MB
+✔ [@deepseek-ai/dsh-client-ui-conversation/client] Build complete in 164ms

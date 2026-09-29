@@ -1,0 +1,400 @@
+diff --git a/docs/subsystems/slots.md b/docs/subsystems/slots.md
+--- a/docs/subsystems/slots.md
++++ b/docs/subsystems/slots.md
+@@ -165,7 +165,8 @@
+ │     │  ├─ conversation.input.attachments
+ │     │  ├─ conversation.input.permission
+ │     │  ├─ conversation.input.plan
+-│     │  └─ conversation.input.model
++│     │  ├─ conversation.input.model
++│     │  └─ conversation.composer.footer
+ │     ├─ conversation.input.overlay
+ │     ├─ conversation.input.dock
+ │     ├─ conversation.composer.dock
+diff --git a/docs/subsystems/slots.zh.md b/docs/subsystems/slots.zh.md
+--- a/docs/subsystems/slots.zh.md
++++ b/docs/subsystems/slots.zh.md
+@@ -165,7 +165,8 @@
+ │     │  ├─ conversation.input.attachments
+ │     │  ├─ conversation.input.permission
+ │     │  ├─ conversation.input.plan
+-│     │  └─ conversation.input.model
++│     │  ├─ conversation.input.model
++│     │  └─ conversation.composer.footer
+ │     ├─ conversation.input.overlay
+ │     ├─ conversation.input.dock
+ │     ├─ conversation.composer.dock
+diff --git a/packages/client/ui-conversation/README.i18n.yaml b/packages/client/ui-conversation/README.i18n.yaml
+--- a/packages/client/ui-conversation/README.i18n.yaml
++++ b/packages/client/ui-conversation/README.i18n.yaml
+@@ -18,8 +18,8 @@
+   en: 13ae68865fa315d7
+   zh: c152f020abf20f35
+ /deepseek-ai-dsh-client-ui-conversation/shell-and-standard-props:
+-  en: ea2f1e81b1f9a38a
+-  zh: a2d4745b3e93e5a9
++  en: 19f9c987690dcee8
++  zh: f9d7999fa1187622
+ /deepseek-ai-dsh-client-ui-conversation/temporary-composer-entries:
+   en: bb1244310f5c0382
+   zh: 824b84077432b559
+diff --git a/packages/client/ui-conversation/README.md b/packages/client/ui-conversation/README.md
+--- a/packages/client/ui-conversation/README.md
++++ b/packages/client/ui-conversation/README.md
+@@ -47,6 +47,8 @@
+ The composer measures its expanded control groups after size, content, visibility, or font-loading changes. If they cannot share a line, the row sets `--dsh-composer-model-text-display: none` and `--dsh-composer-model-icon-display: block` for the model seat; their defaults are `block` and `none`. Wrapping remains available if even the icon cannot fit.
+ 
+ The context-occupancy button shows a ring and percentage below the input card, after the Session statistics. Clicking it opens the token breakdown in a panel kept inside the viewport, including when no statistics are shown; the button stays hidden until context usage and capacity are available.
++
++`conversation.composer.footer` is a Session-scoped list below that dock/statistics row, aligned to the input card's edges. Entries receive `PropsRuntime<'conversation.composer.footer'>` with the standard Session props and no owner props. The footer follows the same resident-composer condition as `conversation.composer.dock`: it is absent in the Hero and without a Session or input, and is hidden with the resident fallback during a composer takeover. Empty content, including entries returning `null`, adds no height or gap. Visible entries stack in registration order, subject to the list's `order` values; the existing dock and context meter keep their own layout.
+ 
+ With Coding Tools off, the shell hides only Trajectory; other plugin-contributed Views remain available. The View tab bar is hidden when fewer than two Views are available. Turning Coding Tools off while Trajectory is active returns to Chat; stored View preferences and recorded Session data remain intact. Turning it on makes Trajectory available again. View owners receive the available roster so their navigation actions can follow the same visibility.
+ 
+diff --git a/packages/client/ui-conversation/README.zh.md b/packages/client/ui-conversation/README.zh.md
+--- a/packages/client/ui-conversation/README.zh.md
++++ b/packages/client/ui-conversation/README.zh.md
+@@ -47,6 +47,8 @@
+ 控件组的尺寸、内容、可见性或字体加载状态变化后，composer 测量展开状态下的控件组。若无法排在同一行，控制栏为模型位设置 `--dsh-composer-model-text-display: none` 和 `--dsh-composer-model-icon-display: block`；两者默认值分别为 `block` 和 `none`。若连图标也放不下，仍允许换行。
+ 
+ 上下文占用按钮在输入卡片下方、会话统计右侧显示圆环和百分比。点击按钮可在视口内的面板查看 token 构成，没有统计项时面板也不会越界；上下文用量和容量尚不可用时，按钮保持隐藏。
++
++`conversation.composer.footer` 是 Session 作用域的列表，位于上述 dock/统计行下方，与输入卡片边缘对齐。条目接收 `PropsRuntime<'conversation.composer.footer'>`，包含标准 Session props，不含 owner props。footer 与 `conversation.composer.dock` 使用相同的常驻 composer 条件：Hero、无 Session 或无输入时不渲染，composer 被接管时随常驻回退内容一同隐藏。空内容（包括返回 `null` 的条目）不增加高度或间距。可见条目按列表的 `order` 值及注册顺序纵向排列；现有 dock 和上下文用量按钮保持各自布局。
+ 
+ 关闭代码工作工具时，外壳仅隐藏 Trajectory；其他插件贡献的 View 仍然可用。可用 View 少于两个时隐藏 View 标签栏。在 Trajectory 激活时关闭代码工作工具会返回 Chat；已保存的 View 偏好和 Session 记录保持不变。开启后，Trajectory 恢复可用。View 所有者接收可用列表，使导航操作跟随相同的可见性。
+ 
+diff --git a/packages/client/ui-conversation/src/client/apply.ts b/packages/client/ui-conversation/src/client/apply.ts
+--- a/packages/client/ui-conversation/src/client/apply.ts
++++ b/packages/client/ui-conversation/src/client/apply.ts
+@@ -429,6 +429,7 @@
+       'conversation.input.model': { kind: 'single', scope: 'session' },
+       'conversation.input.activity': { kind: 'single', scope: 'session' },
+       'conversation.composer.dock': { kind: 'list', scope: 'session' },
++      'conversation.composer.footer': { kind: 'list', scope: 'session' },
+     },
+     inject: (sessionId: SessionId | undefined): ComposerBarInjected => {
+       if (sessionId === undefined) {
+diff --git a/packages/client/ui-conversation/src/client/contract/slots.ts b/packages/client/ui-conversation/src/client/contract/slots.ts
+--- a/packages/client/ui-conversation/src/client/contract/slots.ts
++++ b/packages/client/ui-conversation/src/client/contract/slots.ts
+@@ -197,6 +197,8 @@
+     'conversation.input.overlay': { kind: 'list'; scope: 'session' }
+     /** Ambient entries below the composer card. */
+     'conversation.composer.dock': { kind: 'list'; scope: 'session' }
++    /** Card-width rows below the resident composer's dock; empty content adds no space. */
++    'conversation.composer.footer': { kind: 'list'; scope: 'session' }
+     /** Compact controls at the left of the composer tool row. */
+     'conversation.input.left': { kind: 'list'; scope: 'session' }
+     /** Compact controls before the composer submit action. */
+@@ -426,7 +428,7 @@
+     | 'conversation.input.permission'
+     | 'conversation.input.left' | 'conversation.input.plan'
+     | 'conversation.input.right' | 'conversation.input.model' | 'conversation.input.activity'
+-    | 'conversation.composer.dock'
++    | 'conversation.composer.dock' | 'conversation.composer.footer'
+   >
+   & InjectFace<ComposerBarInjected>
+   & PropsLocale<'conversation'>
+diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css b/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css
+--- a/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css
++++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.module.css
+@@ -21,6 +21,17 @@
+ 
+ .hero .dock:empty {
+   display: none;
++}
++
++.footer {
++  display: flex;
++  flex-direction: column;
++  width: 100%;
++  max-width: var(--dsh-composer-card-max-width);
++  min-width: 0;
++  /* The Slot's display:contents anchor survives empty entries. No padding or
++     margin: an empty footer must add neither height nor spacing. */
++  gap: 4px;
+ }
+ 
+ .hero {
+diff --git a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
+--- a/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
++++ b/packages/client/ui-conversation/src/client/skeleton/InputBar.tsx
+@@ -502,6 +502,11 @@
+           : null}
+         {activity ? null : <ContextMeter useProjection={useProjection} t={t} />}
+       </div>
++      {variant === 'composer' && input !== undefined && sessionId !== undefined && (
++        <div className={css.footer}>
++          {renderSlot('conversation.composer.footer', {})}
++        </div>
++      )}
+     </div>
+   )
+ })
+diff --git a/packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx b/packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx
+--- a/packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx
++++ b/packages/client/ui-conversation/tests/apply-wiring.client.spec.tsx
+@@ -100,6 +100,8 @@
+     expect(header?.store).toBe(session?.store)
+     expect(b.runtime.slots.spec('conversation.composer'))
+       .toEqual({ kind: 'chain', scope: 'session' })
++    expect(b.runtime.slots.spec('conversation.composer.footer'))
++      .toEqual({ kind: 'list', scope: 'session' })
+     expect(b.runtime.slots.entries('settings.general.item').map(row => row.options.id))
+       .toEqual(['composer-enter'])
+     await b.runtime.dispose()
+@@ -145,6 +147,7 @@
+     expect(b.runtime.slots.entries('main.conversation')).toHaveLength(0)
+     expect(b.runtime.slots.spec('main.conversation')).toBeUndefined()
+     expect(b.runtime.slots.spec('conversation.view')).toBeUndefined()
++    expect(b.runtime.slots.spec('conversation.composer.footer')).toBeUndefined()
+     await b.runtime.dispose()
+   })
+ })
+diff --git a/packages/client/ui-conversation/tests/input-bar.client.spec.tsx b/packages/client/ui-conversation/tests/input-bar.client.spec.tsx
+--- a/packages/client/ui-conversation/tests/input-bar.client.spec.tsx
++++ b/packages/client/ui-conversation/tests/input-bar.client.spec.tsx
+@@ -97,6 +97,9 @@
+   activityEntry?: (owner: InputActivityOwnerProps) => React.ReactNode
+   contextPressure?: ContextPressureProjection
+   footer?: React.ReactNode
++  composerFooter?: React.ReactNode
++  noSession?: boolean
++  noInput?: boolean
+   attachments?: readonly ComposerAttachment[]
+   /** Upload states served for file-kind drafts (absent = every file is ready). */
+   fileUploads?: DraftFileUploads
+@@ -164,6 +167,8 @@
+     if (key === 'conversation.input.left') return over?.leftItems ?? null
+     if (key === 'conversation.input.right') return over?.rightItems ?? null
+     if (key === 'conversation.composer.dock') return over?.footer ?? null
++    // The real renderer retains a display:contents anchor even for null entries.
++    if (key === 'conversation.composer.footer') return <div data-slot={key} style={{ display: 'contents' }}>{over?.composerFooter ?? null}</div>
+     if (key === 'conversation.input.plan') return over?.planEntry ?? null
+     if (key === 'conversation.input.permission') return over?.permissionEntry ?? null
+     if (key === 'conversation.input.model') return over?.modelEntry ?? null
+@@ -172,7 +177,7 @@
+   }) as never
+   const props: InputBarProps = {
+     usePanelInfo: selector => selector({ activePanelId: null }),
+-    sessionId: SID,
++    sessionId: over?.noSession ? undefined : SID,
+     SessionProvider: ({ children }) => children,
+     useSession: bindSnapshotSelector(session),
+     useConversation: bindSnapshotSelector(createSnapshotStore(conversationFixture())),
+@@ -192,7 +197,7 @@
+         : key === 'goal' ? over?.goal
+           : key === 'imageLimits' ? over?.imageLimits
+             : key === 'contextPressure' ? over?.contextPressure : undefined)),
+-    useInput: bindSnapshotSelector(shell.state),
++    useInput: over?.noInput ? () => undefined : bindSnapshotSelector(shell.state),
+     inputActions: shell.actions,
+     keyboard: shell,
+     addFiles: over?.addFiles ?? (() => null),
+@@ -1664,6 +1669,42 @@
+   })
+ })
+ 
++describe('resident composer footer', () => {
++  it('places actions in their own row after the unchanged dock and context meter', () => {
++    const { view, slotCalls } = bench({
++      footer: <button>Session statistics</button>,
++      composerFooter: <button>Quick action</button>,
++      contextPressure: { pressureTokens: 32_000, contextWindow: 128_000 },
++    })
++    const card = view.container.querySelector('[data-composer-card]')!
++    const dock = view.getByRole('button', { name: 'Session statistics' }).parentElement!
++    const action = view.getByRole('button', { name: 'Quick action' })
++    const footer = action.closest('[data-slot]')!.parentElement!
++    expect(dock.contains(view.getByRole('button', { name: '上下文已用 25%' }))).toBe(true)
++    expect(card.nextElementSibling).toBe(dock)
++    expect(dock.nextElementSibling).toBe(footer)
++    expect(footer.parentElement).toBe(card.parentElement)
++    expect(dock.contains(action)).toBe(false)
++    expect(slotCalls.find(call => call.key === 'conversation.composer.footer')?.owner).toEqual({})
++  })
++
++  it.each<BenchOptions>([
++    { variant: 'hero' }, { noSession: true }, { noInput: true },
++  ])('does not dispatch the footer outside the resident composer: %j', (options) => {
++    const { view, slotCalls } = bench({ ...options, composerFooter: <button>Quick action</button> })
++    expect(view.queryByRole('button', { name: 'Quick action' })).toBeNull()
++    expect(slotCalls.some(call => call.key === 'conversation.composer.footer')).toBe(false)
++  })
++
++  it('allows an empty renderer anchor and entries returning null', () => {
++    const EmptyEntry = () => null
++    const { view } = bench({ composerFooter: <EmptyEntry /> })
++    const outlet = view.container.querySelector('[data-slot="conversation.composer.footer"]')
++    expect(outlet).not.toBeNull()
++    expect(outlet!.childNodes).toHaveLength(0)
++  })
++})
++
+ describe('command launcher chrome and control seats', () => {
+   it('renders the command launcher and dispatches every empty control seat', () => {
+     const { view, slotCalls } = bench()
+@@ -1676,7 +1717,7 @@
+       'conversation.input.overlay', 'conversation.input.attachments',
+       'conversation.input.permission', 'conversation.input.plan', 'conversation.input.left',
+       'conversation.input.right', 'conversation.input.model', 'conversation.input.activity',
+-      'conversation.composer.dock',
++      'conversation.composer.dock', 'conversation.composer.footer',
+     ])
+     expect(view.queryByLabelText('Plan mode')).toBeNull()
+     expect(view.queryByLabelText('Model')).toBeNull()
+diff --git a/packages/client/ui-conversation/tests/skeleton.client.spec.tsx b/packages/client/ui-conversation/tests/skeleton.client.spec.tsx
+--- a/packages/client/ui-conversation/tests/skeleton.client.spec.tsx
++++ b/packages/client/ui-conversation/tests/skeleton.client.spec.tsx
+@@ -299,6 +299,7 @@
+             // The bar's own seats: recorded so a case can assert what share
+             // each tool-row control received.
+             seatOwners.push({ key, owner: seatOwner })
++            if (key === 'conversation.composer.footer') return <button>Footer action</button>
+             return null
+           }) as InputBarProps['renderSlot']}
+           {...bar}
+@@ -528,6 +529,8 @@
+     const fallback = b.view.container.querySelector('[data-chain-overlay-fallback="conversation.composer"]')
+     expect(seat?.contains(takeover)).toBe(true)
+     expect(seat?.contains(fallback)).toBe(true)
++    expect(b.view.queryByRole('button', { name: 'Footer action' })).toBeNull()
++    expect(fallback?.contains(b.view.getByRole('button', { name: 'Footer action', hidden: true }))).toBe(true)
+   })
+ 
+   it('hero phase: keeps sidebar controls accessible while hiding conversation chrome', () => {
+diff --git a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
+--- a/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
++++ b/packages/extensions/cordis-client-runner/src/client/slot-catalog.ts
+@@ -447,7 +447,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.bar\', () => ctx.slots.register(\n      { name: \'conversation.composer.bar\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:207',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:209',
+   },
+   {
+     key: 'conversation.composer.dock',
+@@ -504,6 +504,60 @@
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.dock\', () => ctx.slots.register(\n      { name: \'conversation.composer.dock\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+     source: 'packages/client/ui-conversation/src/client/contract/slots.ts:199',
++  },
++  {
++    key: 'conversation.composer.footer',
++    kind: 'list',
++    scope: 'session',
++    summary: 'Card-width rows below the resident composer\'s dock; empty content adds no space.',
++    doc: 'Card-width rows below the resident composer\'s dock; empty content adds no space.',
++    registerOptions: [
++      {
++        name: 'id',
++        requirement: 'required',
++        type: 'string',
++        doc: 'Your cell key. Use an id of your own: a fresh id is added beside the shipped entries, while reusing a shipped id puts you in THAT cell and replaces it. Owners that filter by id address you by it.',
++      },
++      {
++        name: 'order',
++        requirement: 'optional',
++        type: 'number',
++        doc: 'Position among the entries, ascending (default 0).',
++      },
++      {
++        name: 'label',
++        requirement: 'optional',
++        type: 'string | (() => string)',
++        doc: 'Display text where the owner projects one (nav rows, tabs). A thunk is re-read on every projection, so localized text follows the active locale without re-registering.',
++      },
++    ],
++    ownerProps: [],
++    ownerPropsReferences: [],
++    standardProps: [
++      'useResource: UseResource',
++      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
++      'usePanelInfo: UsePanelInfo',
++      'useSessions: UseSessions',
++      'useSessionStatus: UseSessionStatus',
++      'useSessionRetainInfo: UseSessionRetainInfo',
++      'useWorkspaces: SnapshotSelectorHook<WorkspaceSnapshot>',
++      'useChat: UseChat',
++      'useConversation: UseConversation',
++      'useInput: SnapshotSelectorHook<InputState>',
++      'inputActions: InputActions',
++      'useSession: SessionSnapshotSelector',
++      'sessionId: SessionId',
++      'useProjection: UseProjection',
++      'useTrajectory: UseTrajectory',
++    ],
++    keyDomain: '',
++    hookContext: '',
++    slotInject: '',
++    declaredBy: 'an entry in \'conversation.composer.bar\' (client-ui-conversation), so it exists while that entry is mounted',
++    occupants: [],
++    replaceRisk: 'none',
++    example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.composer.footer\', () => ctx.slots.register(\n      { name: \'conversation.composer.footer\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:201',
+   },
+   {
+     key: 'conversation.header',
+@@ -739,7 +793,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.activity\', () => ctx.slots.register(\n      { name: \'conversation.input.activity\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:205',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:207',
+   },
+   {
+     key: 'conversation.input.attachments',
+@@ -780,7 +834,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.attachments\', () => ctx.slots.register(\n      { name: \'conversation.input.attachments\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:209',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:211',
+   },
+   {
+     key: 'conversation.input.dock',
+@@ -897,7 +951,7 @@
+     occupants: [],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.left\', () => ctx.slots.register(\n      { name: \'conversation.input.left\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:201',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:203',
+   },
+   {
+     key: 'conversation.input.model',
+@@ -936,7 +990,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.model\', () => ctx.slots.register(\n      { name: \'conversation.input.model\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:223',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:225',
+   },
+   {
+     key: 'conversation.input.overlay',
+@@ -1033,7 +1087,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.permission\', () => ctx.slots.register(\n      { name: \'conversation.input.permission\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:217',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:219',
+   },
+   {
+     key: 'conversation.input.plan',
+@@ -1072,7 +1126,7 @@
+     ],
+     replaceRisk: 'shadows-shipped-ui',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.plan\', () => ctx.slots.register(\n      { name: \'conversation.input.plan\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:215',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:217',
+   },
+   {
+     key: 'conversation.input.right',
+@@ -1126,7 +1180,7 @@
+     occupants: [],
+     replaceRisk: 'none',
+     example: 'return {\n  inject: [\'slots\'],\n  apply(ctx) {\n    ctx.slots.inject(\'conversation.input.right\', () => ctx.slots.register(\n      { name: \'conversation.input.right\', id: \'my-entry\', order: 100, label: \'My entry\' },\n      () => React.createElement(\'div\', null, \'hello\'),\n    ))\n  },\n}',
+-    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:203',
++    source: 'packages/client/ui-conversation/src/client/contract/slots.ts:205',
+   },
+   {
+     key: 'conversation.message.images',

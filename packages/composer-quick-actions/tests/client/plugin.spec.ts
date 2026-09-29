@@ -25,7 +25,7 @@ class FakeClientContext {
   conversation: { blocks: ComposerBlocks } | undefined
   private readonly disposers: (() => void)[] = []
 
-  constructor() {
+  constructor(private readonly hasFooter = true) {
     this.document.register(QUICK_ACTIONS_SETTINGS_NAMESPACE, {
       defaults: { presets: [], schemaVersion: 1, layout: 'ribbon', userActionsById: {}, actionOrder: [], presetStateById: {} },
       base: { presets: [{ id: 'a', kind: 'send', label: 'A', text: 'a', confirm: true }] },
@@ -41,6 +41,8 @@ class FakeClientContext {
         // input dock declares two cells through one declaration lifetime.
         inject: (key: string, callback: () => SlotInjectionEffect) => {
           this.injected.push(key)
+          // An absent optional declaration leaves the injection dormant.
+          if (key === 'conversation.composer.footer' && !this.hasFooter) return () => {}
           const effect = callback()
           const stops = typeof effect === 'function' ? [effect] : Array.from(effect)
           for (const stop of stops) this.disposers.push(stop)
@@ -112,7 +114,7 @@ describe('the Client plugin surface', () => {
     const host = new FakeClientContext()
     apply(host.ctx)
 
-    expect(host.injected).toEqual(['conversation.input.dock', 'conversation.composer.dock'])
+    expect(host.injected).toEqual(['conversation.input.dock', 'conversation.composer.dock', 'conversation.composer.footer'])
     expect(host.registered.map((entry) => entry.options)).toEqual([
       {
         name: 'conversation.input.dock',
@@ -134,7 +136,23 @@ describe('the Client plugin surface', () => {
         order: 100,
         locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
       },
+      {
+        name: 'conversation.composer.footer',
+        id: 'composer-quick-actions',
+        order: 100,
+        locale: QUICK_ACTIONS_LOCALE_NAMESPACE,
+      },
     ])
+  })
+
+  it('keeps the original registrations when the core declares no footer', () => {
+    const host = new FakeClientContext(false)
+    apply(host.ctx)
+    expect(host.registered.map((entry) => entry.options.name)).toEqual([
+      'conversation.input.dock', 'conversation.input.dock', 'conversation.composer.dock',
+    ])
+    host.unload()
+    expect(host.registered).toHaveLength(0)
   })
 
   it('registers ids of its own rather than reusing a shipped entry', () => {
@@ -150,7 +168,7 @@ describe('the Client plugin surface', () => {
     const host = new FakeClientContext()
     apply(host.ctx)
     expect(host.document.listenerCount).toBeGreaterThan(0)
-    expect(host.registered).toHaveLength(3)
+    expect(host.registered).toHaveLength(4)
     expect(host.locales).toHaveLength(1)
 
     host.unload()

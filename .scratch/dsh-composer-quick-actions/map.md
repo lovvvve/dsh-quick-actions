@@ -90,6 +90,17 @@ Label: `wayfinder:map`
 - [让 GUI 驱动进入会话时不被折叠的工作区行卡住](./issues/38-make-session-entry-survive-collapsed-workspaces.md) — DSH 侧栏里会话行与工作区行是兄弟节点、展开状态在 localStorage，旧 helper 按行下标缓存、把折叠工作区当会话去点；改为只点 `session:` 行、先展开折叠工作区、按会话 id 缓存，surface + manager 30 条一次全过（27.7→3.8 分钟）。
 - [把 0.2.0-rc.2 发到 npm 的 next dist-tag](./issues/39-publish-0.2.0-rc.2-to-next.md) — 已发布，带票据 37 的 bar 修复，`latest` 仍是 `0.1.0`，registry 与本地打包逐字节一致；头 24 小时 `@next` 会被年龄门槛退回 `0.2.0-rc.1`。
 
+- [将下方操作栏放到独立且与输入框左对齐的一行](./issues/40-place-bar-on-a-separate-left-aligned-row.md) — 源码实施结项：本地核心 footer 补丁 + 插件每会话回退、真实组件折叠回归已交付（spec 23）；未部署或实时验收，当时缺少的核心生成物已由下一项解除，详见票据的部署边界。
+- [打通独立操作栏核心补丁的构建前置条件](./issues/41-unblock-footer-core-build.md) — 确认根因是依赖不全与跳过 Host/Typert 生成；原始类型失败及包解析警告已解除，本地核心/插件 tarball 已验证，运行环境仍未替换。
+
+- [核对独立操作栏的部署入口与回滚方案](./issues/42-plan-footer-deployment-and-rollback.md) — 核实活动 GUI 为 3080、实际 bundle 来源及 profile 本地覆盖入口；核心覆盖要求重启，已拟完整 profile 快照回滚方案，待部署授权，未改运行环境。
+
+- [备份 web profile 并安装独立操作栏本地包](./issues/43-install-local-footer-packages.md) — 已授权安装：完整快照及 18,361 项校验通过，两份本地包经现有 CLI 安装成功，Settings 与桌面安装目录不变；等待用户在桌面端重启后做真实 GUI 验收。
+
+- [安装本机最新的 Quick Actions 修复包](./issues/44-restore-local-fixed-quick-actions.md) — 重启后核心已生效，插件缺失；经用户新授权，仅恢复本地修复插件，重新备份当前 profile，当前服务两份代码均匹配本地修复，待视觉验收。
+
+- [将独立下方操作栏的动作组改为居中](./issues/45-center-the-footer-action-group.md) — 用户改选居中，单行插件 CSS 调整已测试并安装；当前 3080 GUI 三档宽度中心偏差 <0.01px，独立行及折叠恢复通过，核心与 Settings 不变。
+
 ## Out of scope（范围外）
 
 - 当前 DSH 进程重启后即消失的临时动态插件。

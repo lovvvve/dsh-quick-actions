@@ -20,7 +20,11 @@
  * — the same cap the composer card uses — and is centred, so its left and right
  * edges coincide with the input box exactly rather than approximately.
  *
- * `.dsh-cqa-bar` makes no such claim. Since DSH 0.1.6-alpha.2 the composer dock is
+ * In the optional composer footer, the core owns card alignment and the bar
+ * fills that row; its control group is centred (spec 23.1). The rules below
+ * still apply to the fallback for unpatched cores.
+ *
+ * `.dsh-cqa-bar` in that fallback makes no such claim. Since DSH 0.1.6-alpha.2 the composer dock is
  * a row under the card that DSH centres and sizes to its content, shared with
  * DSH's own stats pills and context meter, so the bar is a content-sized member of
  * that row (spec 22.9). It only has to stay inside it: `min-width: 0` lets it
@@ -49,6 +53,24 @@ export const QUICK_ACTIONS_CSS = `
 /* Folding: claim the card's width, for the dock row's own max-width to cap. */
 .dsh-cqa-bar[data-quick-actions-overflow] {
   width: var(--dsh-composer-card-max-width);
+}
+
+/* The optional footer is already aligned to the card by its core owner.
+   Only this plugin's row shrinks and centres the whole control group. */
+.dsh-cqa-footer {
+  width: 100%;
+  min-width: 0;
+}
+.dsh-cqa-footer > .dsh-cqa-bar {
+  width: 100%;
+}
+.dsh-cqa-footer .dsh-cqa-row {
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.dsh-cqa-footer [data-quick-actions-overflow] .dsh-cqa-row {
+  width: 100%;
 }
 
 .dsh-cqa-row {

@@ -1,0 +1,51 @@
+packages/api/job-controller/src/client/index.ts(11,21): error TS2307: Cannot find module '@deepseek-ai/dsh-api-job-controller/remote' or its corresponding type declarations.
+packages/api/job-controller/src/client/index.ts(34,11): error TS2339: Property 'job' does not exist on type 'ClientRemote'.
+packages/api/session-controller/src/client/transport.ts(3,21): error TS2307: Cannot find module '@deepseek-ai/dsh-api-session-controller/remote' or its corresponding type declarations.
+packages/api/session-controller/src/client/transport.ts(41,42): error TS2339: Property 'session' does not exist on type 'ClientRemote'.
+packages/api/workspace-files/src/client/index.ts(24,34): error TS2345: Argument of type 'ClientRemote' is not assignable to parameter of type 'WorkspaceFilesRemote'.
+  Property 'workspaceFiles' is missing in type 'ClientRemote' but required in type 'WorkspaceFilesRemote'.
+packages/api/workspace-files/src/client/index.ts(25,47): error TS2345: Argument of type 'ClientRemote' is not assignable to parameter of type 'WorkspaceFilesRemote'.
+  Property 'workspaceFiles' is missing in type 'ClientRemote' but required in type 'WorkspaceFilesRemote'.
+packages/api/workspace-files/src/client/remote.ts(8,21): error TS2307: Cannot find module '@deepseek-ai/dsh-api-workspace-files/remote' or its corresponding type declarations.
+packages/api/workspace-files/src/client/remote.ts(38,57): error TS2339: Property 'workspaceFiles' does not exist on type 'ClientRemote'.
+packages/api/workspace-controller/src/client/index.ts(48,53): error TS2339: Property 'workspace' does not exist on type 'ClientRemote'.
+packages/api/workspace-controller/src/client/index.ts(84,28): error TS2339: Property 'workspace' does not exist on type 'ClientRemote'.
+packages/api/workspace-controller/src/client/model.ts(4,21): error TS2307: Cannot find module '@deepseek-ai/dsh-api-workspace-controller/remote' or its corresponding type declarations.
+packages/api/workspace-controller/src/client/model.ts(26,50): error TS2339: Property 'workspace' does not exist on type 'TypertClientRemote'.
+packages/api/terminal-controller/src/client/index.ts(105,69): error TS7006: Parameter 'shell' implicitly has an 'any' type.
+packages/api/terminal-controller/src/client/index.ts(195,32): error TS7006: Parameter 'info' implicitly has an 'any' type.
+packages/api/terminal-controller/src/client/index.ts(242,39): error TS2339: Property 'terminal' does not exist on type 'ClientRemote'.
+packages/api/terminal-controller/src/client/model.ts(7,21): error TS2307: Cannot find module '@deepseek-ai/dsh-api-terminal-controller/remote' or its corresponding type declarations.
+packages/api/terminal-controller/src/client/model.ts(15,43): error TS2339: Property 'terminal' does not exist on type 'ClientRemote'.
+packages/api/terminal-controller/src/client/model.ts(115,20): error TS2571: Object is of type 'unknown'.
+packages/api/terminal-controller/src/client/model.ts(115,44): error TS7006: Parameter 'item' implicitly has an 'any' type.
+packages/api/terminal-controller/src/client/model.ts(122,18): error TS18046: 'shells' is of type 'unknown'.
+packages/api/terminal-controller/src/client/model.ts(122,30): error TS7006: Parameter 'shell' implicitly has an 'any' type.
+packages/api/terminal-controller/src/client/model.ts(122,73): error TS18046: 'shells' is of type 'unknown'.
+packages/api/terminal-controller/src/client/model.ts(143,20): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'WebTerminalInfo'.
+packages/api/remotes/src/client/index.ts(4,32): error TS2307: Cannot find module '@deepseek-ai/dsh-agent-preset-registry/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(5,28): error TS2307: Cannot find module '@deepseek-ai/dsh-commands/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(6,27): error TS2307: Cannot find module '@deepseek-ai/dsh-api-account-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(7,38): error TS2307: Cannot find module '@deepseek-ai/dsh-api-settings-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(8,31): error TS2307: Cannot find module '@deepseek-ai/dsh-office-to-pdf/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(9,25): error TS2307: Cannot find module '@deepseek-ai/dsh-goal/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(10,28): error TS2307: Cannot find module '@deepseek-ai/dsh-schedule/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(11,23): error TS2307: Cannot find module '@deepseek-ai/dsh-llm/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(12,27): error TS2307: Cannot find module '@deepseek-ai/dsh-cordis-host-runner/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(13,33): error TS2307: Cannot find module '@deepseek-ai/dsh-plugin-manager/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(14,39): error TS2307: Cannot find module '@deepseek-ai/dsh-client-ui-plugin-manager/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(15,35): error TS2307: Cannot find module '@deepseek-ai/dsh-host-plugin-inventory/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(16,35): error TS2307: Cannot find module '@deepseek-ai/dsh-message-feedback/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(17,37): error TS2307: Cannot find module '@deepseek-ai/dsh-permission-presets/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(18,35): error TS2307: Cannot find module '@deepseek-ai/dsh-command-feedback/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(19,31): error TS2307: Cannot find module '@deepseek-ai/dsh-client-file-upload/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(20,37): error TS2307: Cannot find module '@deepseek-ai/dsh-session-reference/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(21,29): error TS2307: Cannot find module '@deepseek-ai/dsh-subagent/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(22,27): error TS2307: Cannot find module '@deepseek-ai/dsh-api-session-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(23,23): error TS2307: Cannot find module '@deepseek-ai/dsh-api-job-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(24,29): error TS2307: Cannot find module '@deepseek-ai/dsh-api-workspace-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(25,28): error TS2307: Cannot find module '@deepseek-ai/dsh-api-terminal-controller/remote' or its corresponding type declarations.
+packages/api/remotes/src/client/index.ts(26,34): error TS2307: Cannot find module '@deepseek-ai/dsh-api-workspace-files/remote' or its corresponding type declarations.
+packages/api/remotes/src/remote-events.ts(33,5): error TS2322: Type '"goal/activation-changed"' is not assignable to type '"internal/plugin" | "internal/status" | "internal/config" | "internal/get" | "internal/dispatch" | "llm/adapters-updated" | "connection/reset" | "plugin-manager/changed" | ... 23 more ... | "user-questions/request"'.
+packages/client/ui-settings/src/client/config-form.ts(139,46): error TS2339: Property 'settings' does not exist on type 'ClientRemote'.
+packages/client/ui-settings/src/client/settings-mirror.ts(183,50): error TS2339: Property 'settings' does not exist on type 'ClientRemote'.

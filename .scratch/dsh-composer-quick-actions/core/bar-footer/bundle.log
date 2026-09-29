@@ -1,0 +1,52 @@
+ℹ tsdown v0.22.2 powered by rolldown v1.1.1
+ℹ config file: /private/tmp/dsh-footer-source.gZQq0j/deepseek-harness-477b4f420553e8a52c2fbccc464d7561b239c443/packages/client/ui-conversation/tsdown.config.ts 
+ℹ [@deepseek-ai/dsh-client-ui-conversation] entry: lib/types/index.js
+ℹ [@deepseek-ai/dsh-client-ui-conversation] target: es2024
+ℹ [@deepseek-ai/dsh-client-ui-conversation] tsconfig: tsconfig.json
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] entry: src/client/index.ts
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] tsconfig: tsconfig.json
+ℹ Build start
+ℹ [@deepseek-ai/dsh-client-ui-conversation] [ESM] lib/index.js  1.52 kB │ gzip: 0.74 kB
+ℹ [@deepseek-ai/dsh-client-ui-conversation] [ESM] 1 files, total: 1.52 kB
+✔ [@deepseek-ai/dsh-client-ui-conversation] Build complete in 46ms
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] Hint: consider adding deps.onlyBundle option to avoid unintended bundling of dependencies, or set deps.onlyBundle: false to disable this hint.
+See more at https://tsdown.dev/options/dependencies#deps-onlybundle
+Detected dependencies in bundle:
+- lexical
+- @lexical/selection
+- @lexical/utils
+- @lexical/extension
+- @lexical/html
+- @lexical/clipboard
+- @lexical/plain-text
+- @lexical/history
+- clsx
+- @lexical/text
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] lib/client.js      704.74 kB │ gzip: 174.53 kB
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] lib/client.js.map    1.30 MB
+ℹ [@deepseek-ai/dsh-client-ui-conversation/client] [CJS] 2 files, total: 2.01 MB
+../../../vendor/schemastery/src/index.ts (1:107) [33m[UNRESOLVED_IMPORT] [0mCould not resolve '@deepseek-ai/cosmokit' in ../../../vendor/schemastery/src/index.ts
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m ../../../vendor/schemastery/src/index.ts:1:108 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mB[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249ma[0m[38;5;249mr[0m[38;5;249my[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mc[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249md[0m[38;5;249me[0m[38;5;249me[0m[38;5;249mp[0m[38;5;249mE[0m[38;5;249mq[0m[38;5;249mu[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249mK[0m[38;5;249me[0m[38;5;249my[0m[38;5;249ms[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mN[0m[38;5;249mu[0m[38;5;249ml[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mb[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mP[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mO[0m[38;5;249mb[0m[38;5;249mj[0m[38;5;249me[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mp[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mk[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mv[0m[38;5;249ma[0m[38;5;249ml[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249mM[0m[38;5;249ma[0m[38;5;249mp[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mD[0m[38;5;249mi[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m'@deepseek-ai/cosmokit'
+ [38;5;240m  │[0m                                                                                                            ───────────┬───────────  
+ [38;5;240m  │[0m                                                                                                                       ╰───────────── Module not found, treating it as an external dependency
+[38;5;246m───╯[0m
+
+../../../vendor/schemastery/src/index.ts (2:58) [33m[UNRESOLVED_IMPORT] [0mCould not resolve '@deepseek-ai/cosmokit' in ../../../vendor/schemastery/src/index.ts
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m ../../../vendor/schemastery/src/index.ts:2:59 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m2 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mc[0m[38;5;249mr[0m[38;5;249me[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249me[0m[38;5;249mV[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mV[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mV[0m[38;5;249mo[0m[38;5;249ml[0m[38;5;249ma[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249ml[0m[38;5;249me[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m'@deepseek-ai/cosmokit'
+ [38;5;240m  │[0m                                                           ───────────┬───────────  
+ [38;5;240m  │[0m                                                                      ╰───────────── Module not found, treating it as an external dependency
+[38;5;246m───╯[0m
+
+../../core/session/src/types.ts (1:75) [33m[UNRESOLVED_IMPORT] [0mCould not resolve '@deepseek-ai/dsh-brand' in ../../core/session/src/types.ts
+   [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m ../../core/session/src/types.ts:1:76 [38;5;246m][0m
+   [38;5;246m│[0m
+ [38;5;246m1 │[0m [38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m{[0m[38;5;249m [0m[38;5;249mb[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249mN[0m[38;5;249mu[0m[38;5;249mm[0m[38;5;249mb[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mb[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249mS[0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249mg[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mB[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m,[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249m [0m[38;5;249mB[0m[38;5;249mr[0m[38;5;249ma[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249md[0m[38;5;249mN[0m[38;5;249mu[0m[38;5;249mm[0m[38;5;249mb[0m[38;5;249me[0m[38;5;249mr[0m[38;5;249m [0m[38;5;249m}[0m[38;5;249m [0m[38;5;249mf[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249mm[0m[38;5;249m [0m'@deepseek-ai/dsh-brand'
+ [38;5;240m  │[0m                                                                            ────────────┬───────────  
+ [38;5;240m  │[0m                                                                                        ╰───────────── Module not found, treating it as an external dependency
+[38;5;246m───╯[0m
+
+✔ [@deepseek-ai/dsh-client-ui-conversation/client] Build complete in 168ms

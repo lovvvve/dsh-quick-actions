@@ -28,7 +28,7 @@ This release has **no insert action** (insert at the selection, keep the editing
 | DSH UI primitives (browser side) | `>=0.1.7-alpha.2`, also supplied by the module table |
 | Platform | `web` profile only |
 
-Nothing is capability-detected at install or at runtime, so there is no feature tiering that varies with the DSH version: either the whole plugin installs and runs, or it does not.
+The send and Settings contracts have no legacy compatibility layer. **Unreleased source changes** also support the optional `conversation.composer.footer`: a locally patched core places the bar below the statistics row, with the action group centered within the input's width; an unpatched core keeps the existing placement. Official `0.1.7-rc.2` does not include this slot, and installing the plugin alone does not add it.
 
 The floor is the DSH release whose Settings form this plugin reads. **Do not run it against anything older**: `0.1.7-alpha.1` rewrote Settings — plugins no longer register namespaces of their own, and user data became the plugin's own Config, written into the profile. This release reads and writes the new model only, and on the `0.1.5` and `0.1.6` lines its Client never starts. For those lines, install this plugin's `0.1.0`.
 
@@ -134,7 +134,7 @@ Layout is a global persisted setting, switched in the management panel:
 | Value | Name | Where |
 |---|---|---|
 | `ribbon` (default) | Action ribbon | One row above the input, matching its width |
-| `bar` | Action bar | One row under the input, beside DSH's own usage info, as wide as its content and at most as wide as the input card; whatever does not fit folds into "more" |
+| `bar` | Action bar | With the footer core patch: a separate row below statistics, with controls centered within the input's width. Without it: the existing placement beside usage info. Actions that do not fit fold into "more" |
 | `launcher` | Single launcher | One entry button opening a searchable panel |
 
 `bar` and `launcher` share the same searchable panel, and the search matches labels and texts only. The management panel is where you reorder, hide, restore and clone presets, create, edit, enable and delete custom actions, and switch layout.
